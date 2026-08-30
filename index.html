@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>War Sim v0.1.0</title>
+  <link rel="stylesheet" href="./src/ui/styles.css" />
+</head>
+<body>
+  <main id="app" class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">WAR SIM · v0.1.0</p>
+      <h1>Core Data & State Foundation</h1>
+      <p class="lede">A data-driven military career simulation foundation built for scaling.</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Current Squad</h2>
+          <p id="squad-meta" class="muted">Loading…</p>
+        </div>
+        <div class="actions">
+          <button id="promote-player" type="button">Promote Player</button>
+          <button id="award-airborne" type="button">Award Airborne</button>
+          <button id="save-game" type="button">Save</button>
+          <button id="load-game" type="button">Load</button>
+          <button id="reset-game" type="button" class="secondary">Reset</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Health</th>
+              <th>Morale</th>
+              <th>Weapon</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="squad-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Player Career</h2>
+        <div id="career-card"></div>
+      </article>
+
+      <article class="panel">
+        <h2>Architecture Diagnostics</h2>
+        <pre id="diagnostics">Loading…</pre>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Career Timeline</h2>
+      <ol id="career-events" class="timeline"></ol>
+    </section>
+  </main>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
