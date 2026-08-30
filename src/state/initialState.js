@@ -1,26 +1,20 @@
-const squadMembers = [
-  ["pers_player", "Alex", "Morgan", "rank_army_e1", "role_rifleman", 95, 82, "loadout_player"],
-  ["pers_1002", "Marcus", "Hill", "rank_army_e5", "role_squad_leader", 100, 86, "loadout_1002"],
-  ["pers_1003", "Daniel", "Reyes", "rank_army_e4", "role_team_leader", 96, 78, "loadout_1003"],
-  ["pers_1004", "Evan", "Brooks", "rank_army_e3", "role_grenadier", 91, 72, "loadout_1004"],
-  ["pers_1005", "Noah", "Carter", "rank_army_e3", "role_automatic_rifleman", 100, 80, "loadout_1005"],
-  ["pers_1006", "Liam", "Walker", "rank_army_e2", "role_rifleman", 89, 74, "loadout_1006"],
-  ["pers_1007", "Mason", "Clark", "rank_army_e2", "role_rifleman", 98, 76, "loadout_1007"],
-  ["pers_1008", "Caleb", "Young", "rank_army_e3", "role_rifleman", 100, 84, "loadout_1008"],
-  ["pers_1009", "Jordan", "Price", "rank_army_e2", "role_rifleman", 94, 71, "loadout_1009"]
+const NPC_SEED = [
+  ["pers_1002", "Marcus", "Hill", "rank_army_e5", "role_squad_leader", 100, 86, "weapon_carbine"],
+  ["pers_1003", "Daniel", "Reyes", "rank_army_e4", "role_team_leader", 96, 78, "weapon_service_rifle"],
+  ["pers_1004", "Evan", "Brooks", "rank_army_e3", "role_grenadier", 91, 72, "weapon_service_rifle"],
+  ["pers_1005", "Noah", "Carter", "rank_army_e3", "role_automatic_rifleman", 100, 80, "weapon_auto_rifle"],
+  ["pers_1006", "Liam", "Walker", "rank_army_e2", "role_rifleman", 89, 74, "weapon_service_rifle"],
+  ["pers_1007", "Mason", "Clark", "rank_army_e2", "role_rifleman", 98, 76, "weapon_service_rifle"],
+  ["pers_1008", "Caleb", "Young", "rank_army_e3", "role_rifleman", 100, 84, "weapon_service_rifle"],
+  ["pers_1009", "Jordan", "Price", "rank_army_e2", "role_rifleman", 94, 71, "weapon_service_rifle"]
 ];
 
-const people = Object.fromEntries(
-  squadMembers.map(([id, firstName, lastName, rankId, roleId, health, morale, loadoutId], index) => [
-    id,
-    {
+function makeNpc([id, firstName, lastName, rankId, roleId, health, morale, equipmentDefinitionId], index) {
+  return {
+    person: {
       id,
-      schemaVersion: 1,
-      identity: {
-        firstName,
-        lastName,
-        displayName: `${firstName} ${lastName}`
-      },
+      schemaVersion: 2,
+      identity: { firstName, lastName, displayName: `${firstName} ${lastName}` },
       affiliation: {
         nationId: "nation_demo",
         branchId: "branch_army",
@@ -28,60 +22,78 @@ const people = Object.fromEntries(
         roleId,
         rankId
       },
-      career: {
-        enlistmentDate: index === 0 ? "2046-02-10" : "2043-01-15",
-        experience: index === 0 ? 0 : 700 + index * 95,
-        prestige: index === 0 ? 0 : 20 + index * 4
-      },
-      condition: {
-        health,
-        morale,
-        fatigue: 10 + index * 2,
-        readiness: Math.max(60, 90 - index),
-        status: "active"
-      },
-      traitIds: index === 0 ? [] : ["trait_steady"],
-      loadoutId,
-      serviceRecordId: `service_${id}`
+      career: { enlistmentDate: "2042-01-15", experience: 900 + index * 175, prestige: 25 + index * 4 },
+      condition: { health, morale, fatigue: 12 + index * 2, readiness: Math.max(65, 92 - index), status: "active" },
+      traitIds: ["trait_steady"],
+      loadoutId: `loadout_${id}`,
+      serviceRecordId: `service_${id}`,
+      simulationTier: 1
+    },
+    serviceRecord: {
+      id: `service_${id}`,
+      schemaVersion: 1,
+      personId: id,
+      serviceStatus: "active",
+      entryDate: "2042-01-15",
+      separationDate: null
+    },
+    equipment: {
+      id: `eq_${id}_primary`,
+      schemaVersion: 1,
+      definitionId: equipmentDefinitionId,
+      ownerPersonId: id,
+      condition: 100,
+      upgradeIds: []
+    },
+    loadout: {
+      id: `loadout_${id}`,
+      schemaVersion: 2,
+      ownerPersonId: id,
+      slots: { primaryWeaponInstanceId: `eq_${id}_primary` }
     }
-  ])
-);
-
-const unitSlots = {};
-squadMembers.forEach(([personId, , , , roleId], i) => {
-  const slotId = `slot_${String(i + 1).padStart(2, "0")}`;
-  unitSlots[slotId] = {
-    id: slotId,
-    schemaVersion: 1,
-    unitId: "unit_sq_001",
-    roleId,
-    assignedPersonId: personId,
-    status: "filled"
   };
-});
-
-const loadouts = {};
-squadMembers.forEach(([personId, , , , roleId, , , loadoutId]) => {
-  loadouts[loadoutId] = {
-    id: loadoutId,
-    schemaVersion: 1,
-    ownerPersonId: personId,
-    primaryEquipmentId: roleId === "role_automatic_rifleman"
-      ? "weapon_auto_rifle"
-      : roleId === "role_squad_leader"
-        ? "weapon_carbine"
-        : "weapon_service_rifle"
-  };
-});
+}
 
 export function createInitialWorldState() {
+  const people = {};
+  const serviceRecords = {};
+  const equipmentInstances = {};
+  const loadouts = {};
+  const unitSlots = {
+    slot_player: {
+      id: "slot_player",
+      schemaVersion: 1,
+      unitId: "unit_sq_001",
+      roleId: "role_rifleman",
+      assignedPersonId: null,
+      status: "vacant"
+    }
+  };
+
+  NPC_SEED.forEach((seed, index) => {
+    const built = makeNpc(seed, index);
+    people[built.person.id] = built.person;
+    serviceRecords[built.serviceRecord.id] = built.serviceRecord;
+    equipmentInstances[built.equipment.id] = built.equipment;
+    loadouts[built.loadout.id] = built.loadout;
+    unitSlots[`slot_${index + 1}`] = {
+      id: `slot_${index + 1}`,
+      schemaVersion: 1,
+      unitId: "unit_sq_001",
+      roleId: built.person.affiliation.roleId,
+      assignedPersonId: built.person.id,
+      status: "filled"
+    };
+  });
+
   return {
-    schemaVersion: 1,
-    gameVersion: "0.1.0",
-    playerPersonId: "pers_player",
+    schemaVersion: 2,
+    gameVersion: "0.1.1",
+    playerPersonId: null,
     world: {
       date: "2046-02-10",
-      nationIds: ["nation_demo"]
+      nationIds: ["nation_demo"],
+      careerStartUnitByBranchId: { branch_army: "unit_sq_001" }
     },
     entities: {
       people,
@@ -101,18 +113,18 @@ export function createInitialWorldState() {
         }
       },
       unitSlots,
+      serviceRecords,
       loadouts,
-      careerEvents: {
-        career_001: {
-          id: "career_001",
-          schemaVersion: 1,
-          personId: "pers_player",
-          type: "enlistment",
-          date: "2046-02-10",
-          references: { branchId: "branch_army" }
-        }
-      },
-      qualificationRecords: {}
+      equipmentInstances,
+      careerEvents: {},
+      assignmentRecords: {},
+      promotionRecords: {},
+      awardRecords: {},
+      qualificationRecords: {},
+      deploymentRecords: {},
+      casualtyRecords: {},
+      memorialRecords: {},
+      relationshipRecords: {}
     }
   };
 }

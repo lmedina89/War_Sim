@@ -1,35 +1,35 @@
 import { createStableId } from "../core/ids.js";
+import { evaluatePromotionEligibility } from "../services/careerRules.js";
 
 export function promotePerson(store, registries, personId) {
   const state = store.getState();
+  const result = evaluatePromotionEligibility(state, store.getIndexes(), registries, personId);
+  if (!result.eligible) throw new Error(result.reasons.join(" · "));
+
   const person = state.entities.people[personId];
-  if (!person) throw new Error(`Unknown person: ${personId}`);
+  const previousRankId = person.affiliation.rankId;
+  const promotionId = createStableId("promo");
+  const eventId = createStableId("career");
 
-  const currentRank = registries.ranks.get(person.affiliation.rankId);
-  const nextRank = registries.ranks.values()
-    .filter(rank =>
-      rank.branchId === currentRank.branchId &&
-      rank.category === currentRank.category &&
-      rank.hierarchyLevel === currentRank.hierarchyLevel + 1
-    )[0];
-
-  if (!nextRank) throw new Error(`${person.identity.displayName} has no next rank in this demo.`);
-
-  store.transact(draft => {
-    draft.entities.people[personId].affiliation.rankId = nextRank.id;
+  store.mutate(draft => {
+    draft.entities.people[personId].affiliation.rankId = result.nextRank.id;
     draft.entities.people[personId].career.prestige += 5;
-
-    const eventId = createStableId("career");
+    draft.entities.promotionRecords[promotionId] = {
+      id: promotionId,
+      schemaVersion: 1,
+      personId,
+      previousRankId,
+      rankId: result.nextRank.id,
+      effectiveDate: draft.world.date,
+      authority: "career_system"
+    };
     draft.entities.careerEvents[eventId] = {
       id: eventId,
       schemaVersion: 1,
       personId,
       type: "promotion",
       date: draft.world.date,
-      references: {
-        previousRankId: currentRank.id,
-        rankId: nextRank.id
-      }
+      references: { previousRankId, rankId: result.nextRank.id, promotionRecordId: promotionId }
     };
-  });
+  }, ["history"]);
 }

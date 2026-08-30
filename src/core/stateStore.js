@@ -1,4 +1,6 @@
-export function createStateStore(initialState, buildIndexes) {
+import { buildIndexes, refreshIndexes } from "../indexes/buildIndexes.js";
+
+export function createStateStore(initialState) {
   let state = structuredClone(initialState);
   let indexes = buildIndexes(state);
   const listeners = new Set();
@@ -19,11 +21,9 @@ export function createStateStore(initialState, buildIndexes) {
       indexes = buildIndexes(state);
       notify();
     },
-    transact(mutator) {
-      const draft = structuredClone(state);
-      mutator(draft);
-      state = draft;
-      indexes = buildIndexes(state);
+    mutate(mutator, indexGroups = []) {
+      mutator(state);
+      if (indexGroups.length) indexes = refreshIndexes(state, indexes, indexGroups);
       notify();
     },
     subscribe(listener) {

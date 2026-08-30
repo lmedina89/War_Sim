@@ -1,8 +1,10 @@
-let counter = 0;
+let fallbackCounter = 0;
 
 export function createStableId(prefix = "ent") {
-  counter += 1;
-  const time = Date.now().toString(36);
-  const seq = counter.toString(36).padStart(3, "0");
-  return `${prefix}_${time}_${seq}`;
+  if (globalThis.crypto?.randomUUID) {
+    return `${prefix}_${globalThis.crypto.randomUUID()}`;
+  }
+
+  fallbackCounter += 1;
+  return `${prefix}_${Date.now().toString(36)}_${fallbackCounter.toString(36).padStart(4, "0")}`;
 }

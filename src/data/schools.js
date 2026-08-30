@@ -5,7 +5,8 @@ export const schoolDefinitions = [
     name: "Airborne School",
     category: "military_school",
     durationDays: 21,
-    grantsQualificationId: "qualification_airborne"
+    grantsQualificationIds: ["qualification_airborne"],
+    completionAwardIds: ["award_parachutist_badge"]
   },
   {
     id: "school_leadership",
@@ -13,6 +14,7 @@ export const schoolDefinitions = [
     name: "Basic Leader Course",
     category: "military_school",
     durationDays: 22,
-    grantsQualificationId: "qualification_basic_leader"
+    grantsQualificationIds: ["qualification_basic_leader"],
+    completionAwardIds: []
   }
 ];
