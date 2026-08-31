@@ -1,5 +1,5 @@
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 4;
+export const CURRENT_WORLD_SCHEMA_VERSION = 5;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -73,6 +73,14 @@ function migrateWorldV3ToV4(worldState) {
   return next;
 }
 
+function migrateWorldV4ToV5(worldState) {
+  const next = structuredClone(worldState);
+  next.schemaVersion = 5;
+  next.gameVersion = "0.2.1";
+  next.entities.orderRecords = next.entities.orderRecords ?? {};
+  return next;
+}
+
 function migrateWorldV2ToV3(worldState) {
   const next = structuredClone(worldState);
   next.schemaVersion = 3;
@@ -106,12 +114,13 @@ export function migratePayload(payload) {
 
   if (next.worldState.schemaVersion === 2) next.worldState = migrateWorldV2ToV3(next.worldState);
   if (next.worldState.schemaVersion === 3) next.worldState = migrateWorldV3ToV4(next.worldState);
+  if (next.worldState.schemaVersion === 4) next.worldState = migrateWorldV4ToV5(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.2.0.1";
-  next.worldState.gameVersion = "0.2.0.1";
+  next.gameVersion = "0.2.1";
+  next.worldState.gameVersion = "0.2.1";
   return next;
 }

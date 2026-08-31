@@ -79,3 +79,17 @@ details.panel[open] summary { margin-bottom: 14px; }
 .save-slot p { margin: 3px 0; color: var(--muted); }
 .save-slot .actions { margin-top: 10px; }
 .autosave-slot { opacity: .85; }
+.breadcrumbs { display:flex; flex-wrap:wrap; gap:6px; margin: 4px 0 14px; }
+.breadcrumbs button, .unit-link { min-height:36px; padding:.4rem .65rem; background:var(--panel-2); color:var(--text); }
+.unit-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 16px; }
+.unit-summary .statline { min-width:0; }
+.unit-children { display:grid; gap:8px; margin-top:14px; }
+.unit-child { width:100%; text-align:left; background:var(--panel-2); color:var(--text); }
+.personnel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+.person-card { border:1px solid var(--border); background:var(--panel-2); border-radius:12px; padding:12px; cursor:pointer; }
+.person-card.player-row { border-color:var(--accent); }
+.person-card h3 { margin:0 0 4px; }
+.person-card p { margin:3px 0; color:var(--muted); }
+.order-card { border-left:3px solid var(--accent); background:var(--panel-2); border-radius:10px; padding:12px; margin-top:10px; }
+.order-card h3,.order-card p { margin:3px 0; }
+@media (max-width:760px){ .unit-summary { grid-template-columns:1fr; } }

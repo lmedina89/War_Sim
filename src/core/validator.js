@@ -1,7 +1,7 @@
 const REQUIRED_STORES = [
   "people","units","billets","serviceRecords","loadouts","equipmentInstances","careerEvents",
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
-  "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords"
+  "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords"
 ];
 
 function requireRef(errors, store, id, label) {
@@ -11,7 +11,7 @@ function requireRef(errors, store, id, label) {
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 4) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 5) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
 
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) {
@@ -69,6 +69,13 @@ export function validateWorldState(state, registries) {
   for (const record of Object.values(e.relationshipRecords)) {
     requireRef(errors, e.people, record.personAId, `${record.id}.personAId`);
     requireRef(errors, e.people, record.personBId, `${record.id}.personBId`);
+  }
+
+
+  for (const record of Object.values(e.orderRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    requireRef(errors, e.units, record.unitId, `${record.id}.unitId`);
+    requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`);
   }
 
   if (state.playerPersonId) requireRef(errors, e.people, state.playerPersonId, "playerPersonId");

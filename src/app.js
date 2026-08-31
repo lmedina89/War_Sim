@@ -13,18 +13,20 @@ import { markNotificationRead } from "./commands/markNotificationRead.js";
 import { selectCurrentSquad } from "./selectors/selectCurrentSquad.js";
 import { selectCareerRecord } from "./selectors/selectCareerRecord.js";
 import { selectNotifications } from "./selectors/selectNotifications.js";
+import { selectOrganizationView } from "./selectors/selectOrganizationView.js";
+import { selectAssignmentView, selectUnitPersonnel } from "./selectors/selectAssignmentView.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save";
+let achievementQueue = [], saveMode = "save", selectedUnitId = null;
 
 const $ = selector => document.querySelector(selector);
 const els = {
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"),
-  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), diagnostics: $("#diagnostics"), status: $("#status-message"),
+  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), ordersList: $("#orders-list"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), diagnostics: $("#diagnostics"), status: $("#status-message"),
   train: $("#train-player"), advanceTime: $("#advance-time"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
   achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
   saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
@@ -56,6 +58,37 @@ function renderInbox(state, indexes, personId) {
   els.careerInbox.appendChild(list);
 }
 
+function descendantUnitIds(state, indexes, unitId) {
+  const result = [unitId], queue = [unitId];
+  while (queue.length) { const current = queue.shift(); for (const child of indexes.unitsByParentUnitId.get(current) ?? []) { result.push(child); queue.push(child); } }
+  return result;
+}
+function aggregateStrength(state, indexes, unitId) {
+  const ids = descendantUnitIds(state, indexes, unitId); let authorized = 0, assigned = 0;
+  for (const id of ids) for (const billetId of indexes.billetsByUnitId.get(id) ?? []) { authorized++; if (state.entities.billets[billetId]?.assignedPersonId) assigned++; }
+  return { authorized, assigned, vacancies: authorized - assigned };
+}
+function showPersonProfile(personId) {
+  const state = store.getState(), indexes = store.getIndexes(), person = state.entities.people[personId]; if (!person) return;
+  const rank = registries.ranks.get(person.affiliation.rankId), billet = state.entities.billets[person.affiliation.billetId], billetDef = billet ? registries.billets.get(billet.definitionId) : null, unit = state.entities.units[person.affiliation.unitId];
+  els.personProfileName.textContent = person.identity.displayName;
+  els.personProfileBody.replaceChildren(statLine("Rank", `${rank.abbreviation} · ${rank.name}`), statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Unit", unit?.name ?? "—"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience));
+  els.personDialog.showModal();
+}
+function renderOrganization(state, indexes, personId) {
+  const assignment = selectAssignmentView(state, indexes, registries, personId);
+  if (!selectedUnitId || !state.entities.units[selectedUnitId] || !assignment.chain.some(x => x.unitId === selectedUnitId)) selectedUnitId = assignment.chain.at(-1).unitId;
+  const current = selectOrganizationView(state, indexes, registries, selectedUnitId), aggregate = aggregateStrength(state, indexes, selectedUnitId);
+  els.assignmentCard.replaceChildren(statLine("Duty Position", assignment.billetName), statLine("Assigned Since", assignment.assignmentStartDate), statLine("Chain", assignment.chain.map(x => x.name).join(" › ")));
+  els.unitBreadcrumbs.replaceChildren(...assignment.chain.map(item => { const b=document.createElement("button"); b.type="button"; b.textContent=item.name; if(item.unitId===selectedUnitId) b.disabled=true; b.addEventListener("click",()=>{selectedUnitId=item.unitId; render();}); return b; }));
+  els.organizationBrowser.replaceChildren(); const summary=document.createElement("div"); summary.className="unit-summary"; summary.append(statLine("Echelon", current.echelon),statLine("Branch",current.branch),statLine("Strength",`${aggregate.assigned} / ${aggregate.authorized}`),statLine("Vacancies",aggregate.vacancies),statLine("Readiness",`${current.readiness}%`),statLine("Morale",`${current.morale}%`)); els.organizationBrowser.append(summary);
+  if(current.childUnitIds.length){ const children=document.createElement("div"); children.className="unit-children"; for(const id of current.childUnitIds){ const child=state.entities.units[id], b=document.createElement("button"); b.type="button"; b.className="unit-child"; b.textContent=`${child.name} · ${registries.echelons.get(child.echelonId).name}`; b.addEventListener("click",()=>{selectedUnitId=id; render();}); children.appendChild(b);} els.organizationBrowser.append(children); }
+  const personnelIds=descendantUnitIds(state,indexes,selectedUnitId).flatMap(id=>indexes.peopleByUnitId.get(id)??[]), seen=new Set(); const personnel=personnelIds.filter(id=>!seen.has(id)&&seen.add(id)).map(id=>selectUnitPersonnel(state,indexes,registries,state.entities.people[id].affiliation.unitId).find(x=>x.id===id)).filter(Boolean);
+  els.unitPersonnelMeta.textContent=`${current.name} and subordinate units · ${personnel.length} assigned personnel`;
+  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; card.append(h,p,p2); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
+  const orderIds=indexes.ordersByPersonId?.get(personId)??[]; els.ordersList.replaceChildren(); if(!orderIds.length){const p=document.createElement("p");p.className="muted";p.textContent="No orders recorded yet.";els.ordersList.append(p);} else for(const id of orderIds.slice().reverse()){const o=state.entities.orderRecords[id], card=document.createElement("article");card.className="order-card";const h=document.createElement("h3");h.textContent=o.title;const p1=document.createElement("p");p1.textContent=o.summary;const p2=document.createElement("p");p2.className="muted";p2.textContent=`Issued ${o.issueDate} · Effective ${o.effectiveDate} · ${o.status}`;card.append(h,p1,p2);els.ordersList.append(card);}
+}
+
 function render() {
   const state = store.getState(), indexes = store.getIndexes(), validation = validateWorldState(state, registries), hasPlayer = Boolean(state.playerPersonId);
   els.newCareerPanel.hidden = hasPlayer; els.careerContent.hidden = !hasPlayer;
@@ -71,6 +104,7 @@ function render() {
   renderList(els.relationships, career.relationships.map(rel => `${rel.otherName} · ${rel.relationshipType} · familiarity ${rel.familiarity} · trust ${rel.trust}`), "No relationship records.");
   els.careerEvents.replaceChildren(...career.events.map(event => { const li = document.createElement("li"), time = document.createElement("time"); time.textContent = event.date; li.append(time, document.createTextNode(event.label)); return li; }));
   renderInbox(state, indexes, state.playerPersonId);
+  renderOrganization(state, indexes, state.playerPersonId);
   els.diagnostics.textContent = JSON.stringify({ valid: validation.ok, validationErrors: validation.errors, definitionValidation, worldSchemaVersion: state.schemaVersion, gameVersion: state.gameVersion, worldClock: state.world.clock, rngState: state.world.rngState, nextEntitySequence: state.world.nextEntitySequence, registryCounts: Object.fromEntries(Object.entries(registries).map(([k, r]) => [k, r.size])), runtimeCounts: Object.fromEntries(Object.entries(state.entities).map(([name, collection]) => [name, Object.keys(collection).length])), indexedSquadMembers: indexes.peopleByUnitId.get(squad.unitId)?.length ?? 0, playerRelationships: indexes.relationshipsByPersonId.get(state.playerPersonId)?.length ?? 0 }, null, 2);
 }
 
@@ -111,6 +145,7 @@ els.airborne.addEventListener("click", () => runCommand(() => completeSchool(sto
 els.leadership.addEventListener("click", () => runCommand(() => completeSchool(store, registries, store.getState().playerPersonId, "school_leadership")));
 els.save.addEventListener("click", () => openSaveManager("save")); els.load.addEventListener("click", () => openSaveManager("load")); els.loadFromStart.addEventListener("click", () => openSaveManager("load"));
 els.saveDialogClose.addEventListener("click", () => els.saveDialog.close());
+els.personProfileClose.addEventListener("click", () => els.personDialog.close());
 els.newCareer.addEventListener("click", async () => { if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return; store.replaceState(createInitialWorldState()); els.newCareerForm.reset(); els.branchSelect.value = registries.branches.values()[0]?.id ?? ""; setStatus("New career setup ready. Existing save slots were preserved.", "warn"); });
 
 store.subscribe(render); eventBus.subscribe("command_completed", () => {}); render();

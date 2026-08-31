@@ -14,6 +14,8 @@ assert.equal(defs.ok, true, defs.errors.join("\n"));
 
 const initial = createInitialWorldState();
 assert.equal(initial.playerPersonId, null);
+assert.equal(initial.schemaVersion, 5);
+assert.equal(initial.gameVersion, "0.2.1");
 assert.equal(Object.keys(initial.entities.units).length, 3);
 assert.equal(Object.keys(initial.entities.billets).length, 9);
 
@@ -32,6 +34,8 @@ const state = store.getState();
 const player = state.entities.people[state.playerPersonId];
 assert.equal(player.identity.displayName, "Luis Medina");
 assert.ok(player.affiliation.billetId);
+assert.equal(Object.keys(state.entities.orderRecords).length, 1);
+assert.equal(store.getIndexes().ordersByPersonId.get(state.playerPersonId).length, 1);
 
 const validation = validateWorldState(state, registries);
 assert.equal(validation.ok, true, validation.errors.join("\n"));
@@ -49,4 +53,4 @@ assert.equal(career.role, "Rifleman");
 const company = selectOrganizationView(state, store.getIndexes(), registries, "unit_company_001");
 assert.deepEqual(company.childUnitIds, ["unit_platoon_001"]);
 
-console.log("War Sim v0.2.0.1 hotfix smoke test passed");
+console.log("War Sim v0.2.1 unit UI smoke test passed");

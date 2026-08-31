@@ -88,8 +88,8 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
   });
 
   return {
-    schemaVersion: 4,
-    gameVersion: "0.2.0.1",
+    schemaVersion: 5,
+    gameVersion: "0.2.1",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
@@ -136,7 +136,8 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
       memorialRecords: {},
       relationshipRecords: {},
       notificationRecords: {},
-      actionRecords: {}
+      actionRecords: {},
+      orderRecords: {}
     }
   };
 }

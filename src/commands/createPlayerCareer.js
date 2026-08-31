@@ -40,6 +40,7 @@ export function createPlayerCareer(store, registries, input) {
     const equipmentInstanceId = createEntityId(draft, "eq");
     const assignmentId = createEntityId(draft, "assign");
     const enlistmentEventId = createEntityId(draft, "career");
+    const orderId = createEntityId(draft, "order");
 
     draft.playerPersonId = personId;
     draft.entities.people[personId] = {
@@ -86,6 +87,13 @@ export function createPlayerCareer(store, registries, input) {
       endDate: null, reason: "initial_assignment"
     };
 
+    draft.entities.orderRecords[orderId] = {
+      id: orderId, schemaVersion: 1, personId, type: "initial_assignment", status: "executed",
+      issueDate: draft.world.date, effectiveDate: draft.world.date, unitId, billetId: billet.id,
+      title: "Initial Assignment Orders",
+      summary: `Assigned to ${unit.name} as ${registries.billets.get(billet.definitionId).name}.`
+    };
+
     draft.entities.careerEvents[enlistmentEventId] = {
       id: enlistmentEventId, schemaVersion: 1, personId, type: "enlistment",
       date: draft.world.date,
@@ -115,7 +123,7 @@ export function createPlayerCareer(store, registries, input) {
       payload: { branchId: branch.id, billetId: billet.id },
       resultCode: "career_created"
     });
-  }, ["people", "billets", "history", "equipment", "notifications", "actions"]);
+  }, ["people", "billets", "history", "equipment", "notifications", "actions", "orders"]);
 
   return commandResult({
     code: "career_created",

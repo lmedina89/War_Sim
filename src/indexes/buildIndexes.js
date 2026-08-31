@@ -75,6 +75,12 @@ function notificationGroup(state) {
   return { notificationsByPersonId, unreadNotificationsByPersonId };
 }
 
+function ordersGroup(state) {
+  const ordersByPersonId = new Map();
+  for (const record of Object.values(state.entities.orderRecords ?? {})) addToIndex(ordersByPersonId, record.personId, record.id);
+  return { ordersByPersonId };
+}
+
 function actionGroup(state) {
   const actionsByActorPersonId = new Map();
   for (const record of Object.values(state.entities.actionRecords)) addToIndex(actionsByActorPersonId, record.actorPersonId, record.id);
@@ -89,7 +95,8 @@ const GROUP_BUILDERS = Object.freeze({
   equipment: equipmentGroup,
   memorial: memorialGroup,
   notifications: notificationGroup,
-  actions: actionGroup
+  actions: actionGroup,
+  orders: ordersGroup
 });
 
 export const ALL_INDEX_GROUPS = Object.freeze(Object.keys(GROUP_BUILDERS));

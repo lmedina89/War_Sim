@@ -1,27 +1,24 @@
-# War Sim v0.2.0.1 — Military Organization UI Hotfix
+# War Sim v0.2.1 — Unit & Chain of Command
 
-This hotfix repairs a regression introduced in v0.2.0 where the new organization model was integrated by replacing the proven v0.1.2 UI controller. That caused the career content to remain hidden and also removed the incremental-index API expected by the state store.
+Built directly on the verified v0.2.0.1 hotfix. This release surfaces the normalized military organization model without replacing the proven career UI controller.
 
-## Fixes
+## Added
 
-- Restores the complete v0.1.2 new-career, training, promotion, school/award popup, Career Inbox, and multi-slot save/load UI.
-- Preserves the v0.2.0 military-organization architecture:
-  - company → platoon → squad hierarchy
-  - persistent Billet entities
-  - billet definitions separate from Person
-  - authorized vs assigned strength
-  - parent/child units
-- Restores grouped incremental index refreshing and adds a dedicated `billets` index group.
-- Adapts player creation and reassignment to fill canonical billets.
-- Adapts career/squad selectors to resolve roles through billets.
-- Strengthens definition and runtime cross-reference validation.
-- Adds v0.1.2 world-schema 3 → v0.2.0.1 world-schema 4 migration while retaining compatible career history.
-- Keeps save format v3 so existing multi-slot save metadata remains compatible.
+- Player-facing **My Assignment** card with duty position, assignment date, and full chain of command.
+- Browsable **Company → Platoon → Squad** organization UI with breadcrumb navigation.
+- Aggregated authorized/assigned strength and vacancies for parent formations.
+- Unit readiness and morale summaries.
+- Personnel browser for the selected unit and subordinate units.
+- Tap/click personnel profiles with rank, billet, status, health, morale, readiness, and experience.
+- Canonical `orderRecords` foundation plus indexed `ordersByPersonId` lookup.
+- Initial Assignment Orders generated for every new player career.
+- World schema 5 with automatic schema 4 → 5 migration, preserving v0.2.0.1 saves.
+- Corrected browser title/version labeling to v0.2.1.
 
-## Permanent engineering rules
+## Architecture rules
 
-Definitions remain immutable and data-driven. Runtime state is normalized. Stable IDs, indexed lookups, command-controlled mutation, selectors/view models, schema migrations, and modular domain boundaries remain mandatory.
+UI remains selector-driven and read-only. Runtime state stays normalized and ID-referenced. Organization strength is derived from canonical billets instead of duplicated counters. Orders are permanent entities intended to support future PCS, deployment, reenlistment, MOS change, and inter-service transfer workflows.
 
 ## Next milestone
 
-After this hotfix is verified in GitHub Pages, continue to v0.3.0 — MOS & Career Contract Foundation.
+v0.3.0 — MOS, Contracts & Personnel Career System: generic military specialties (Army MOS / Navy Rating / Air Force AFSC presentation), enlistment contracts, components, service periods, reenlistment offers/bonuses, specialty changes, and inter-service transfer foundations.

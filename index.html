@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Sim v0.1.2</title>
+  <title>War Sim v0.2.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <section class="hero">
-      <p class="eyebrow">WAR SIM · v0.2.0.1</p>
-      <h1>Military Organization & Personnel Foundation</h1>
-      <p class="lede">Hierarchical units, persistent billets, authorized strength, career systems, saves, and scalable personnel organization.</p>
+      <p class="eyebrow">WAR SIM · v0.2.1</p>
+      <h1>Unit & Chain of Command</h1>
+      <p class="lede">Player-facing assignments, browsable chain of command, personnel profiles, unit readiness, and scalable orders infrastructure.</p>
     </section>
 
     <section id="new-career-panel" class="panel setup-panel" hidden>
@@ -40,6 +40,9 @@
       </section>
 
       <section class="grid"><article class="panel"><h2>Player Career</h2><div id="career-card"></div></article><article class="panel"><h2>Promotion Status</h2><div id="promotion-card"></div></article></section>
+      <section class="grid organization-grid"><article class="panel"><h2>My Assignment</h2><div id="assignment-card"></div></article><article class="panel"><div class="panel-head"><div><h2>Unit & Chain of Command</h2><p class="muted">Browse your organization from company to squad.</p></div></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article></section>
+      <section class="panel"><div class="panel-head"><div><h2>Unit Personnel</h2><p id="unit-personnel-meta" class="muted"></p></div></div><div id="unit-personnel" class="personnel-grid"></div></section>
+      <section class="panel"><h2>Orders</h2><p class="muted">Permanent career orders are stored as canonical records. Future PCS, deployment, reenlistment, and transfer systems will use this same pipeline.</p><div id="orders-list"></div></section>
       <section class="grid"><article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article><article class="panel"><h2>Squad Relationships</h2><div id="relationships"></div></article></section>
       <section class="panel"><div class="panel-head"><div><h2>Career Inbox</h2><p class="muted">Persistent player-facing milestones and important events.</p></div><span id="unread-badge" class="badge" hidden></span></div><div id="career-inbox"></div></section>
       <section class="panel"><h2>Career Timeline</h2><ol id="career-events" class="timeline"></ol></section>
@@ -51,6 +54,8 @@
   <dialog id="achievement-dialog" class="modal"><div class="modal-card"><p id="achievement-type" class="eyebrow"></p><h2 id="achievement-title"></h2><p id="achievement-message"></p><button id="achievement-ok" type="button">Continue</button></div></dialog>
 
   <dialog id="save-dialog" class="modal"><div class="modal-card save-manager"><div class="panel-head"><div><p id="save-mode-label" class="eyebrow"></p><h2 id="save-dialog-title">Save Manager</h2></div><button id="save-dialog-close" type="button" class="secondary compact-button">Close</button></div><div id="save-slots" class="save-slots"></div></div></dialog>
+
+  <dialog id="person-dialog" class="modal"><div class="modal-card"><div class="panel-head"><div><p class="eyebrow">PERSONNEL PROFILE</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-profile-body"></div></div></dialog>
 
   <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card"><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
 
