@@ -19,6 +19,15 @@ export function validateDefinitions(registries) {
 
   for (const rank of registries.ranks.values()) {
     if (!registries.branches.has(rank.branchId)) errors.push(`${rank.id}: invalid branchId ${rank.branchId}.`);
+    if (rank.promotionTargetRankId != null) {
+      if (!registries.ranks.has(rank.promotionTargetRankId)) errors.push(`${rank.id}: invalid promotion target ${rank.promotionTargetRankId}.`);
+      else {
+        const target = registries.ranks.get(rank.promotionTargetRankId);
+        if (target.branchId !== rank.branchId || target.category !== rank.category) errors.push(`${rank.id}: promotion target must remain in the same branch/category.`);
+        if (target.hierarchyLevel < rank.hierarchyLevel) errors.push(`${rank.id}: promotion target cannot be lower in hierarchy.`);
+      }
+      if (!rank.promotionRequirements) errors.push(`${rank.id}: a promotion target requires promotionRequirements.`);
+    }
     for (const qualificationId of rank.promotionRequirements?.requiredQualificationIds ?? []) {
       if (!registries.qualifications.has(qualificationId)) errors.push(`${rank.id}: invalid required qualification ${qualificationId}.`);
     }

@@ -1,6 +1,6 @@
 const REQUIRED_STORES = [
   "people","units","billets","serviceRecords","loadouts","equipmentInstances","careerEvents",
-  "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
+  "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","qualificationAttemptRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
   "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords","militaryEducationRecords",
@@ -20,11 +20,13 @@ export function validateWorldState(state, registries) {
   if (state.world?.generation?.scenarioId && !registries.careerStartScenarios.has(state.world.generation.scenarioId)) errors.push(`Invalid career-start scenario ${state.world.generation.scenarioId}.`);
   if (state.world?.generation?.generationProfileId && !registries.generationProfiles.has(state.world.generation.generationProfileId)) errors.push(`Invalid generation profile ${state.world.generation.generationProfileId}.`);
   if (state.world?.generation?.startingBilletId && !e.billets[state.world.generation.startingBilletId]) errors.push(`Missing generated starting billet ${state.world.generation.startingBilletId}.`);
+  if (state.world?.formationIdentityId && !registries.formations.has(state.world.formationIdentityId)) errors.push(`Invalid formation identity ${state.world.formationIdentityId}.`);
 
   for (const unit of Object.values(e.units)) {
     if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${unit.id}: invalid organizationDefinitionId.`);
     if (!registries.echelons.has(unit.echelonId)) errors.push(`${unit.id}: invalid echelonId.`);
     if (unit.readinessModelId && !registries.readinessModels.has(unit.readinessModelId)) errors.push(`${unit.id}: invalid readinessModelId ${unit.readinessModelId}.`);
+    if (unit.formationId && !registries.formations.has(unit.formationId)) errors.push(`${unit.id}: invalid formationId ${unit.formationId}.`);
     requireRef(errors, e.units, unit.parentUnitId, `${unit.id}.parentUnitId`);
     if (new Set(unit.childUnitIds ?? []).size !== (unit.childUnitIds ?? []).length) errors.push(`${unit.id}: duplicate childUnitIds.`);
     for (const childId of unit.childUnitIds ?? []) {
@@ -32,6 +34,13 @@ export function validateWorldState(state, registries) {
       if (e.units[childId] && e.units[childId].parentUnitId !== unit.id) errors.push(`${unit.id}/${childId}: parent-child unit mismatch.`);
     }
     if (unit.parentUnitId && e.units[unit.parentUnitId] && !(e.units[unit.parentUnitId].childUnitIds ?? []).includes(unit.id)) errors.push(`${unit.id}: parent does not list unit as child.`);
+    const ancestry = new Set([unit.id]);
+    let cursor = unit.parentUnitId ? e.units[unit.parentUnitId] : null;
+    while (cursor) {
+      if (ancestry.has(cursor.id)) { errors.push(`${unit.id}: cyclic unit ancestry detected.`); break; }
+      ancestry.add(cursor.id);
+      cursor = cursor.parentUnitId ? e.units[cursor.parentUnitId] : null;
+    }
   }
   const assignedPersonToBillet = new Map();
   for (const billet of Object.values(e.billets)) {
@@ -68,14 +77,57 @@ export function validateWorldState(state, registries) {
     }
     requireRef(errors, e.serviceRecords, person.serviceRecordId, `${person.id}.serviceRecordId`); requireRef(errors, e.loadouts, person.loadoutId, `${person.id}.loadoutId`);
   }
+  for (const loadout of Object.values(e.loadouts)) {
+    requireRef(errors, e.people, loadout.ownerPersonId, `${loadout.id}.ownerPersonId`);
+    for (const [slotName, instanceId] of Object.entries(loadout.slots ?? {})) {
+      requireRef(errors, e.equipmentInstances, instanceId, `${loadout.id}.${slotName}`);
+      if (instanceId && e.equipmentInstances[instanceId]?.ownerPersonId !== loadout.ownerPersonId) errors.push(`${loadout.id}.${slotName}: equipment owner mismatch.`);
+    }
+  }
+  for (const item of Object.values(e.equipmentInstances)) {
+    requireRef(errors, e.people, item.ownerPersonId, `${item.id}.ownerPersonId`);
+    if (!registries.equipment.has(item.definitionId)) errors.push(`${item.id}: invalid equipment definition ${item.definitionId}.`);
+    if (!Number.isFinite(Number(item.condition)) || Number(item.condition) < 0 || Number(item.condition) > 100) errors.push(`${item.id}: invalid equipment condition.`);
+  }
+  for (const event of Object.values(e.careerEvents)) {
+    requireRef(errors, e.people, event.personId, `${event.id}.personId`);
+    if (!event.type || typeof event.type !== "string") errors.push(`${event.id}: invalid career event type.`);
+    if (!event.date || Number.isNaN(Date.parse(`${event.date}T00:00:00Z`))) errors.push(`${event.id}: invalid career event date.`);
+  }
   for (const service of Object.values(e.serviceRecords)) { requireRef(errors, e.people, service.personId, `${service.id}.personId`); if (service.branchId && !registries.branches.has(service.branchId)) errors.push(`${service.id}: invalid branchId.`); if (service.componentId && !registries.components.has(service.componentId)) errors.push(`${service.id}: invalid componentId.`); if (service.specialtyId && !registries.specialties.has(service.specialtyId)) errors.push(`${service.id}: invalid specialtyId.`); requireRef(errors, e.contractRecords, service.currentContractId, `${service.id}.currentContractId`); for (const id of service.servicePeriodIds ?? []) requireRef(errors, e.servicePeriodRecords, id, `${service.id}.servicePeriodIds`); }
   for (const record of Object.values(e.contractRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.contracts.has(record.contractDefinitionId)) errors.push(`${record.id}: invalid contractDefinitionId.`); if (!registries.components.has(record.componentId)) errors.push(`${record.id}: invalid componentId.`); if (!registries.specialties.has(record.specialtyId)) errors.push(`${record.id}: invalid specialtyId.`); }
   for (const record of Object.values(e.servicePeriodRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.branches.has(record.branchId)) errors.push(`${record.id}: invalid branchId.`); if (!registries.components.has(record.componentId)) errors.push(`${record.id}: invalid componentId.`); if (!registries.specialties.has(record.specialtyId)) errors.push(`${record.id}: invalid specialtyId.`); }
   for (const record of Object.values(e.reenlistmentOfferRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.contracts.has(record.contractDefinitionId)) errors.push(`${record.id}: invalid contractDefinitionId.`); }
   for (const record of Object.values(e.assignmentRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`); }
-  for (const record of Object.values(e.promotionRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.ranks.has(record.rankId)) errors.push(`${record.id}: invalid rankId.`); }
-  for (const record of Object.values(e.qualificationRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.qualifications.has(record.qualificationId)) errors.push(`${record.id}: invalid qualificationId.`); if (record.schoolId != null && !registries.schools.has(record.schoolId)) errors.push(`${record.id}: invalid schoolId.`); }
-  for (const record of Object.values(e.awardRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.awards.has(record.awardId)) errors.push(`${record.id}: invalid awardId.`); }
+  for (const record of Object.values(e.promotionRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.ranks.has(record.rankId)) errors.push(`${record.id}: invalid rankId.`);
+    if (record.previousRankId != null && !registries.ranks.has(record.previousRankId)) errors.push(`${record.id}: invalid previousRankId.`);
+    if (!record.effectiveDate || Number.isNaN(Date.parse(`${record.effectiveDate}T00:00:00Z`))) errors.push(`${record.id}: invalid effectiveDate.`);
+  }
+  for (const record of Object.values(e.qualificationRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.qualifications.has(record.qualificationId)) errors.push(`${record.id}: invalid qualificationId.`);
+    if (record.schoolId != null && !registries.schools.has(record.schoolId)) errors.push(`${record.id}: invalid schoolId.`);
+    if (record.score != null && !Number.isFinite(Number(record.score))) errors.push(`${record.id}: invalid qualification score.`);
+    if (record.maxScore != null && (!Number.isFinite(Number(record.maxScore)) || Number(record.maxScore) <= 0)) errors.push(`${record.id}: invalid qualification maxScore.`);
+    if (record.score != null && record.maxScore != null && (Number(record.score) < 0 || Number(record.score) > Number(record.maxScore))) errors.push(`${record.id}: qualification score outside range.`);
+  }
+  for (const record of Object.values(e.qualificationAttemptRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.qualifications.has(record.qualificationId)) errors.push(`${record.id}: invalid qualificationId.`);
+    if (!Number.isFinite(Number(record.score)) || Number(record.score) < 0) errors.push(`${record.id}: invalid attempt score.`);
+    if (!Number.isFinite(Number(record.maxScore)) || Number(record.maxScore) <= 0) errors.push(`${record.id}: invalid attempt maxScore.`);
+    if (Number(record.score) > Number(record.maxScore)) errors.push(`${record.id}: attempt score outside range.`);
+    if (typeof record.qualified !== "boolean") errors.push(`${record.id}: qualified must be boolean.`);
+    if (!record.result || typeof record.result !== "string") errors.push(`${record.id}: invalid attempt result.`);
+    if (!Number.isInteger(record.elapsedDay) || record.elapsedDay < 0) errors.push(`${record.id}: invalid elapsedDay.`);
+  }
+  for (const record of Object.values(e.awardRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.awards.has(record.awardId)) errors.push(`${record.id}: invalid awardId.`);
+    if (!record.earnedDate || Number.isNaN(Date.parse(`${record.earnedDate}T00:00:00Z`))) errors.push(`${record.id}: invalid earnedDate.`);
+  }
   for (const record of Object.values(e.militaryEducationRecords ?? {})) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.schools.has(record.schoolId)) errors.push(`${record.id}: invalid schoolId.`); if (!["graduated","failed","recycled","withdrawn"].includes(record.status)) errors.push(`${record.id}: invalid education status ${record.status}.`); }
   for (const record of Object.values(e.relationshipRecords)) { requireRef(errors, e.people, record.personAId, `${record.id}.personAId`); requireRef(errors, e.people, record.personBId, `${record.id}.personBId`); }
   for (const record of Object.values(e.personnelActionRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.fromUnitId, `${record.id}.fromUnitId`); requireRef(errors, e.units, record.toUnitId, `${record.id}.toUnitId`); requireRef(errors, e.billets, record.fromBilletId, `${record.id}.fromBilletId`); requireRef(errors, e.billets, record.toBilletId, `${record.id}.toBilletId`); }

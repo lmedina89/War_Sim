@@ -17,13 +17,23 @@ export function createStateStore(initialState) {
       return indexes;
     },
     replaceState(nextState) {
-      state = structuredClone(nextState);
-      indexes = buildIndexes(state);
+      const candidate = structuredClone(nextState);
+      const candidateIndexes = buildIndexes(candidate);
+      state = candidate;
+      indexes = candidateIndexes;
       notify();
     },
     mutate(mutator, indexGroups = []) {
-      mutator(state);
-      if (indexGroups.length) indexes = refreshIndexes(state, indexes, indexGroups);
+      // Mutations execute against an isolated working copy. The live state is
+      // committed only after both the mutator and requested index refreshes
+      // succeed, preventing a thrown command from leaving half-applied state.
+      const candidate = structuredClone(state);
+      mutator(candidate);
+      const candidateIndexes = indexGroups.length
+        ? refreshIndexes(candidate, indexes, indexGroups)
+        : indexes;
+      state = candidate;
+      indexes = candidateIndexes;
       notify();
     },
     subscribe(listener) {

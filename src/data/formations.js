@@ -5,7 +5,9 @@ export const formationDefinitions = [
     name: "82d Airborne Division",
     shortName: "82d Airborne",
     insigniaId: "ssi_82d_airborne",
-    careerStartEligible: true,
+    careerStartEligible: false,
+    eligibilityNote: "Requires Airborne qualification before assignment to an airborne infantry formation.",
+    requiredQualificationId: "qualification_airborne",
     lineage: [
       { id: "unit_formation_root", name: "82d Airborne Division", echelonId: "echelon_division", organizationDefinitionId: "orgdef_infantry_division" },
       { id: "unit_formation_brigade", name: "1st Brigade", echelonId: "echelon_brigade", organizationDefinitionId: "orgdef_infantry_brigade" },

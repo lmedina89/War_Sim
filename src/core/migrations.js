@@ -508,7 +508,7 @@ export function migratePayload(payload) {
   backfillArmyServiceRibbon(next.worldState);
   ensureNamedInfantryFormation(next.worldState);
   initializeUnitTrainingProfiles(next.worldState);
-  next.gameVersion = "0.4.3.2.2";
-  next.worldState.gameVersion = "0.4.3.2.2";
+  next.gameVersion = "0.4.3.3";
+  next.worldState.gameVersion = "0.4.3.3";
   return next;
 }

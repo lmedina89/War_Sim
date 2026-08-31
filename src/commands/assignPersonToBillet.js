@@ -26,11 +26,12 @@ export function assignPersonToBillet(store, registries, personId, billetId) {
       }
     }
 
-    billet.assignedPersonId = personId;
-    billet.status = "filled";
+    const targetBillet = draft.entities.billets[billetId];
+    targetBillet.assignedPersonId = personId;
+    targetBillet.status = "filled";
 
     draftPerson.affiliation.billetId = billetId;
-    draftPerson.affiliation.unitId = billet.unitId;
+    draftPerson.affiliation.unitId = targetBillet.unitId;
   }, ["people", "billets"]);
 
   return { ok: true, code: "ASSIGNED", personId, billetId };

@@ -5,6 +5,12 @@ function daysBetween(startIso, endIso) {
 }
 
 export function findNextRank(registries, currentRank) {
+  if (!currentRank) return null;
+  if (Object.prototype.hasOwnProperty.call(currentRank, "promotionTargetRankId")) {
+    return currentRank.promotionTargetRankId && registries.ranks.has(currentRank.promotionTargetRankId)
+      ? registries.ranks.get(currentRank.promotionTargetRankId)
+      : null;
+  }
   return registries.ranks.values().find(rank =>
     rank.branchId === currentRank.branchId &&
     rank.category === currentRank.category &&
@@ -19,10 +25,13 @@ export function evaluatePromotionEligibility(state, indexes, registries, personI
   const currentRank = registries.ranks.get(person.affiliation.rankId);
   const nextRank = findNextRank(registries, currentRank);
   if (!nextRank) {
-    return { eligible: false, nextRank: null, reasons: ["No higher rank is defined in this build."], progress: {} };
+    return { eligible: false, nextRank: null, reasons: [currentRank.terminalReason ?? "No higher rank is defined in this build."], progress: {} };
+  }
+  if (!currentRank.promotionRequirements) {
+    return { eligible: false, nextRank, reasons: ["Promotion requirements are not implemented for this grade."], progress: {} };
   }
 
-  const requirements = currentRank.promotionRequirements ?? {};
+  const requirements = currentRank.promotionRequirements;
   const serviceDays = daysBetween(person.career.enlistmentDate, state.world.date);
   const promotionIds = indexes.promotionsByPersonId.get(personId) ?? [];
   const latestPromotion = promotionIds
@@ -37,20 +46,12 @@ export function evaluatePromotionEligibility(state, indexes, registries, personI
   );
 
   const reasons = [];
-  if (person.career.experience < (requirements.minimumExperience ?? 0)) {
-    reasons.push(`Experience ${person.career.experience}/${requirements.minimumExperience}`);
-  }
-  if (serviceDays < (requirements.minimumTimeInServiceDays ?? 0)) {
-    reasons.push(`Time in service ${serviceDays}/${requirements.minimumTimeInServiceDays} days`);
-  }
-  if (gradeDays < (requirements.minimumTimeInGradeDays ?? 0)) {
-    reasons.push(`Time in grade ${gradeDays}/${requirements.minimumTimeInGradeDays} days`);
-  }
+  if (person.career.experience < (requirements.minimumExperience ?? 0)) reasons.push(`Experience ${person.career.experience}/${requirements.minimumExperience}`);
+  if (serviceDays < (requirements.minimumTimeInServiceDays ?? 0)) reasons.push(`Time in service ${serviceDays}/${requirements.minimumTimeInServiceDays} days`);
+  if (gradeDays < (requirements.minimumTimeInGradeDays ?? 0)) reasons.push(`Time in grade ${gradeDays}/${requirements.minimumTimeInGradeDays} days`);
 
   const missingQualifications = (requirements.requiredQualificationIds ?? []).filter(id => !heldQualifications.has(id));
-  if (missingQualifications.length) {
-    reasons.push(`Missing qualification: ${missingQualifications.map(id => registries.qualifications.get(id).name).join(", ")}`);
-  }
+  if (missingQualifications.length) reasons.push(`Missing qualification: ${missingQualifications.map(id => registries.qualifications.get(id).name).join(", ")}`);
 
   return {
     eligible: reasons.length === 0,
