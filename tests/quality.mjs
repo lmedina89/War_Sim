@@ -107,7 +107,7 @@ assert.ok(registries.eventTables.size >= 3);
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 12);
-  assert.equal(payload.worldState.gameVersion, "0.4.0");
+  assert.equal(payload.worldState.gameVersion, "0.4.0.1");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);

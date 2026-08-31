@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.0</title>
+  <title>War Sim v0.4.0.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.0</p>
+        <p class="eyebrow">WAR SIM · v0.4.0.1</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -58,7 +58,7 @@
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">SIMULATION</p><h2>Advance Time</h2><p class="muted">Advance the world without performing a focused activity.</p></div><div class="actions time-actions"><button id="advance-1" type="button" class="secondary">1 Day</button><button id="advance-7" type="button" class="secondary">7 Days</button><button id="advance-30" type="button">30 Days</button></div><div class="section-heading compact-heading subheading"><p class="section-kicker">CAREER ACTIONS</p></div><div class="actions action-grid"><button id="promote-player" type="button">Request Promotion</button><button id="airborne-player" type="button" class="secondary">Complete Airborne</button><button id="leadership-player" type="button" class="secondary">Complete BLC</button></div></article>
         </section>
 
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">AFTER ACTION</p><h2>Recent Training</h2></div><div id="activity-history" class="activity-feed"></div></section>
+        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">AFTER ACTION</p><h2>Activity Log</h2><p class="muted">Tap an entry to review the full after-action report.</p></div><div id="activity-history" class="activity-feed"></div></section>
 
         <section class="dashboard-grid">
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFILE</p><h2>Career</h2></div><div id="career-card"></div></article>
@@ -70,14 +70,14 @@
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RETENTION</p><h2>Reenlistment</h2><p class="muted">Options open during the final 180 days of your active contract.</p></div><button id="review-reenlistment" type="button">Review Reenlistment Options</button><div id="reenlistment-offers"></div></article>
         </section>
 
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RECENT</p><h2>Activity</h2></div><div id="recent-activity" class="activity-feed"></div></section>
+        
 
         <section class="dashboard-grid">
           <article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article>
-          <article class="panel"><div class="panel-head"><h2>Career Inbox</h2><span id="unread-badge" class="badge" hidden></span></div><div id="career-inbox"></div></article>
+          <article class="panel"><div class="panel-head"><div><p class="section-kicker">NOTIFICATIONS</p><h2>Inbox</h2></div><span id="unread-badge" class="badge" hidden></span></div><div class="inbox-actions"><button id="mark-all-read" type="button" class="secondary compact-button">Mark All Read</button><button id="clear-read" type="button" class="secondary compact-button">Clear Read</button></div><div id="career-inbox"></div></article>
         </section>
 
-        <details class="panel"><summary>Career Timeline</summary><ol id="career-events" class="timeline"></ol></details>
+        <details class="panel"><summary>Service Record</summary><p class="muted">Permanent career milestones only.</p><ol id="career-events" class="timeline"></ol></details>
       </section>
 
       <section class="game-view" data-view="unit" hidden>
@@ -125,5 +125,6 @@
   <dialog id="person-dialog" class="modal personnel-modal"><div class="modal-card personnel-file-card"><div class="panel-head"><div><p class="eyebrow">PERSONNEL FILE</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-dog-tag" class="dog-tag" aria-label="Military personnel identification plate"></div><div id="person-profile-body" class="personnel-profile-body"></div></div></dialog>
   <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card"><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
   <script type="module" src="./src/app.js"></script>
+<dialog id="result-dialog" class="modal"><div class="modal-card result-card"><div class="panel-head"><div><p id="result-kicker" class="eyebrow">AFTER ACTION REPORT</p><h2 id="result-title">Activity Complete</h2></div><button id="result-close" type="button" class="secondary compact-button">Close</button></div><div id="result-body"></div></div></dialog>
 </body>
 </html>

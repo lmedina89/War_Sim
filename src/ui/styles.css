@@ -228,3 +228,4 @@ body::before {
 .decision-card h3 { margin: 0 0 6px; }
 .decision-card p { margin: 0 0 12px; color: var(--muted); }
 .decision-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.inbox-actions,.notice-actions{display:flex;gap:.55rem;flex-wrap:wrap;margin:.65rem 0 1rem}.notice-actions{margin:.75rem 0 0}.activity-log-button{width:100%;text-align:left;color:inherit;background:var(--surface-2,#14202b);border:1px solid var(--border,#314151);cursor:pointer}.activity-log-button:hover{transform:none}.result-card{max-width:38rem}.result-grade{font-weight:800;letter-spacing:.06em;color:#9dbdff}.aar-event{margin-top:1rem;padding:1rem;border-left:4px solid #80aaff;background:rgba(128,170,255,.08);border-radius:.5rem}.inbox-item .compact-button{min-height:2.25rem;padding:.4rem .7rem}

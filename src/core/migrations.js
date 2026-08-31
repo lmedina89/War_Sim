@@ -290,7 +290,7 @@ export function migratePayload(payload) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.4.0";
-  next.worldState.gameVersion = "0.4.0";
+  next.gameVersion = "0.4.0.1";
+  next.worldState.gameVersion = "0.4.0.1";
   return next;
 }

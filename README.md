@@ -1,6 +1,6 @@
-# War Sim v0.4.0 — Core Gameplay Systems
+# War Sim v0.4.0.1 — Core Gameplay Systems
 
-War Sim v0.4.0 is the first playable-career systems release built on the frozen v0.3.2.3 military organization foundation. The focus is not deployment or tactical combat yet; it is making time, training, skills, decisions, and performance into reusable gameplay systems that later deployment/combat systems can consume.
+War Sim v0.4.0.1 is the first playable-career systems release built on the frozen v0.3.2.3 military organization foundation. The focus is not deployment or tactical combat yet; it is making time, training, skills, decisions, and performance into reusable gameplay systems that later deployment/combat systems can consume.
 
 ## Player-facing gameplay
 
@@ -69,7 +69,7 @@ These records are authoritative and saved. Derived indexes are rebuilt from cano
 
 ## Data-integrity correction included
 
-During the v0.4 audit, the fresh-world generator was found to have a legacy inconsistency: generated NPCs were receiving the player scenario's specialty even though the generation profile already defined billet-specific specialty mappings. v0.4.0 corrects this. Company/platoon officers and administrative billets now resolve specialty through `billetSpecialtyIdsByDefinitionId`, while infantry billets resolve to the infantry specialty.
+During the v0.4 audit, the fresh-world generator was found to have a legacy inconsistency: generated NPCs were receiving the player scenario's specialty even though the generation profile already defined billet-specific specialty mappings. v0.4.0.1 corrects this. Company/platoon officers and administrative billets now resolve specialty through `billetSpecialtyIdsByDefinitionId`, while infantry billets resolve to the infantry specialty.
 
 ## Compatibility
 
@@ -80,7 +80,7 @@ During the v0.4 audit, the fresh-world generator was found to have a legacy inco
 
 ## Quality gates
 
-Before packaging, v0.4.0 passed:
+Before packaging, v0.4.0.1 passed:
 
 - JavaScript syntax validation across all source/test modules
 - full gameplay/regression smoke suite
@@ -108,7 +108,7 @@ See `SOFTWARE_QUALITY_REPORT.md` for the separate QA report.
 
 The v0.4 series remains intentionally staged:
 
-- **v0.4.0** — Core Gameplay Systems (current)
+- **v0.4.0.1** — Core Gameplay Systems (current)
 - **v0.4.1** — Training & Readiness Gameplay
 - **v0.4.2** — Career & Personnel Gameplay
 - **v0.4.3** — Unit Events & Decision Gameplay
@@ -116,3 +116,12 @@ The v0.4 series remains intentionally staged:
 - **v0.5.x** — Actual Deployment Gameplay
 
 The project remains definition/registry driven: definitions describe content, generic services execute rules, canonical records preserve history, indexes serve queries, and UI code does not own simulation state.
+
+## v0.4.0.1 Gameplay Feedback & Information Hierarchy
+- Activity commands now produce an immediate After Action Report with performance grade and recorded stat/skill deltas.
+- Activity Log entries open their durable AAR instead of duplicating the Career Timeline.
+- Repeated identical training within seven world-days has diminishing learning efficiency; fatigue costs are not reduced.
+- Time advancement produces a date-range summary and refuses to skip an unresolved player decision.
+- Career Inbox is now notification-focused with Mark All Read, per-item Clear, and Clear Read controls. Clearing archives notifications rather than deleting canonical history.
+- Career Timeline is relabeled Service Record and remains reserved for durable career milestones.
+- The redundant Recent Activity panel was removed.
