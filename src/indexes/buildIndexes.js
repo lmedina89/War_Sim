@@ -1,84 +1,63 @@
 function addToIndex(map, key, value) {
-  if (key == null) return;
-  let bucket = map.get(key);
-  if (!bucket) { bucket = []; map.set(key, bucket); }
-  bucket.push(value);
+  if (!key) return;
+  if (!map.has(key)) map.set(key, []);
+  map.get(key).push(value);
 }
 
-function peopleGroup(state) {
-  const peopleByUnitId = new Map(), peopleByNationId = new Map(), peopleByStatus = new Map();
-  for (const person of Object.values(state.entities.people)) {
+export function buildIndexes(state) {
+  const unitsByParentId = new Map();
+  const unitsByBranchId = new Map();
+  const billetsByUnitId = new Map();
+  const billetByAssignedPersonId = new Map();
+  const peopleByUnitId = new Map();
+  const peopleByStatus = new Map();
+  const relationshipsByPersonId = new Map();
+  const careerEventsByPersonId = new Map();
+  const qualificationsByPersonId = new Map();
+  const awardsByPersonId = new Map();
+
+  for (const unit of Object.values(state.entities.units ?? {})) {
+    addToIndex(unitsByParentId, unit.parentUnitId ?? "__root__", unit.id);
+    addToIndex(unitsByBranchId, unit.branchId, unit.id);
+  }
+
+  for (const billet of Object.values(state.entities.billets ?? {})) {
+    addToIndex(billetsByUnitId, billet.unitId, billet.id);
+    if (billet.assignedPersonId) billetByAssignedPersonId.set(billet.assignedPersonId, billet.id);
+  }
+
+  for (const person of Object.values(state.entities.people ?? {})) {
     addToIndex(peopleByUnitId, person.affiliation.unitId, person.id);
-    addToIndex(peopleByNationId, person.affiliation.nationId, person.id);
     addToIndex(peopleByStatus, person.condition.status, person.id);
   }
-  return { peopleByUnitId, peopleByNationId, peopleByStatus };
-}
 
-function unitsGroup(state) {
-  const unitsByNationId = new Map(), unitsByParentUnitId = new Map();
-  for (const unit of Object.values(state.entities.units)) {
-    addToIndex(unitsByNationId, unit.nationId, unit.id);
-    addToIndex(unitsByParentUnitId, unit.parentUnitId, unit.id);
+  for (const rel of Object.values(state.entities.relationshipRecords ?? {})) {
+    addToIndex(relationshipsByPersonId, rel.personAId, rel.id);
+    addToIndex(relationshipsByPersonId, rel.personBId, rel.id);
   }
-  return { unitsByNationId, unitsByParentUnitId };
-}
 
-function personHistoryGroup(state) {
-  const maps = {
-    careerEventsByPersonId: new Map(), qualificationsByPersonId: new Map(), awardsByPersonId: new Map(), assignmentsByPersonId: new Map(),
-    promotionsByPersonId: new Map(), deploymentsByPersonId: new Map(), casualtiesByPersonId: new Map(), relationshipsByPersonId: new Map()
-  };
-  for (const record of Object.values(state.entities.careerEvents)) addToIndex(maps.careerEventsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.qualificationRecords)) addToIndex(maps.qualificationsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.awardRecords)) addToIndex(maps.awardsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.assignmentRecords)) addToIndex(maps.assignmentsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.promotionRecords)) addToIndex(maps.promotionsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.deploymentRecords)) addToIndex(maps.deploymentsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.casualtyRecords)) addToIndex(maps.casualtiesByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.relationshipRecords)) {
-    addToIndex(maps.relationshipsByPersonId, record.personAId, record.id);
-    addToIndex(maps.relationshipsByPersonId, record.personBId, record.id);
+  for (const event of Object.values(state.entities.careerEvents ?? {})) {
+    addToIndex(careerEventsByPersonId, event.personId, event.id);
   }
-  return maps;
-}
 
-function equipmentGroup(state) {
-  const equipmentByOwnerId = new Map();
-  for (const item of Object.values(state.entities.equipmentInstances)) addToIndex(equipmentByOwnerId, item.ownerPersonId, item.id);
-  return { equipmentByOwnerId };
-}
-
-function memorialGroup(state) {
-  const memorialByPersonId = new Map();
-  for (const record of Object.values(state.entities.memorialRecords)) memorialByPersonId.set(record.personId, record.id);
-  return { memorialByPersonId };
-}
-
-function notificationGroup(state) {
-  const notificationsByPersonId = new Map(), unreadNotificationsByPersonId = new Map();
-  for (const record of Object.values(state.entities.notificationRecords)) {
-    addToIndex(notificationsByPersonId, record.personId, record.id);
-    if (record.readAtElapsedDay == null) addToIndex(unreadNotificationsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.qualificationRecords ?? {})) {
+    addToIndex(qualificationsByPersonId, record.personId, record.id);
   }
-  return { notificationsByPersonId, unreadNotificationsByPersonId };
-}
 
-function actionGroup(state) {
-  const actionsByActorPersonId = new Map();
-  for (const record of Object.values(state.entities.actionRecords)) addToIndex(actionsByActorPersonId, record.actorPersonId, record.id);
-  return { actionsByActorPersonId };
-}
-
-const GROUP_BUILDERS = Object.freeze({ people: peopleGroup, units: unitsGroup, history: personHistoryGroup, equipment: equipmentGroup, memorial: memorialGroup, notifications: notificationGroup, actions: actionGroup });
-export const ALL_INDEX_GROUPS = Object.freeze(Object.keys(GROUP_BUILDERS));
-export function buildIndexes(state) { return refreshIndexes(state, Object.freeze({}), ALL_INDEX_GROUPS); }
-export function refreshIndexes(state, currentIndexes, groups) {
-  const next = { ...currentIndexes };
-  for (const groupName of new Set(groups)) {
-    const builder = GROUP_BUILDERS[groupName];
-    if (!builder) throw new Error(`Unknown index group: ${groupName}`);
-    Object.assign(next, builder(state));
+  for (const record of Object.values(state.entities.awardRecords ?? {})) {
+    addToIndex(awardsByPersonId, record.personId, record.id);
   }
-  return Object.freeze(next);
+
+  return Object.freeze({
+    unitsByParentId,
+    unitsByBranchId,
+    billetsByUnitId,
+    billetByAssignedPersonId,
+    peopleByUnitId,
+    peopleByStatus,
+    relationshipsByPersonId,
+    careerEventsByPersonId,
+    qualificationsByPersonId,
+    awardsByPersonId
+  });
 }

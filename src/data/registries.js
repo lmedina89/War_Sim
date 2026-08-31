@@ -8,6 +8,9 @@ import { awardDefinitions } from "./awards.js";
 import { schoolDefinitions } from "./schools.js";
 import { qualificationDefinitions } from "./qualifications.js";
 import { simulationTierDefinitions } from "./simulationTiers.js";
+import { echelonDefinitions } from "./echelons.js";
+import { billetDefinitions } from "./billetDefinitions.js";
+import { organizationDefinitions } from "./organizationDefinitions.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -18,5 +21,8 @@ export const registries = Object.freeze({
   awards: createRegistry(awardDefinitions, "awards"),
   schools: createRegistry(schoolDefinitions, "schools"),
   qualifications: createRegistry(qualificationDefinitions, "qualifications"),
-  simulationTiers: createRegistry(simulationTierDefinitions, "simulationTiers")
+  simulationTiers: createRegistry(simulationTierDefinitions, "simulationTiers"),
+  echelons: createRegistry(echelonDefinitions, "echelons"),
+  billets: createRegistry(billetDefinitions, "billets"),
+  organizations: createRegistry(organizationDefinitions, "organizations")
 });
