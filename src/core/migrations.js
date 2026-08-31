@@ -1,6 +1,6 @@
 import { ensureInfantryCompanyStructure, npcIdentityForIndex } from "../services/organizationSeed.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 10;
+export const CURRENT_WORLD_SCHEMA_VERSION = 11;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -166,6 +166,22 @@ function repairLegacyPlayerSquadDuplicates(state) {
 }
 
 
+function migrateWorldV10ToV11(worldState) {
+  const next = structuredClone(worldState);
+  next.world ??= {};
+  next.world.generation ??= {
+    generatorVersion: 0,
+    scenarioId: "career_start_army_active_11b_new_enlistee",
+    generationProfileId: "generation_profile_army_infantry_company_v1",
+    startingBilletId: next.playerPersonId ? (next.entities.people?.[next.playerPersonId]?.affiliation?.billetId ?? null) : (Object.values(next.entities.billets ?? {}).find(b => b.status === "vacant" && b.definitionId === "billet_rifleman")?.id ?? null),
+    generatedAtWorldDate: next.world.date ?? null,
+    legacyWorld: true
+  };
+  next.schemaVersion = 11;
+  next.gameVersion = "0.3.2.1";
+  return next;
+}
+
 function migrateWorldV9ToV10(worldState) {
   const next = structuredClone(worldState);
   next.entities.personnelActionRecords ??= {};
@@ -245,12 +261,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 7) next.worldState = migrateWorldV7ToV8(next.worldState);
   if (next.worldState.schemaVersion === 8) next.worldState = migrateWorldV8ToV9(next.worldState);
   if (next.worldState.schemaVersion === 9) next.worldState = migrateWorldV9ToV10(next.worldState);
+  if (next.worldState.schemaVersion === 10) next.worldState = migrateWorldV10ToV11(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.3.2";
-  next.worldState.gameVersion = "0.3.2";
+  next.gameVersion = "0.3.2.1";
+  next.worldState.gameVersion = "0.3.2.1";
   return next;
 }

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Sim v0.3.2</title>
+  <title>War Sim v0.3.2.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <section class="hero">
-      <p class="eyebrow">WAR SIM · v0.3.2</p>
+      <p class="eyebrow">WAR SIM · v0.3.2.1</p>
       <h1>Military Career</h1>
       <p class="lede">Build a career inside a living military organization.</p>
     </section>
@@ -24,6 +24,7 @@
         <label><span>Component</span><select id="component-select" name="componentId" required></select></label>
         <label><span>Military Specialty / MOS</span><select id="specialty-select" name="specialtyId" required></select></label>
         <label><span>Enlistment Contract</span><select id="contract-select" name="contractDefinitionId" required></select></label>
+        <label><span>World Seed</span><div class="seed-control"><input id="world-seed" name="seed" type="number" min="1" max="4294967295" inputmode="numeric" required /><button id="reroll-seed" type="button" class="secondary">New Seed</button></div><small class="muted">Same seed = same generated company, roster, and starting vacancy.</small></label>
         <button type="submit">Begin Career</button>
       </form>
       <div class="setup-actions"><button id="load-from-start" type="button" class="secondary">Load Existing Career</button></div>

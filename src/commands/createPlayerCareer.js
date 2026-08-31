@@ -1,8 +1,8 @@
 import { createEntityId } from "../core/ids.js";
-import { seedFromText } from "../core/rng.js";
 import { commandResult } from "../core/commandResult.js";
 import { addMonthsIso } from "../services/dateMath.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { createInitialWorldState } from "../state/initialState.js";
 
 function normalizeName(value, label) {
   const normalized = String(value ?? "").normalize("NFC").trim().replace(/\s+/g, " ");
@@ -12,8 +12,7 @@ function normalizeName(value, label) {
 }
 
 export function createPlayerCareer(store, registries, input) {
-  const state = store.getState();
-  if (state.playerPersonId) throw new Error("A player career already exists. Start a new career first.");
+  if (store.getState().playerPersonId) throw new Error("A player career already exists. Start a new career first.");
 
   const firstName = normalizeName(input.firstName, "First name"), lastName = normalizeName(input.lastName, "Last name");
   const branch = registries.branches.get(input.branchId), component = registries.components.get(input.componentId), specialty = registries.specialties.get(input.specialtyId), contractDef = registries.contracts.get(input.contractDefinitionId);
@@ -21,15 +20,26 @@ export function createPlayerCareer(store, registries, input) {
   if (!specialty.careerAvailable) throw new Error(`${specialty.code} ${specialty.name} is defined but its unit/training pipeline is not enabled yet.`);
   if (component.branchId !== branch.id || specialty.branchId !== branch.id || contractDef.branchId !== branch.id) throw new Error("Career selections are not compatible.");
 
-  const rank = registries.ranks.get(branch.startingRankId), startingRole = registries.roles.get(specialty.startingRoleId || branch.startingRoleId);
+  const scenario = registries.careerStartScenarios.values().find(item => item.enabled && item.branchId === branch.id && item.componentId === component.id && item.specialtyId === specialty.id);
+  if (!scenario) throw new Error("No enabled career-start scenario matches those selections.");
+  if (!scenario.allowedContractDefinitionIds.includes(contractDef.id)) throw new Error(`${contractDef.name} is not allowed for ${scenario.name}.`);
+  const requestedSeed = Number.isInteger(input.seed) ? (input.seed >>> 0) : (store.getState().world.seed >>> 0);
+  const currentGeneration = store.getState().world.generation;
+  if (store.getState().world.seed !== requestedSeed || currentGeneration?.scenarioId !== scenario.id) {
+    store.replaceState(createInitialWorldState({ seed: requestedSeed, scenarioId: scenario.id }));
+  }
+  const state = store.getState();
+
+  const rank = registries.ranks.get(scenario.startingRankId || branch.startingRankId), startingRole = registries.roles.get(specialty.startingRoleId || branch.startingRoleId);
   const unitId = state.world.careerStartUnitByBranchId[branch.id], unit = state.entities.units[unitId];
   if (!unit) throw new Error(`No starting unit is configured for ${branch.name}.`);
-  const billet = Object.values(state.entities.billets).find(candidate => candidate.unitId === unitId && candidate.status === "vacant" && specialty.eligibleBilletDefinitionIds.includes(candidate.definitionId) && registries.billets.get(candidate.definitionId).roleId === startingRole.id);
+  const designatedStartingBilletId = state.world.generation?.startingBilletId;
+  const billet = (designatedStartingBilletId ? state.entities.billets[designatedStartingBilletId] : null) ?? Object.values(state.entities.billets).find(candidate => candidate.unitId === unitId && candidate.status === "vacant" && specialty.eligibleBilletDefinitionIds.includes(candidate.definitionId) && registries.billets.get(candidate.definitionId).roleId === startingRole.id);
+  if (billet && (billet.status !== "vacant" || !scenario.eligibleStartingBilletDefinitionIds.includes(billet.definitionId))) throw new Error("Generated starting billet is not valid for this career-start scenario.");
   if (!billet) throw new Error(`No vacant ${startingRole.name} billet exists in ${unit.name}.`);
 
   let personId, noticeId;
   store.mutate(draft => {
-    draft.world.seed = Number.isInteger(input.seed) ? (input.seed >>> 0) : seedFromText(`${firstName}|${lastName}|${draft.world.date}`); draft.world.rngState = draft.world.seed;
     personId = createEntityId(draft, "pers"); const serviceRecordId = createEntityId(draft, "service"), servicePeriodId = createEntityId(draft, "period"), contractId = createEntityId(draft, "contract"), loadoutId = createEntityId(draft, "loadout"), equipmentInstanceId = createEntityId(draft, "eq"), assignmentId = createEntityId(draft, "assign"), enlistmentEventId = createEntityId(draft, "career"), orderId = createEntityId(draft, "order");
     const bonus = Math.round((specialty.enlistmentBonusBase || 0) * contractDef.bonusMultiplier / 500) * 500, contractEndDate = addMonthsIso(draft.world.date, contractDef.termMonths);
 

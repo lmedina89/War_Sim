@@ -136,3 +136,5 @@ details.panel[open] summary { margin-bottom: 14px; }
 .admin-summary { margin: 0 0 1rem; }
 .admin-grid article { min-width: 0; }
 .admin-grid h3 { margin-top: 0; }
+.seed-control{display:flex;gap:.65rem;align-items:stretch}.seed-control input{min-width:0;flex:1}.seed-control button{white-space:nowrap}
+@media(max-width:640px){.seed-control{flex-direction:column}.seed-control button{width:100%}}

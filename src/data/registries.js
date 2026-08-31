@@ -14,6 +14,8 @@ import { organizationDefinitions } from "./organizationDefinitions.js";
 import { componentDefinitions } from "./components.js";
 import { specialtyDefinitions } from "./specialties.js";
 import { contractDefinitions } from "./contracts.js";
+import { generationProfileDefinitions } from "./generationProfiles.js";
+import { careerStartScenarioDefinitions } from "./careerStartScenarios.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -30,5 +32,7 @@ export const registries = Object.freeze({
   organizations: createRegistry(organizationDefinitions, "organizations"),
   components: createRegistry(componentDefinitions, "components"),
   specialties: createRegistry(specialtyDefinitions, "specialties"),
-  contracts: createRegistry(contractDefinitions, "contracts")
+  contracts: createRegistry(contractDefinitions, "contracts"),
+  generationProfiles: createRegistry(generationProfileDefinitions, "generationProfiles"),
+  careerStartScenarios: createRegistry(careerStartScenarioDefinitions, "careerStartScenarios")
 });

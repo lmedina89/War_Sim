@@ -50,5 +50,30 @@ export function validateDefinitions(registries) {
     }
   }
 
+  for (const profile of registries.generationProfiles.values()) {
+    if (!registries.branches.has(profile.branchId)) errors.push(`${profile.id}: invalid branchId ${profile.branchId}.`);
+    if (!Array.isArray(profile.units) || profile.units.length === 0) errors.push(`${profile.id}: generation profile must define units.`);
+    const unitIds = new Set(profile.units.map(unit => unit.id));
+    if (!unitIds.has(profile.rootUnitId)) errors.push(`${profile.id}: missing rootUnitId ${profile.rootUnitId}.`);
+    for (const unit of profile.units) {
+      if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${profile.id}/${unit.id}: invalid organizationDefinitionId ${unit.organizationDefinitionId}.`);
+      if (unit.parentUnitId && !unitIds.has(unit.parentUnitId)) errors.push(`${profile.id}/${unit.id}: invalid parentUnitId ${unit.parentUnitId}.`);
+    }
+    for (const [billetId, rankId] of Object.entries(profile.billetRankIdsByDefinitionId ?? {})) {
+      if (!registries.billets.has(billetId)) errors.push(`${profile.id}: invalid billet rank mapping ${billetId}.`);
+      if (!registries.ranks.has(rankId)) errors.push(`${profile.id}: invalid rank mapping ${rankId}.`);
+    }
+  }
+
+  for (const scenario of registries.careerStartScenarios.values()) {
+    if (!registries.branches.has(scenario.branchId)) errors.push(`${scenario.id}: invalid branchId ${scenario.branchId}.`);
+    if (!registries.components.has(scenario.componentId)) errors.push(`${scenario.id}: invalid componentId ${scenario.componentId}.`);
+    if (!registries.specialties.has(scenario.specialtyId)) errors.push(`${scenario.id}: invalid specialtyId ${scenario.specialtyId}.`);
+    if (!registries.generationProfiles.has(scenario.generationProfileId)) errors.push(`${scenario.id}: invalid generationProfileId ${scenario.generationProfileId}.`);
+    if (!registries.ranks.has(scenario.startingRankId)) errors.push(`${scenario.id}: invalid startingRankId ${scenario.startingRankId}.`);
+    for (const id of scenario.eligibleStartingBilletDefinitionIds ?? []) if (!registries.billets.has(id)) errors.push(`${scenario.id}: invalid starting billet ${id}.`);
+    for (const id of scenario.allowedContractDefinitionIds ?? []) if (!registries.contracts.has(id)) errors.push(`${scenario.id}: invalid allowed contract ${id}.`);
+  }
+
   return { ok: errors.length === 0, errors };
 }
