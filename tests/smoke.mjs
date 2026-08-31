@@ -1,41 +1,36 @@
 import assert from "node:assert/strict";
 import { registries } from "../src/data/registries.js";
 import { createInitialWorldState } from "../src/state/initialState.js";
-import { createStateStore } from "../src/core/stateStore.js";
-import { validateWorldState } from "../src/core/validator.js";
-import { validateDefinitions } from "../src/core/definitionValidator.js";
-import { createPlayerCareer } from "../src/commands/createPlayerCareer.js";
-import { grantTrainingExperience, advanceWorldDays } from "../src/commands/advanceCareer.js";
-import { promotePerson } from "../src/commands/promotePerson.js";
-import { completeSchool } from "../src/commands/awardQualification.js";
-import { recordCasualty } from "../src/commands/recordCasualty.js";
-import { nextRandom } from "../src/core/rng.js";
-import { migratePayload } from "../src/core/migrations.js";
+import { buildIndexes } from "../src/indexes/buildIndexes.js";
+import { validateDefinitions, validateWorldState } from "../src/core/validator.js";
+import { selectCurrentSquad } from "../src/selectors/selectCurrentSquad.js";
+import { selectOrganizationView } from "../src/selectors/selectOrganizationView.js";
 
-assert.equal(validateDefinitions(registries).ok, true);
-const store = createStateStore(createInitialWorldState({ seed: 12345 }));
-assert.equal(validateWorldState(store.getState(), registries).ok, true);
-const result = createPlayerCareer(store, registries, { firstName: "Test", lastName: "Player", branchId: "branch_army", seed: 12345 });
-const playerId = result.data.personId;
-assert.equal(result.code, "career_created");
-assert.equal(store.getState().entities.people[playerId].identity.displayName, "Test Player");
-assert.equal(store.getIndexes().relationshipsByPersonId.get(playerId).length, 8);
-assert.equal(store.getIndexes().notificationsByPersonId.get(playerId).length, 1);
-assert.ok(store.getIndexes().actionsByActorPersonId.get(playerId).length >= 1);
+const defs = validateDefinitions(registries);
+assert.equal(defs.ok, true, defs.errors.join("\n"));
 
-grantTrainingExperience(store, playerId, 250); advanceWorldDays(store, 30);
-const promo = promotePerson(store, registries, playerId); assert.equal(promo.code, "promoted");
-const school = completeSchool(store, registries, playerId, "school_airborne"); assert.equal(school.notifications.length, 2);
-assert.equal(store.getIndexes().qualificationsByPersonId.get(playerId).length, 1);
-assert.equal(store.getIndexes().awardsByPersonId.get(playerId).length, 1);
+const state = createInitialWorldState({ firstName: "Luis", lastName: "Medina" });
+const validation = validateWorldState(state, registries);
+assert.equal(validation.ok, true, validation.errors.join("\n"));
 
-const a = createInitialWorldState({ seed: 99 }), b = createInitialWorldState({ seed: 99 });
-assert.equal(nextRandom(a), nextRandom(b)); assert.equal(nextRandom(a), nextRandom(b));
+const indexes = buildIndexes(state);
+assert.equal(indexes.unitsByParentId.get("unit_company_001")[0], "unit_platoon_001");
+assert.equal(indexes.unitsByParentId.get("unit_platoon_001")[0], "unit_sq_001");
+assert.equal(indexes.billetsByUnitId.get("unit_sq_001").length, 9);
+assert.equal(indexes.billetByAssignedPersonId.get("pers_player"), "billet_009");
 
-recordCasualty(store, "pers_1009", { classification: "kia", circumstances: "test" });
-assert.ok(store.getIndexes().memorialByPersonId.get("pers_1009"));
-assert.equal(validateWorldState(store.getState(), registries).ok, true);
+const squad = selectCurrentSquad(state, indexes, registries, "pers_player");
+assert.equal(squad.authorizedStrength, 9);
+assert.equal(squad.assignedStrength, 9);
+assert.equal(squad.vacancies, 0);
+assert.equal(squad.members.find(m => m.personId === "pers_player").role, "Rifleman");
 
-const oldPayload = { saveFormatVersion: 2, savedAt: "2026-01-01T00:00:00.000Z", gameVersion: "0.1.1", worldState: (() => { const s = createInitialWorldState(); s.schemaVersion = 2; s.gameVersion = "0.1.1"; delete s.world.clock; delete s.world.seed; delete s.world.rngState; delete s.world.nextEntitySequence; delete s.entities.notificationRecords; delete s.entities.actionRecords; return s; })() };
-const migrated = migratePayload(oldPayload); assert.equal(migrated.saveFormatVersion, 3); assert.equal(migrated.worldState.schemaVersion, 3);
-console.log("War Sim v0.1.2 smoke test passed");
+const company = selectOrganizationView(state, indexes, registries, "unit_company_001");
+assert.equal(company.echelon, "Company");
+assert.deepEqual(company.childUnitIds, ["unit_platoon_001"]);
+
+const platoon = selectOrganizationView(state, indexes, registries, "unit_platoon_001");
+assert.equal(platoon.echelon, "Platoon");
+assert.deepEqual(platoon.childUnitIds, ["unit_sq_001"]);
+
+console.log("War Sim v0.2.0 smoke test passed");
