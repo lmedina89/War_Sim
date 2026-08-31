@@ -8,7 +8,10 @@ import { createInitialWorldState } from "./state/initialState.js";
 import { createPlayerCareer } from "./commands/createPlayerCareer.js";
 import { promotePerson } from "./commands/promotePerson.js";
 import { completeSchool } from "./commands/awardQualification.js";
-import { advanceWorldDays, grantTrainingExperience } from "./commands/advanceCareer.js";
+import { advanceWorldDays } from "./commands/advanceCareer.js";
+import { performActivity } from "./commands/performActivity.js";
+import { selectGameplay } from "./selectors/selectGameplay.js";
+import { resolveDecision } from "./commands/resolveDecision.js";
 import { markNotificationRead } from "./commands/markNotificationRead.js";
 import { selectCurrentSquad } from "./selectors/selectCurrentSquad.js";
 import { selectCareerRecord } from "./selectors/selectCareerRecord.js";
@@ -28,10 +31,10 @@ let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null,
 
 const $ = selector => document.querySelector(selector);
 const els = {
-  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), recentActivity: $("#recent-activity"),
+  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), recentActivity: $("#recent-activity"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"),
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
   squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), returnMyUnit: $("#return-my-unit"), viewSelectedPersonnel: $("#view-selected-personnel"), personnelMyUnit: $("#personnel-my-unit"), personDogTag: $("#person-dog-tag"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), status: $("#status-message"),
-  train: $("#train-player"), advanceTime: $("#advance-time"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
+  advance1: $("#advance-1"), advance7: $("#advance-7"), advance30: $("#advance-30"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
   achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
   saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
   confirmDialog: $("#confirm-dialog"), confirmTitle: $("#confirm-title"), confirmMessage: $("#confirm-message"), confirmOk: $("#confirm-ok")
@@ -121,7 +124,10 @@ function showPersonProfile(personId) {
   for (const [label, value] of [["SERVICE", branch?.name ?? "—"], ["RANK", `${rank.abbreviation} / ${rank.payGrade}`], ["SPECIALTY", specialty ? `${specialty.code} ${specialty.name}` : "—"], ["ASSIGNMENT", unit?.name ?? "Unassigned"]]) {
     const row=document.createElement("div"); row.className="dog-tag-row"; const key=document.createElement("span"), val=document.createElement("strong"); key.textContent=label; val.textContent=value; row.append(key,val); els.personDogTag.appendChild(row);
   }
-  els.personProfileBody.replaceChildren(statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience));
+  const profileRows=[statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience)];
+  const gameplay=selectGameplay(state, indexes, registries, person.id);
+  for (const skill of gameplay?.skills ?? []) profileRows.push(statLine(skill.name, `${skill.value}/100`));
+  els.personProfileBody.replaceChildren(...profileRows);
   els.personDialog.showModal();
 }
 function organizationChain(state, indexes, unitId) {
@@ -191,6 +197,37 @@ function renderServiceCareer(state, indexes, personId) {
   renderList(els.careerFramework, history, "No service periods recorded.");
 }
 
+
+function renderGameplay(state, indexes, personId) {
+  const view = selectGameplay(state, indexes, registries, personId);
+  if (!view) return;
+  els.skillSummary.replaceChildren();
+  for (const skill of view.skills) {
+    const row = document.createElement("div"); row.className = "skill-row"; row.appendChild(progressRow(skill.name, skill.value, 100)); els.skillSummary.appendChild(row);
+  }
+  els.pendingDecisions.replaceChildren();
+  for (const decision of view.pendingDecisions) {
+    const card=document.createElement("article"); card.className="decision-card"; const h=document.createElement("h3"); h.textContent=decision.title; const p=document.createElement("p"); p.textContent=decision.message; const actions=document.createElement("div"); actions.className="decision-choices";
+    for (const choice of decision.choices) { const b=document.createElement("button"); b.type="button"; b.textContent=choice.label; b.addEventListener("click",()=>runCommand(()=>resolveDecision(store,registries,personId,decision.id,choice.id))); actions.appendChild(b); }
+    card.append(h,p,actions); els.pendingDecisions.appendChild(card);
+  }
+  els.activityOptions.replaceChildren();
+  for (const activity of view.activities) {
+    const card=document.createElement("article"); card.className="activity-option";
+    const meta=document.createElement("div"); meta.className="activity-meta"; meta.textContent=`${activity.durationDays} DAY${activity.durationDays===1?"":"S"}`;
+    const h=document.createElement("h3"); h.textContent=activity.name;
+    const p=document.createElement("p"); p.textContent=activity.description;
+    const button=document.createElement("button"); button.type="button"; button.textContent=activity.eligible ? `Conduct ${activity.shortName}` : "Unavailable"; button.disabled=!activity.eligible; if(!activity.eligible) button.title=activity.reasons.join(", ");
+    button.addEventListener("click",()=>runCommand(()=>performActivity(store,registries,personId,activity.id)));
+    card.append(meta,h,p,button); els.activityOptions.appendChild(card);
+  }
+  els.activityHistory.replaceChildren();
+  if (!view.recentActivities.length) { const p=document.createElement("p"); p.className="muted"; p.textContent="No focused training activities completed yet."; els.activityHistory.appendChild(p); }
+  else for (const record of view.recentActivities) {
+    const def=registries.activities.get(record.activityDefinitionId), item=document.createElement("article"); item.className="activity-item training-record"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); text.textContent=`${def.name} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event recorded":""}`; item.append(time,text); els.activityHistory.appendChild(item);
+  }
+}
+
 function renderAdministration(state, indexes) {
   const view = selectPersonnelAdministration(state, indexes, registries);
   els.administrationSummary.replaceChildren();
@@ -237,6 +274,7 @@ function render() {
   if (!recentEvents.length) { const p=document.createElement("p"); p.className="muted"; p.textContent="No recent career activity."; els.recentActivity.appendChild(p); }
   else for (const event of recentEvents) { const item=document.createElement("article"); item.className="activity-item"; const time=document.createElement("time"); time.textContent=event.date; const text=document.createElement("span"); text.textContent=event.label; item.append(time,text); els.recentActivity.appendChild(item); }
   renderInbox(state, indexes, state.playerPersonId);
+  renderGameplay(state, indexes, state.playerPersonId);
   renderOrganization(state, indexes, state.playerPersonId);
   renderServiceCareer(state, indexes, state.playerPersonId);
   renderAdministration(state, indexes);
@@ -274,8 +312,9 @@ function renderSaveManager(mode) {
 function openSaveManager(mode) { renderSaveManager(mode); els.saveDialog.showModal(); }
 
 els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
-els.train.addEventListener("click", () => runCommand(() => grantTrainingExperience(store, store.getState().playerPersonId, 250)));
-els.advanceTime.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
+els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
+els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 7)));
+els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
 els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
 els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
 els.airborne.addEventListener("click", () => runCommand(() => completeSchool(store, registries, store.getState().playerPersonId, "school_airborne")));

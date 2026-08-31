@@ -16,6 +16,9 @@ import { specialtyDefinitions } from "./specialties.js";
 import { contractDefinitions } from "./contracts.js";
 import { generationProfileDefinitions } from "./generationProfiles.js";
 import { careerStartScenarioDefinitions } from "./careerStartScenarios.js";
+import { skillDefinitions } from "./skills.js";
+import { activityDefinitions } from "./activities.js";
+import { gameplayEventDefinitions, eventTableDefinitions } from "./gameplayEvents.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -34,5 +37,9 @@ export const registries = Object.freeze({
   specialties: createRegistry(specialtyDefinitions, "specialties"),
   contracts: createRegistry(contractDefinitions, "contracts"),
   generationProfiles: createRegistry(generationProfileDefinitions, "generationProfiles"),
-  careerStartScenarios: createRegistry(careerStartScenarioDefinitions, "careerStartScenarios")
+  careerStartScenarios: createRegistry(careerStartScenarioDefinitions, "careerStartScenarios"),
+  skills: createRegistry(skillDefinitions, "skills"),
+  activities: createRegistry(activityDefinitions, "activities"),
+  gameplayEvents: createRegistry(gameplayEventDefinitions, "gameplayEvents"),
+  eventTables: createRegistry(eventTableDefinitions, "eventTables")
 });

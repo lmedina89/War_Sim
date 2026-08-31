@@ -11,6 +11,9 @@ import { validateWorldState } from "../src/core/validator.js";
 import { createStateStore } from "../src/core/stateStore.js";
 import { createPlayerCareer } from "../src/commands/createPlayerCareer.js";
 import { saveToSlot, loadFromSlot, listSaveSlots } from "../src/core/saveSystem.js";
+import { performActivity } from "../src/commands/performActivity.js";
+import { selectGameplay } from "../src/selectors/selectGameplay.js";
+import { migratePayload } from "../src/core/migrations.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const srcRoot = path.join(root, "src");
@@ -60,6 +63,12 @@ for (const file of runtimeFiles) {
   assert.doesNotMatch(source, forbiddenConcreteIds, `${path.relative(root,file)} contains concrete content IDs that belong in definitions/profiles`);
 }
 
+// Selector efficiency guard: hot UI selectors must not scan the entire people collection.
+for (const file of walk(path.join(srcRoot, "selectors")).filter(file => file.endsWith(".js"))) {
+  const source = fs.readFileSync(file, "utf8");
+  assert.doesNotMatch(source, /Object\.values\(state\.entities\.people/, `${path.relative(root,file)} performs a global people scan instead of using indexes`);
+}
+
 // Definition and generated-world integrity across a broader seed sweep than smoke tests.
 const defs = validateDefinitions(registries);
 assert.equal(defs.ok, true, defs.errors.join("\n"));
@@ -69,6 +78,39 @@ for (let seed=1001; seed<=1300; seed++) {
   assert.equal(validation.ok, true, `seed ${seed}: ${validation.errors.join(" | ")}`);
   assert.equal(Object.keys(world.entities.billets).length, 91);
   assert.equal(Object.keys(world.entities.people).length, 90);
+}
+
+// v0.4 core gameplay integrity: registry-driven skills/activities and deterministic activity outcomes.
+assert.equal(registries.skills.size, 5);
+assert.ok(registries.activities.size >= 5);
+assert.ok(registries.gameplayEvents.size >= 4);
+assert.ok(registries.eventTables.size >= 3);
+{
+  const seed = 404040;
+  const a = createStateStore(createInitialWorldState({ seed }));
+  const b = createStateStore(createInitialWorldState({ seed }));
+  const input = { firstName:"Deterministic", lastName:"Activity", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed };
+  createPlayerCareer(a, registries, input); createPlayerCareer(b, registries, input);
+  for (let i=0;i<20;i++) { performActivity(a, registries, a.getState().playerPersonId, "activity_pt"); performActivity(b, registries, b.getState().playerPersonId, "activity_pt"); }
+  assert.deepEqual(a.getState(), b.getState(), "identical seeds + identical activities must remain deterministic");
+  const gameplay = selectGameplay(a.getState(), a.getIndexes(), registries, a.getState().playerPersonId);
+  assert.equal(gameplay.recentActivities.length, 5);
+  assert.ok(gameplay.skills.find(x=>x.id==="skill_fitness").value > 35);
+  assert.equal(validateWorldState(a.getState(), registries).ok, true);
+}
+
+// Current schema migration preserves v0.3.2.3 careers and adds skill profiles without regeneration.
+{
+  const legacy = createInitialWorldState({ seed: 606060 });
+  legacy.schemaVersion = 11; legacy.gameVersion = "0.3.2.3";
+  delete legacy.entities.skillProfiles; delete legacy.entities.activityRecords; delete legacy.entities.performanceRecords; delete legacy.entities.gameplayEventRecords;
+  const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
+  const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
+  assert.equal(payload.worldState.schemaVersion, 12);
+  assert.equal(payload.worldState.gameVersion, "0.4.0");
+  assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
+  assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
+  assert.equal(validateWorldState(payload.worldState, registries).ok, true);
 }
 
 // Browser-save round trip with an in-memory localStorage stand-in.
@@ -119,5 +161,9 @@ console.log(JSON.stringify({
   importGraphIntegrity:true,
   renderContainment:true,
   independentUnitPersonnelState:true,
-  militaryPresentationDom:true
+  militaryPresentationDom:true,
+  gameplayDefinitions:true,
+  deterministicActivities:true,
+  selectorIndexAudit:true,
+  schema12Migration:true
 }, null, 2));

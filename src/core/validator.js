@@ -3,7 +3,7 @@ const REQUIRED_STORES = [
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
-  "personnelActionRecords","replacementRequestRecords"
+  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords"
 ];
 
 function requireRef(errors, store, id, label) { if (id != null && !store[id]) errors.push(`${label}: missing reference ${id}.`); }
@@ -11,7 +11,7 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 11) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 12) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };
@@ -72,6 +72,28 @@ export function validateWorldState(state, registries) {
   for (const record of Object.values(e.personnelActionRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.fromUnitId, `${record.id}.fromUnitId`); requireRef(errors, e.units, record.toUnitId, `${record.id}.toUnitId`); requireRef(errors, e.billets, record.fromBilletId, `${record.id}.fromBilletId`); requireRef(errors, e.billets, record.toBilletId, `${record.id}.toBilletId`); }
   for (const record of Object.values(e.replacementRequestRecords)) { requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`); requireRef(errors, e.people, record.replacementPersonId, `${record.id}.replacementPersonId`); }
   for (const record of Object.values(e.orderRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`); }
+
+  const skillProfilePersons = new Set();
+  for (const profile of Object.values(e.skillProfiles ?? {})) {
+    requireRef(errors, e.people, profile.personId, `${profile.id}.personId`);
+    if (skillProfilePersons.has(profile.personId)) errors.push(`${profile.personId}: multiple skill profiles.`);
+    skillProfilePersons.add(profile.personId);
+    for (const skill of registries.skills.values()) {
+      const value = profile.values?.[skill.id];
+      if (!Number.isFinite(value) || value < skill.minimum || value > skill.maximum) errors.push(`${profile.id}: invalid ${skill.id} value ${value}.`);
+    }
+  }
+  for (const person of Object.values(e.people)) if (!skillProfilePersons.has(person.id)) errors.push(`${person.id}: missing skill profile.`);
+  for (const record of Object.values(e.activityRecords ?? {})) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.activities.has(record.activityDefinitionId)) errors.push(`${record.id}: invalid activityDefinitionId.`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); }
+  for (const record of Object.values(e.performanceRecords ?? {})) requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+  for (const record of Object.values(e.gameplayEventRecords ?? {})) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.gameplayEvents.has(record.definitionId)) errors.push(`${record.id}: invalid gameplay event definition.`);
+    if (!["pending","resolved"].includes(record.status)) errors.push(`${record.id}: invalid gameplay event status ${record.status}.`);
+    const def = registries.gameplayEvents.has(record.definitionId) ? registries.gameplayEvents.get(record.definitionId) : null;
+    if (record.selectedChoiceId && !(def?.choices ?? []).some(choice => choice.id === record.selectedChoiceId)) errors.push(`${record.id}: invalid selected choice ${record.selectedChoiceId}.`);
+  }
+
   if (state.playerPersonId) requireRef(errors, e.people, state.playerPersonId, "playerPersonId");
   return { ok: errors.length === 0, errors };
 }

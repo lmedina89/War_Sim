@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.3.2.3</title>
+  <title>War Sim v0.4.0</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.3.2.3</p>
+        <p class="eyebrow">WAR SIM · v0.4.0</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -48,16 +48,17 @@
           <div id="career-summary" class="career-summary"></div>
         </section>
 
-        <section class="panel action-panel">
-          <div class="section-heading compact-heading"><p class="section-kicker">CAREER ACTIONS</p><h2>Advance Your Career</h2></div>
-          <div class="actions action-grid">
-            <button id="train-player" type="button">Train +250 XP</button>
-            <button id="advance-time" type="button">Advance 30 Days</button>
-            <button id="promote-player" type="button">Request Promotion</button>
-            <button id="airborne-player" type="button" class="secondary">Complete Airborne</button>
-            <button id="leadership-player" type="button" class="secondary">Complete BLC</button>
-          </div>
+        <section class="panel gameplay-panel">
+          <div class="section-heading compact-heading"><p class="section-kicker">DAILY OPERATIONS</p><h2>Activities</h2><p class="muted">Activities consume world time and improve actual skills, readiness, and unit cohesion.</p></div>
+          <div id="pending-decisions" class="pending-decisions"></div><div id="activity-options" class="activity-options"></div>
         </section>
+
+        <section class="dashboard-grid">
+          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFICIENCY</p><h2>Skills</h2></div><div id="skill-summary"></div></article>
+          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">SIMULATION</p><h2>Advance Time</h2><p class="muted">Advance the world without performing a focused activity.</p></div><div class="actions time-actions"><button id="advance-1" type="button" class="secondary">1 Day</button><button id="advance-7" type="button" class="secondary">7 Days</button><button id="advance-30" type="button">30 Days</button></div><div class="section-heading compact-heading subheading"><p class="section-kicker">CAREER ACTIONS</p></div><div class="actions action-grid"><button id="promote-player" type="button">Request Promotion</button><button id="airborne-player" type="button" class="secondary">Complete Airborne</button><button id="leadership-player" type="button" class="secondary">Complete BLC</button></div></article>
+        </section>
+
+        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">AFTER ACTION</p><h2>Recent Training</h2></div><div id="activity-history" class="activity-feed"></div></section>
 
         <section class="dashboard-grid">
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFILE</p><h2>Career</h2></div><div id="career-card"></div></article>

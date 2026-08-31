@@ -117,6 +117,7 @@ function fillReplacement(draft, registries, request) {
   draft.entities.serviceRecords[serviceId] = { id: serviceId, schemaVersion: 2, personId, serviceStatus: "active", entryDate: draft.world.date, separationDate: null, branchId: context.branchId, componentId: context.componentId, specialtyId: context.specialtyId, currentContractId: null, servicePeriodIds: [] };
   draft.entities.equipmentInstances[eqId] = { id: eqId, schemaVersion: 1, definitionId: context.billetDef.primaryEquipmentDefinitionId, ownerPersonId: personId, condition: randomInt(draft, 94, 100), upgradeIds: [] };
   draft.entities.loadouts[loadoutId] = { id: loadoutId, schemaVersion: 2, ownerPersonId: personId, slots: { primaryWeaponInstanceId: eqId } };
+  draft.entities.skillProfiles[`skills_${personId}`] = { id: `skills_${personId}`, schemaVersion: 1, personId, values: Object.fromEntries(registries.skills.values().map(skill => [skill.id, randomInt(draft, 25, 55)])) };
   billet.assignedPersonId = personId; billet.status = "filled";
   const assignmentId = createEntityId(draft, "assign");
   draft.entities.assignmentRecords[assignmentId] = { id: assignmentId, schemaVersion: 2, personId, unitId: billet.unitId, billetId: billet.id, startDate: draft.world.date, endDate: null, reason: "replacement_arrival" };

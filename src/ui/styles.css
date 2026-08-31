@@ -208,3 +208,23 @@ body::before {
   .dog-tag { padding-right: 14px; }
   .dog-tag-row { grid-template-columns: 5.6rem minmax(0, 1fr); gap: 8px; }
 }
+
+/* v0.4.0 playable career foundation */
+.activity-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.activity-option { display: grid; align-content: start; gap: 8px; min-height: 150px; padding: 14px; border: 1px solid var(--border); border-left: 3px solid var(--mil-olive); border-radius: var(--radius-md); background: var(--surface-raised); }
+.activity-option h3, .activity-option p { margin: 0; }
+.activity-option p { color: var(--muted); font-size: .88rem; line-height: 1.4; }
+.activity-option .activity-meta { color: var(--mil-olive); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.activity-option button { margin-top: auto; width: 100%; }
+.activity-option button:disabled { opacity: .5; }
+.skill-row { margin: 12px 0; }
+.skill-row .progress-row-head { margin-bottom: 4px; }
+.time-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
+.subheading { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+.training-record { border-left: 3px solid var(--mil-olive); }
+@media (max-width: 520px) { .time-actions { grid-template-columns: repeat(3, 1fr); } .activity-options { grid-template-columns: 1fr; } }
+.pending-decisions { display: grid; gap: 10px; margin-bottom: 12px; }
+.decision-card { border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border)); border-left: 4px solid var(--warn); border-radius: var(--radius-md); background: color-mix(in srgb, var(--warn) 7%, var(--surface-raised)); padding: 14px; }
+.decision-card h3 { margin: 0 0 6px; }
+.decision-card p { margin: 0 0 12px; color: var(--muted); }
+.decision-choices { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1,3 +1,18 @@
+const EFFECT_FIELDS = Object.freeze({
+  person: new Set(["career.experience","career.prestige","condition.health","condition.morale","condition.fatigue","condition.readiness"]),
+  unit: new Set(["condition.readiness","condition.morale","condition.cohesion","condition.supply"]),
+  relationships: new Set(["familiarity","trust","respect","bond"])
+});
+
+function validateEffect(errors, ownerId, effect, registries) {
+  if (!["skill","person","unit","relationships"].includes(effect.target)) { errors.push(`${ownerId}: invalid effect target ${effect.target}.`); return; }
+  if (!["add","set"].includes(effect.operation)) errors.push(`${ownerId}: invalid effect operation ${effect.operation}.`);
+  if (!Number.isFinite(effect.value)) errors.push(`${ownerId}: effect value must be numeric.`);
+  if (effect.target === "skill") { if (!registries.skills.has(effect.skillId)) errors.push(`${ownerId}: invalid skill ${effect.skillId}.`); }
+  else if (!EFFECT_FIELDS[effect.target].has(effect.field)) errors.push(`${ownerId}: invalid ${effect.target} field ${effect.field}.`);
+  if (effect.clamp && (!Array.isArray(effect.clamp) || effect.clamp.length !== 2 || !effect.clamp.every(Number.isFinite) || effect.clamp[1] < effect.clamp[0])) errors.push(`${ownerId}: invalid effect clamp.`);
+}
+
 export function validateDefinitions(registries) {
   const errors = [];
 
@@ -82,6 +97,26 @@ export function validateDefinitions(registries) {
     if (!registries.ranks.has(scenario.startingRankId)) errors.push(`${scenario.id}: invalid startingRankId ${scenario.startingRankId}.`);
     for (const id of scenario.eligibleStartingBilletDefinitionIds ?? []) if (!registries.billets.has(id)) errors.push(`${scenario.id}: invalid starting billet ${id}.`);
     for (const id of scenario.allowedContractDefinitionIds ?? []) if (!registries.contracts.has(id)) errors.push(`${scenario.id}: invalid allowed contract ${id}.`);
+  }
+
+
+  for (const activity of registries.activities.values()) {
+    if (!Number.isInteger(activity.durationDays) || activity.durationDays <= 0) errors.push(`${activity.id}: invalid durationDays.`);
+    if (activity.eventTableId && !registries.eventTables.has(activity.eventTableId)) errors.push(`${activity.id}: invalid eventTableId ${activity.eventTableId}.`);
+    for (const effect of activity.effects ?? []) validateEffect(errors, activity.id, effect, registries);
+  }
+  for (const table of registries.eventTables.values()) {
+    if (!Array.isArray(table.entries) || !table.entries.length) errors.push(`${table.id}: event table must contain entries.`);
+    for (const entry of table.entries ?? []) { if (entry.eventId && !registries.gameplayEvents.has(entry.eventId)) errors.push(`${table.id}: invalid event ${entry.eventId}.`); if (!Number.isInteger(entry.weight) || entry.weight <= 0) errors.push(`${table.id}: invalid weight.`); }
+  }
+  for (const event of registries.gameplayEvents.values()) {
+    for (const effect of event.effects ?? []) validateEffect(errors, event.id, effect, registries);
+    const choiceIds = new Set();
+    for (const choice of event.choices ?? []) {
+      if (!choice.id || choiceIds.has(choice.id)) errors.push(`${event.id}: duplicate/invalid choice id ${choice.id}.`);
+      choiceIds.add(choice.id);
+      for (const effect of choice.effects ?? []) validateEffect(errors, `${event.id}/${choice.id}`, effect, registries);
+    }
   }
 
   return { ok: errors.length === 0, errors };

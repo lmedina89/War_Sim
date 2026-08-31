@@ -1,111 +1,118 @@
-# War Sim v0.3.2.3 — Military Interface & Unit Browsing Hotfix
+# War Sim v0.4.0 — Core Gameplay Systems
 
-War Sim v0.3.2.3 fixes Unit/Personnel browsing state and adds the first deliberate military presentation layer while preserving the tested v0.3.2.2 simulation foundation.
+War Sim v0.4.0 is the first playable-career systems release built on the frozen v0.3.2.3 military organization foundation. The focus is not deployment or tactical combat yet; it is making time, training, skills, decisions, and performance into reusable gameplay systems that later deployment/combat systems can consume.
 
-## What changed
+## Player-facing gameplay
 
-### Unit and Personnel browsing fix
-- Unit browsing owns its own `selectedOrganizationUnitId`.
-- The roster directly under the Unit browser follows the unit actually selected: squad, platoon, or company.
-- `My Assignment` remains tied to the player’s real billet and never changes while browsing.
-- Personnel uses an independent `personnelFilterUnitId`; browsing Unit no longer silently changes Personnel.
-- `View in Personnel`, `Return to My Unit`, and `My Unit` make scope changes explicit.
-- Scoped personnel collection uses derived unit indexes and de-duplicates IDs once per selected organization.
+- Replaces the old generic `Train +250 XP` action with data-defined activities.
+- Adds five initial skills on a normalized 0–100 scale:
+  - Fitness
+  - Marksmanship
+  - Fieldcraft
+  - MOS Proficiency
+  - Leadership
+- Adds initial data-driven activities:
+  - Physical Training
+  - Weapons Qualification Range
+  - MOS Training
+  - Squad Drills
+  - Leadership Development
+- Activities consume world time and can affect skills, XP, prestige, fatigue, readiness, unit cohesion, and relationships.
+- Adds 1-day / 7-day / 30-day free time advancement.
+- Adds a recent training / after-action history.
+- Personnel profiles now include their simulated skills.
+- Adds the first reusable gameplay-event and decision framework. Some activities can produce weighted events, including an actionable leadership decision with definition-driven choices/effects.
 
-### Military presentation
-- personnel profiles include a dog-tag-style identification plate built only from canonical branch, rank, specialty, and unit data
-- Personnel cards are presented as personnel files
-- Orders use an official-orders treatment with a headquarters masthead and effective-date metadata
-- Unit roster rows are interactive and open the canonical personnel profile
-- steel/olive accents, subtle grid texture, section rails, and stronger hierarchy add military character without coupling presentation to simulation logic
+## Architecture
 
-### Real gameplay navigation
-The old bottom bar only scrolled around one very long page. v0.3.2.3 introduces five actual primary views:
+### Data definitions
 
-- Career
-- Unit
-- Personnel
-- Orders
-- More
+New definition registries:
 
-Only the active view is shown. The layout is denser, more game-like, and designed around mobile use rather than one giant developer dashboard.
+- `skills`
+- `activities`
+- `gameplayEvents`
+- `eventTables`
 
-### UI/UX cleanup
-- stronger career header and visual hierarchy
-- compact status chips and promotion progress meters
-- recent career activity feed
-- dedicated Unit roster/manpower presentation
-- Personnel and Orders separated into their own views
-- save/load/new-career utilities moved to More
-- Developer Diagnostics kept out of normal gameplay
-- improved iPhone safe-area support and bottom navigation
-- larger tap targets, clearer disabled states, less dead space, and reusable CSS design tokens
-- top-level render error containment so a display failure does not mutate canonical game state
+Normal runtime systems do not contain concrete branch/MOS/rank/weapon content IDs. Activities and events describe effects; generic engines execute them.
 
-### Data-driven runtime cleanup
-The normal runtime no longer contains concrete Army/11B/rank/weapon IDs for personnel generation and replacement behavior.
+### Generic effect engine
 
-- billet definitions now own their primary-equipment references
-- generation profiles own billet-to-rank, billet-to-specialty, and rank service-year generation policy
-- replacement personnel derive nation, branch, component, specialty, rank, and equipment from definitions/profile data
-- NPC promotion progression resolves ranks and promotion requirements from rank definitions instead of hardcoded rank maps
-- fresh player equipment derives from the assigned billet definition
-- legacy hardcoded organization seeding remains isolated to migration/repair code only
+Activity/event definitions use standardized effects such as:
 
-### Personnel/simulation fixes
-- ETS now takes effect on the contract end date rather than one day late
-- monthly NPC lifecycle simulation is step-independent: 30 × 1-day advances and 1 × 30-day advance produce the same personnel progression outcome
-- replacement identities use the centralized deterministic RNG
-- vacancy/open-replacement selectors use derived indexes instead of rescanning those collections
+- skill changes
+- person stat changes
+- unit-condition changes
+- relationship changes
 
-### Supporting specialty definitions
-The current generated infantry company now distinguishes non-playable framework specialties used by NPC billets:
+The effect engine owns clamping and mutation semantics. Future schools, injuries, equipment, deployments, weather, logistics, and combat can reuse the same mechanism rather than adding one-off mutation logic.
 
-- 11A Infantry Officer
-- 42A Human Resources Specialist
+### Canonical gameplay records
 
-11B remains the enabled player career in this release. These definitions exist so company leadership and administrative replacements do not have to be mislabeled or hardcoded by runtime logic.
+World schema 12 introduces:
 
-### Save metadata
-Save slots now retain and display more useful context including specialty and current unit while stable IDs remain authoritative.
+- `skillProfiles`
+- `activityRecords`
+- `performanceRecords`
+- `gameplayEventRecords`
+
+These records are authoritative and saved. Derived indexes are rebuilt from canonical state and are never serialized.
+
+### Determinism and efficiency
+
+- Gameplay-event rolls use the centralized seeded RNG; no runtime `Math.random()`.
+- Activity history, skill profiles, gameplay events, personnel, units, billets, relationships, orders, career records, and admin records use derived indexes for normal query paths.
+- Unit relationship effects use the existing relationship index rather than scanning all relationship records in the normal activity command.
+- Career creation uses the existing unit personnel index to seed squad relationships.
+- Recent personnel actions are prepared by the admin index rather than sorted from the full collection every render.
+- World generator version is now **2** because generated NPC skill profiles are part of fresh generated worlds.
+
+## Data-integrity correction included
+
+During the v0.4 audit, the fresh-world generator was found to have a legacy inconsistency: generated NPCs were receiving the player scenario's specialty even though the generation profile already defined billet-specific specialty mappings. v0.4.0 corrects this. Company/platoon officers and administrative billets now resolve specialty through `billetSpecialtyIdsByDefinitionId`, while infantry billets resolve to the infantry specialty.
 
 ## Compatibility
-- World schema remains **11**.
-- Existing v0.3.2.1 schema-11 saves do not require destructive migration.
-- Loaded saves are normalized to game version **0.3.2.3** by the save migration pipeline.
-- Existing v0.3.2 and older supported saves continue through the existing migration chain.
 
-## Verification
-Two independent test passes are included:
+- Save format remains **3**.
+- World schema: **12**.
+- v0.3.2.3 schema-11 saves migrate to schema 12 without regenerating the world, changing names, or moving personnel.
+- Migration creates a skill profile for every existing person and initializes the new canonical gameplay collections.
 
-- `tests/smoke.mjs` — gameplay/regression coverage
-- `tests/quality.mjs` — separate software-quality audit
+## Quality gates
 
-The quality pass checks import integrity, DOM/controller matching, duplicate DOM IDs, deterministic RNG use, runtime concrete-ID leakage, dynamic-code/HTML-injection hazards, definition validity, 300 generated seeds, save/checksum round trip, and 10,000-person index scaling.
+Before packaging, v0.4.0 passed:
 
-See `SOFTWARE_QUALITY_REPORT.md` for the full audit results.
+- JavaScript syntax validation across all source/test modules
+- full gameplay/regression smoke suite
+- independent software-quality suite
+- definition-reference validation
+- 300-seed generated-world validation in the formal QA suite
+- additional 1,000-seed generated-world validation sweep
+- same-seed deterministic world generation
+- same-seed deterministic repeated-activity simulation
+- exact squad/player assignment checks
+- schema-11 → schema-12 migration preservation
+- save/checksum round trip and corruption rejection
+- static import-graph validation
+- DOM/controller ID validation
+- duplicate DOM-ID audit
+- direct `Math.random()` audit
+- dynamic-code / `innerHTML` assignment audit
+- runtime concrete-content-ID audit
+- selector global-people-scan guard
+- 10,000-person index build stress benchmark
 
-## Architecture rules
-- immutable definition registries are separate from runtime entities
-- display strings never drive authoritative game logic
-- stable IDs drive all references
-- UI does not own simulation state
-- selectors/view models read; commands/services mutate
-- indexes are derived and never serialized
-- seeded deterministic RNG is centralized
-- legacy migration code stays isolated from normal runtime generation
-- new branches, specialties, ranks, billets, equipment, and starting scenarios should be definition/profile additions rather than runtime conditionals
+See `SOFTWARE_QUALITY_REPORT.md` for the separate QA report.
 
 ## Roadmap
-- **v0.3.2.3** — Military Interface & Unit Browsing Hotfix (current)
-- **v0.4.x** — MOS, Training & Career Expansion
-- **v0.5.x** — Locations, Installations & PCS
-- **v0.6.x** — Equipment & Logistics
-- **v0.7.x** — Skills & Individual Capability
-- **v0.8.x** — Unit Training & Readiness
-- **v0.9.x** — Military AI
-- **v1.0** — Nation & Economy
-- **v1.1** — World & Geography
-- **v1.2** — Diplomacy & Geopolitics
-- **v1.3** — Operational Warfare
-- **v1.4** — Tactical Combat
+
+The v0.4 series remains intentionally staged:
+
+- **v0.4.0** — Core Gameplay Systems (current)
+- **v0.4.1** — Training & Readiness Gameplay
+- **v0.4.2** — Career & Personnel Gameplay
+- **v0.4.3** — Unit Events & Decision Gameplay
+- **v0.4.4** — Deployment Preparation Foundation
+- **v0.5.x** — Actual Deployment Gameplay
+
+The project remains definition/registry driven: definitions describe content, generic services execute rules, canonical records preserve history, indexes serve queries, and UI code does not own simulation state.

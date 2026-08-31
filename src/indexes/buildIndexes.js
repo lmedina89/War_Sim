@@ -93,10 +93,21 @@ function careerGroup(state) {
 
 
 function adminGroup(state) {
-  const personnelActionsByPersonId = new Map(), replacementRequestsByUnitId = new Map(), replacementRequestsByStatus = new Map();
-  for (const record of Object.values(state.entities.personnelActionRecords ?? {})) addToIndex(personnelActionsByPersonId, record.personId, record.id);
+  const personnelActionsByPersonId = new Map(), replacementRequestsByUnitId = new Map(), replacementRequestsByStatus = new Map(), actionIds = [];
+  for (const record of Object.values(state.entities.personnelActionRecords ?? {})) { addToIndex(personnelActionsByPersonId, record.personId, record.id); actionIds.push(record.id); }
+  actionIds.sort((a,b) => b.localeCompare(a));
   for (const record of Object.values(state.entities.replacementRequestRecords ?? {})) { addToIndex(replacementRequestsByUnitId, record.unitId, record.id); addToIndex(replacementRequestsByStatus, record.status, record.id); }
-  return { personnelActionsByPersonId, replacementRequestsByUnitId, replacementRequestsByStatus };
+  return { personnelActionsByPersonId, replacementRequestsByUnitId, replacementRequestsByStatus, recentPersonnelActionIds: Object.freeze(actionIds.slice(0, 20)) };
+}
+
+
+function activitiesGroup(state) {
+  const skillProfileByPersonId = new Map(), activityRecordsByPersonId = new Map(), performanceRecordsByPersonId = new Map(), gameplayEventsByPersonId = new Map();
+  for (const profile of Object.values(state.entities.skillProfiles ?? {})) skillProfileByPersonId.set(profile.personId, profile.id);
+  for (const record of Object.values(state.entities.activityRecords ?? {})) addToIndex(activityRecordsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.performanceRecords ?? {})) addToIndex(performanceRecordsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.gameplayEventRecords ?? {})) addToIndex(gameplayEventsByPersonId, record.personId, record.id);
+  return { skillProfileByPersonId, activityRecordsByPersonId, performanceRecordsByPersonId, gameplayEventsByPersonId };
 }
 
 function actionGroup(state) {
@@ -116,7 +127,8 @@ const GROUP_BUILDERS = Object.freeze({
   actions: actionGroup,
   orders: ordersGroup,
   career: careerGroup,
-  admin: adminGroup
+  admin: adminGroup,
+  activities: activitiesGroup
 });
 
 export const ALL_INDEX_GROUPS = Object.freeze(Object.keys(GROUP_BUILDERS));

@@ -1,7 +1,7 @@
 import { randomInt } from "../core/rng.js";
 import { personnelGenerationDefinition as personnelData } from "../data/personnelGeneration.js";
 
-export const CURRENT_WORLD_GENERATOR_VERSION = 1;
+export const CURRENT_WORLD_GENERATOR_VERSION = 2;
 
 function cloneCondition(state) {
   return {
@@ -43,7 +43,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
   if (!scenario.enabled) throw new Error(`Career start scenario ${scenario.name} is not enabled.`);
 
   const e = state.entities;
-  for (const name of ["people","units","billets","serviceRecords","loadouts","equipmentInstances"]) e[name] = {};
+  for (const name of ["people","units","billets","serviceRecords","loadouts","equipmentInstances","skillProfiles"]) e[name] = {};
 
   const childrenByParent = new Map();
   for (const template of profile.units) {
@@ -91,19 +91,22 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
     const identity = generatedIdentity(state, usedNames);
     const years = profile.rankServiceYearsByRankId?.[rankId] ?? 0;
     const enlistmentDate = dateYearsBefore(state.world.date, years, randomInt(state, 0, 330));
+    const specialtyId = profile.billetSpecialtyIdsByDefinitionId?.[billet.definitionId] ?? scenario.specialtyId;
+    if (!registries.specialties.has(specialtyId)) throw new Error(`Generation profile ${profile.id} has no valid specialty mapping for ${billet.definitionId}.`);
     const serviceRecordId = `service_${id}`;
     const loadoutId = `loadout_${id}`;
     const equipmentId = `eq_${id}_primary`;
     e.people[id] = {
       id, schemaVersion: 5, identity,
-      affiliation: { nationId: profile.nationId, branchId: scenario.branchId, componentId: scenario.componentId, specialtyId: scenario.specialtyId, unitId: billet.unitId, billetId: billet.id, rankId },
+      affiliation: { nationId: profile.nationId, branchId: scenario.branchId, componentId: scenario.componentId, specialtyId, unitId: billet.unitId, billetId: billet.id, rankId },
       career: { enlistmentDate, experience: randomInt(state, 500 + years * 350, 1200 + years * 650), prestige: randomInt(state, 10 + years, 30 + years * 3), bonusEarnings: 0 },
       condition: { health: randomInt(state, ...personnelData.healthRange), morale: randomInt(state, ...personnelData.moraleRange), fatigue: randomInt(state, ...personnelData.fatigueRange), readiness: randomInt(state, ...personnelData.readinessRange), status: "active" },
       traitIds: [...personnelData.traits], loadoutId, serviceRecordId, simulationTier: 2
     };
-    e.serviceRecords[serviceRecordId] = { id: serviceRecordId, schemaVersion: 2, personId: id, serviceStatus: "active", entryDate: enlistmentDate, separationDate: null, branchId: scenario.branchId, componentId: scenario.componentId, specialtyId: scenario.specialtyId, currentContractId: null, servicePeriodIds: [] };
+    e.serviceRecords[serviceRecordId] = { id: serviceRecordId, schemaVersion: 2, personId: id, serviceStatus: "active", entryDate: enlistmentDate, separationDate: null, branchId: scenario.branchId, componentId: scenario.componentId, specialtyId, currentContractId: null, servicePeriodIds: [] };
     e.equipmentInstances[equipmentId] = { id: equipmentId, schemaVersion: 1, definitionId: registries.billets.get(billet.definitionId).primaryEquipmentDefinitionId, ownerPersonId: id, condition: randomInt(state, 94, 100), upgradeIds: [] };
     e.loadouts[loadoutId] = { id: loadoutId, schemaVersion: 2, ownerPersonId: id, slots: { primaryWeaponInstanceId: equipmentId } };
+    e.skillProfiles[`skills_${id}`] = { id: `skills_${id}`, schemaVersion: 1, personId: id, values: Object.fromEntries(registries.skills.values().map(skill => [skill.id, randomInt(state, 25, 65)])) };
     billet.assignedPersonId = id;
     billet.status = "filled";
   }

@@ -17,6 +17,9 @@ import { migratePayload } from "../src/core/migrations.js";
 import { separatePersonAdministrative, processPersonnelAdministration } from "../src/services/personnelAdministration.js";
 import { selectPersonnelAdministration } from "../src/selectors/selectPersonnelAdministration.js";
 import { assignPersonToBillet } from "../src/commands/assignPersonToBillet.js";
+import { performActivity } from "../src/commands/performActivity.js";
+import { selectGameplay } from "../src/selectors/selectGameplay.js";
+import { resolveDecision } from "../src/commands/resolveDecision.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const appSource = fs.readFileSync(path.join(root, "src/app.js"), "utf8");
@@ -24,7 +27,7 @@ const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 for (const id of [...appSource.matchAll(/\$\("#([^"]+)"\)/g)].map(match => match[1])) {
   assert.match(htmlSource, new RegExp(`id=["']${id}["']`), `index.html missing #${id} required by app.js`);
 }
-assert.match(htmlSource, /WAR SIM · v0\.3\.2\.3/);
+assert.match(htmlSource, /WAR SIM · v0\.4\.0/);
 assert.match(htmlSource, /id="world-seed"/);
 assert.match(htmlSource, /id="reroll-seed"/);
 assert.doesNotMatch(appSource, /!assignment\.chain\.some\(x => x\.unitId === selectedUnitId\)/);
@@ -57,9 +60,9 @@ assert.equal(registries.generationProfiles.size, 1);
 const sameA = createInitialWorldState({ seed: 123456789 });
 const sameB = createInitialWorldState({ seed: 123456789 });
 assert.deepEqual(sameA, sameB, "same seed must reproduce the same generated world");
-assert.equal(sameA.schemaVersion, 11);
-assert.equal(sameA.gameVersion, "0.3.2.3");
-assert.equal(sameA.world.generation.generatorVersion, 1);
+assert.equal(sameA.schemaVersion, 12);
+assert.equal(sameA.gameVersion, "0.4.0");
+assert.equal(sameA.world.generation.generatorVersion, 2);
 assert.equal(Object.keys(sameA.entities.units).length, 13);
 assert.equal(Object.keys(sameA.entities.billets).length, 91);
 assert.equal(Object.keys(sameA.entities.people).length, 90);
@@ -130,8 +133,8 @@ assert.deepEqual(npcNamesA, npcNamesB);
   delete legacy.world.generation;
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema10", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2", worldState:legacy });
-  assert.equal(payload.worldState.schemaVersion, 11);
-  assert.equal(payload.worldState.gameVersion, "0.3.2.3");
+  assert.equal(payload.worldState.schemaVersion, 12);
+  assert.equal(payload.worldState.gameVersion, "0.4.0");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(payload.worldState.world.generation.legacyWorld, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -209,6 +212,62 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   }
 }
 
+// Data-driven activity gameplay consumes time, improves skills, records history, and remains valid.
+{
+  const gameplaySeed = 86420;
+  const gameplayStore = createStateStore(createInitialWorldState({ seed: gameplaySeed }));
+  createPlayerCareer(gameplayStore, registries, { firstName:"Game", lastName:"Play", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed:gameplaySeed });
+  const personId = gameplayStore.getState().playerPersonId;
+  const before = selectGameplay(gameplayStore.getState(), gameplayStore.getIndexes(), registries, personId);
+  assert.equal(before.activities.length, registries.activities.size);
+  const marksmanshipBefore = before.skills.find(s => s.id === "skill_marksmanship").value;
+  const dateBefore = gameplayStore.getState().world.date;
+  const result = performActivity(gameplayStore, registries, personId, "activity_range");
+  assert.equal(result.ok, true);
+  const after = selectGameplay(gameplayStore.getState(), gameplayStore.getIndexes(), registries, personId);
+  assert.ok(after.skills.find(s => s.id === "skill_marksmanship").value >= marksmanshipBefore + 4);
+  assert.equal(after.recentActivities[0].activityDefinitionId, "activity_range");
+  assert.notEqual(gameplayStore.getState().world.date, dateBefore);
+  assert.equal(Object.keys(gameplayStore.getState().entities.performanceRecords).length, 1);
+  assert.equal(validateWorldState(gameplayStore.getState(), registries).ok, true);
+}
+
+// Skill profiles exist exactly once for every generated/replacement person.
+{
+  const world = createInitialWorldState({ seed: 919191 });
+  assert.equal(Object.keys(world.entities.skillProfiles).length, Object.keys(world.entities.people).length);
+  assert.equal(new Set(Object.values(world.entities.skillProfiles).map(p => p.personId)).size, Object.keys(world.entities.people).length);
+}
+
+
+// Generated billet specialty assignments are driven by generation-profile definitions.
+{
+  const world = createInitialWorldState({ seed: 13579 });
+  for (const person of Object.values(world.entities.people)) {
+    const billet = world.entities.billets[person.affiliation.billetId];
+    const profile = registries.generationProfiles.get(world.world.generation.generationProfileId);
+    const expectedSpecialtyId = profile.billetSpecialtyIdsByDefinitionId[billet.definitionId];
+    assert.equal(person.affiliation.specialtyId, expectedSpecialtyId, `${person.id} specialty must match billet mapping`);
+  }
+}
+
+// Generic decision records resolve through definition choices and effects.
+{
+  const decisionSeed = 112233;
+  const decisionStore = createStateStore(createInitialWorldState({ seed: decisionSeed }));
+  createPlayerCareer(decisionStore, registries, { firstName:"Choice", lastName:"Test", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed:decisionSeed });
+  const personId = decisionStore.getState().playerPersonId;
+  const beforeLeadership = selectGameplay(decisionStore.getState(), decisionStore.getIndexes(), registries, personId).skills.find(s => s.id === "skill_leadership").value;
+  const eventId = "gameevt_test_choice";
+  decisionStore.mutate(draft => { draft.entities.gameplayEventRecords[eventId] = { id:eventId, schemaVersion:1, definitionId:"event_training_leadership_moment", personId, unitId:draft.entities.people[personId].affiliation.unitId, activityId:"activity_squad_drills", gameDate:draft.world.date, elapsedDays:draft.world.clock.elapsedDays, status:"pending", selectedChoiceId:null, resolvedDate:null }; }, ["activities"]);
+  assert.equal(selectGameplay(decisionStore.getState(), decisionStore.getIndexes(), registries, personId).pendingDecisions.length, 1);
+  assert.equal(resolveDecision(decisionStore, registries, personId, eventId, "choice_help_teammate").ok, true);
+  const after = selectGameplay(decisionStore.getState(), decisionStore.getIndexes(), registries, personId);
+  assert.equal(after.pendingDecisions.length, 0);
+  assert.ok(after.skills.find(s => s.id === "skill_leadership").value >= beforeLeadership + 2);
+  assert.equal(validateWorldState(decisionStore.getState(), registries).ok, true);
+}
+
 // Low-level assignment uses store.mutate and works with generated billet IDs.
 {
   const low = createStateStore(createInitialWorldState({ seed: 555 }));
@@ -218,4 +277,4 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   assert.equal(low.getState().entities.billets[vacant.id].assignedPersonId, npc.id);
 }
 
-console.log("War Sim v0.3.2.3 military interface + unit browsing smoke test passed");
+console.log("War Sim v0.4.0 core gameplay systems smoke test passed");
