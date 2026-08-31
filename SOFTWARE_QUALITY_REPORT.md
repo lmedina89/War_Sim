@@ -1,90 +1,45 @@
-# War Sim v0.3.2.2 — Software Quality Report
+# War Sim v0.3.2.3 — Software Quality Report
 
 ## Result
+**PASS**
 
-**PASS — no release-blocking defects found after the v0.3.2.2 fixes.**
+This report covers the v0.3.2.3 Military Interface & Unit Browsing Hotfix built from the tested v0.3.2.2 checkpoint.
 
-This was performed as a separate audit from the feature smoke test. The audit covers the complete current source tree (59 JavaScript source modules, approximately 2,500 source lines) plus HTML/CSS integration and save behavior.
-
-## Release-blocking issues found and fixed during this audit
-
-1. **Hardcoded replacement career data** — replacements previously assumed Army / Active / 11B and used a hardcoded billet-rank table. Replaced with generation-profile and registry resolution.
-2. **Hardcoded NPC promotion maps** — fixed rank/XP/TIS maps were removed. NPC progression now resolves next rank and requirements from rank definitions.
-3. **Hardcoded generation interpretations** — rank IDs were parsed for service years and one billet ID was checked to choose a weapon. Both were moved into generation/billet definitions.
-4. **Player weapon hardcoding** — initial player weapon now comes from the assigned billet definition.
-5. **ETS off-by-one** — expiration now occurs on the contract end date.
-6. **Time-step dependence** — NPC lifecycle formerly treated every call shorter than 30 days as a full monthly cycle. Simulation now uses elapsed-day month boundaries so 30×1-day and 1×30-day advancement agree for personnel progression.
-7. **UI architecture** — bottom navigation was only scrolling a long page. It now switches among five real views.
-8. **Render failure containment** — a render exception is now caught at the top-level UI boundary and reported without mutating canonical state.
-9. **HTML injection hygiene** — the remaining `innerHTML` assignment in Inbox rendering was replaced with DOM text nodes.
-10. **Selector efficiency** — vacant billets and open replacement requests now use derived indexes.
+## Release-specific fixes verified
+- Unit browsing uses `selectedOrganizationUnitId` and the Unit roster follows the selected squad/platoon/company.
+- Personnel filtering uses a separate `personnelFilterUnitId`; Unit browsing does not silently mutate Personnel scope.
+- My Assignment remains bound to the player's canonical assignment.
+- Explicit `Return to My Unit`, `View in Personnel`, and Personnel `My Unit` controls exist.
+- Unit roster collection uses derived `peopleByUnitId` / hierarchy indexes and de-duplicates IDs.
+- Unit roster rows and Personnel cards open the same canonical person profile.
+- Personnel dog-tag presentation uses only existing canonical branch, rank/pay-grade, specialty, and unit values; no fabricated identity fields are introduced.
+- Orders use presentation-only military formatting; canonical order records are unchanged.
 
 ## Automated quality checks
+- Source JavaScript modules checked: **59**
+- Generated worlds validated: **300 seeds**
+- Stress population for index construction: **10,000 people**
+- Final observed 10k index-build benchmark: **~20 ms** in the verification container
+- Primary gameplay views: **5**
+- Static import graph integrity: **PASS**
+- DOM/controller ID integrity: **PASS**
+- Duplicate DOM ID check: **PASS**
+- Definition validation: **PASS**
+- World-state validation: **PASS**
+- Deterministic RNG audit / no runtime `Math.random()`: **PASS**
+- Concrete runtime content-ID leakage audit: **PASS**
+- Dynamic code / `document.write` / runtime `innerHTML =` audit: **PASS**
+- Save/checksum round trip: **PASS**
+- Corrupted save rejection: **PASS**
+- Render error containment: **PASS**
+- Independent Unit/Personnel UI state audit: **PASS**
+- Military presentation DOM audit: **PASS**
 
-### Source / module integrity
-- all JavaScript files pass Node syntax parsing
-- every static relative import resolves to an existing module
-- no duplicate HTML IDs
-- every DOM ID queried by `app.js` exists in `index.html`
-- no `eval`, `new Function`, or `document.write`
-- no runtime `innerHTML =` injection
+## Regression coverage retained
+The v0.3.2.2 foundation tests remain active, including deterministic world generation, different-seed diversity, 9-person squad integrity, player-in-one-squad integrity, reenlistment, exact-date ETS, vacancy/replacement administration, old-save migration, step-independent personnel progression, and save/load preservation.
 
-### Determinism / data-driven architecture
-- no direct `Math.random()` calls in source
-- normal runtime modules contain no concrete `branch_army`, `specialty_army_11b`, concrete Army rank IDs, service-rifle IDs, or automatic-rifleman conditional IDs
-- concrete content IDs remain allowed in definition files and isolated legacy migration/repair code
-- same seed reproduction remains deterministic
+## Architecture assessment
+v0.3.2.3 does not introduce new authoritative simulation models or a schema bump. World schema remains **11**. The military styling is UI-only. Stable IDs remain authoritative, normal runtime behavior continues to resolve content through definitions/registries, and derived indexes remain non-serialized.
 
-### Definition/world integrity
-- all registry definitions validate
-- 300 additional generated worlds validated successfully across different seeds
-- each generated world preserves unit/billet/person reference integrity
-- generated worlds retain 91 billets / 90 pre-player personnel with one valid starting vacancy
-
-### Save system
-- manual save round trip preserves canonical state
-- save metadata includes character/specialty/unit context
-- checksum corruption is detected and blocks load
-- existing schema migration coverage remains in smoke tests
-
-### Simulation regression coverage
-- squad roster integrity remains 9 personnel per rifle squad after player creation
-- player appears in exactly one squad
-- reenlistment flow still works
-- personnel separation creates a durable vacancy/request
-- replacement fills the correct billet after the configured latency
-- replacement branch/specialty/equipment derive from data definitions
-- ETS occurs exactly on contract end date
-- 30×1-day vs 1×30-day advancement produces equal NPC experience/fatigue/readiness/rank outcomes
-
-### Performance sanity check
-A synthetic **10,000-person** world was passed through the derived index builder. The benchmark completed in tens of milliseconds in the test container, well below the deliberately generous 2-second regression threshold.
-
-This is not a promise that a future nation-scale simulation is already optimized; it confirms the current index construction remains linear enough for the present architecture and guards against accidental quadratic regressions.
-
-## Manual/static architecture review
-
-### Passed
-- player remains a normal Person entity
-- definitions are immutable registries
-- authoritative state is separate from UI
-- selectors read state; commands/services own normal state changes
-- indexes are rebuilt/derived rather than serialized
-- generation metadata is stored with the world
-- stable IDs are independent of names/display text
-- legacy organization seeding is only referenced by migration code
-- current UI view state is presentation-only and is not serialized into world state
-
-### Known limitations (not defects for v0.3.2.2)
-- only Active Army 11B is currently enabled as a player career
-- 11A and 42A exist as NPC/framework specialties; their player training/career pipelines are intentionally not enabled yet
-- organization generation currently creates one infantry company profile; battalion/brigade-scale content comes later
-- administrative action history selector still sorts a small action collection at view time; this should gain a chronology index when action volume grows materially
-- save persistence still uses browser localStorage; adequate for the current GitHub Pages build, but a larger save backend/export path may be needed as world size grows
-- automated browser interaction testing is not yet part of the repository; current UI verification is DOM/controller structural testing plus live user testing
-
-## Release recommendation
-
-**Recommended as the stable v0.3.x foundation checkpoint**, assuming the live GitHub Pages visual test confirms the new five-view navigation and existing save loads correctly on the target iPhone browser.
-
-After that live check, development can proceed to v0.4.x without another foundation release unless a real regression is discovered.
+## Known scope boundary
+This release intentionally does **not** add deployment gameplay, tactical combat, locations, logistics, or expanded playable MOS pipelines. Those remain later roadmap systems so the 0.3.x foundation does not become a mixed feature release.

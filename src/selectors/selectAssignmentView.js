@@ -20,6 +20,9 @@ export function selectUnitPersonnel(state, indexes, registries, unitId) {
     const rank = registries.ranks.get(person.affiliation.rankId);
     const billet = state.entities.billets[person.affiliation.billetId];
     const billetDef = billet ? registries.billets.get(billet.definitionId) : null;
-    return { id, name: person.identity.displayName, rank: rank.abbreviation, rankName: rank.name, billet: billetDef?.name ?? "Unassigned", status: person.condition.status, readiness: person.condition.readiness, health: person.condition.health, morale: person.condition.morale, isPlayer: id === state.playerPersonId };
+    const loadout = state.entities.loadouts[person.loadoutId];
+    const equipmentInstance = loadout ? state.entities.equipmentInstances[loadout.slots.primaryWeaponInstanceId] : null;
+    const equipment = equipmentInstance ? registries.equipment.get(equipmentInstance.definitionId) : null;
+    return { id, name: person.identity.displayName, rank: rank.abbreviation, rankName: rank.name, billet: billetDef?.name ?? "Unassigned", weaponName: equipment?.name ?? "Unassigned", status: person.condition.status, readiness: person.condition.readiness, health: person.condition.health, morale: person.condition.morale, isPlayer: id === state.playerPersonId };
   });
 }

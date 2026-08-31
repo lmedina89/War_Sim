@@ -24,13 +24,13 @@ if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${d
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save", selectedUnitId = null, activeView = "career";
+let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career";
 
 const $ = selector => document.querySelector(selector);
 const els = {
   appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), recentActivity: $("#recent-activity"),
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
-  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), status: $("#status-message"),
+  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), returnMyUnit: $("#return-my-unit"), viewSelectedPersonnel: $("#view-selected-personnel"), personnelMyUnit: $("#personnel-my-unit"), personDogTag: $("#person-dog-tag"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), status: $("#status-message"),
   train: $("#train-player"), advanceTime: $("#advance-time"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
   achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
   saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
@@ -99,11 +99,29 @@ function aggregateStrength(state, indexes, unitId) {
   for (const id of ids) for (const billetId of indexes.billetsByUnitId.get(id) ?? []) { authorized++; if (state.entities.billets[billetId]?.assignedPersonId) assigned++; }
   return { authorized, assigned, vacancies: authorized - assigned };
 }
+function collectUnitPersonnel(state, indexes, unitId) {
+  const seen = new Set();
+  const members = [];
+  for (const scopedUnitId of descendantUnitIds(state, indexes, unitId)) {
+    for (const member of selectUnitPersonnel(state, indexes, registries, scopedUnitId)) {
+      if (!seen.has(member.id)) { seen.add(member.id); members.push(member); }
+    }
+  }
+  return members;
+}
+function playerAssignmentUnitId(state, indexes, personId = state.playerPersonId) {
+  return selectAssignmentView(state, indexes, registries, personId).chain.at(-1)?.unitId ?? null;
+}
 function showPersonProfile(personId) {
   const state = store.getState(), indexes = store.getIndexes(), person = state.entities.people[personId]; if (!person) return;
   const rank = registries.ranks.get(person.affiliation.rankId), billet = state.entities.billets[person.affiliation.billetId], billetDef = billet ? registries.billets.get(billet.definitionId) : null, unit = state.entities.units[person.affiliation.unitId];
+  const branch = registries.branches.get(person.affiliation.branchId), specialty = registries.specialties.get(person.affiliation.specialtyId);
   els.personProfileName.textContent = person.identity.displayName;
-  els.personProfileBody.replaceChildren(statLine("Rank", `${rank.abbreviation} · ${rank.name}`), statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Unit", unit?.name ?? "—"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience));
+  els.personDogTag.replaceChildren();
+  for (const [label, value] of [["SERVICE", branch?.name ?? "—"], ["RANK", `${rank.abbreviation} / ${rank.payGrade}`], ["SPECIALTY", specialty ? `${specialty.code} ${specialty.name}` : "—"], ["ASSIGNMENT", unit?.name ?? "Unassigned"]]) {
+    const row=document.createElement("div"); row.className="dog-tag-row"; const key=document.createElement("span"), val=document.createElement("strong"); key.textContent=label; val.textContent=value; row.append(key,val); els.personDogTag.appendChild(row);
+  }
+  els.personProfileBody.replaceChildren(statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience));
   els.personDialog.showModal();
 }
 function organizationChain(state, indexes, unitId) {
@@ -115,23 +133,40 @@ function organizationChain(state, indexes, unitId) {
   }
   return chain;
 }
-function renderOrganization(state, indexes, personId) {
-  const assignment = selectAssignmentView(state, indexes, registries, personId);
-  // Keep a valid browsed unit selected even when it is outside the player's own
-  // assignment chain. Only fall back to the player's unit when selection is invalid.
-  if (!selectedUnitId || !state.entities.units[selectedUnitId]) selectedUnitId = assignment.chain.at(-1).unitId;
-  const current = selectOrganizationView(state, indexes, registries, selectedUnitId), aggregate = aggregateStrength(state, indexes, selectedUnitId);
-  const browseChain = organizationChain(state, indexes, selectedUnitId);
-  els.assignmentCard.replaceChildren(statLine("Duty Position", assignment.billetName), statLine("Assigned Since", assignment.assignmentStartDate), statLine("Chain", assignment.chain.map(x => x.name).join(" › ")));
-  els.unitBreadcrumbs.replaceChildren(...browseChain.map(item => { const b=document.createElement("button"); b.type="button"; b.textContent=item.name; if(item.unitId===selectedUnitId) b.disabled=true; b.addEventListener("click",()=>{selectedUnitId=item.unitId; render();}); return b; }));
-  els.organizationBrowser.replaceChildren(); const summary=document.createElement("div"); summary.className="unit-summary"; summary.append(statLine("Echelon", current.echelon),statLine("Branch",current.branch),statLine("Strength",`${aggregate.assigned} / ${aggregate.authorized}`),statLine("Vacancies",aggregate.vacancies),statLine("Readiness",`${current.readiness}%`),statLine("Morale",`${current.morale}%`)); els.organizationBrowser.append(summary);
-  if(current.childUnitIds.length){ const children=document.createElement("div"); children.className="unit-children"; for(const id of current.childUnitIds){ const child=state.entities.units[id], b=document.createElement("button"); b.type="button"; b.className="unit-child"; b.textContent=`${child.name} · ${registries.echelons.get(child.echelonId).name}`; b.addEventListener("click",()=>{selectedUnitId=id; render();}); children.appendChild(b);} els.organizationBrowser.append(children); }
-  const personnelIds=descendantUnitIds(state,indexes,selectedUnitId).flatMap(id=>indexes.peopleByUnitId.get(id)??[]), seen=new Set(); const personnel=personnelIds.filter(id=>!seen.has(id)&&seen.add(id)).map(id=>selectUnitPersonnel(state,indexes,registries,state.entities.people[id].affiliation.unitId).find(x=>x.id===id)).filter(Boolean);
-  els.unitPersonnelMeta.textContent=`${current.name}${current.childUnitIds.length ? " and subordinate units" : ""} · ${personnel.length} assigned personnel`;
-  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}${member.isPlayer ? " · YOU" : ""}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; card.append(h,p,p2); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
-  const orderIds=indexes.ordersByPersonId?.get(personId)??[]; els.ordersList.replaceChildren(); if(!orderIds.length){const p=document.createElement("p");p.className="muted";p.textContent="No orders recorded yet.";els.ordersList.append(p);} else for(const id of orderIds.slice().reverse()){const o=state.entities.orderRecords[id], card=document.createElement("article");card.className="order-card";const h=document.createElement("h3");h.textContent=o.title;const p1=document.createElement("p");p1.textContent=o.summary;const p2=document.createElement("p");p2.className="muted";p2.textContent=`Issued ${o.issueDate} · Effective ${o.effectiveDate} · ${o.status}`;card.append(h,p1,p2);els.ordersList.append(card);}
+function renderUnitRoster(state, indexes, unitId) {
+  const unitView = selectOrganizationView(state, indexes, registries, unitId);
+  const members = collectUnitPersonnel(state, indexes, unitId);
+  const aggregate = aggregateStrength(state, indexes, unitId);
+  els.squadMeta.textContent = `${unitView.name}${unitView.childUnitIds.length ? " + subordinate units" : ""} · ${members.length} personnel · ${aggregate.assigned}/${aggregate.authorized} assigned · Readiness ${unitView.readiness}% · Morale ${unitView.morale}% · ${state.world.date}`;
+  els.squadBody.replaceChildren(...members.map(member => {
+    const tr=document.createElement("tr"); if(member.isPlayer) tr.className="player-row";
+    for(const value of [member.rank, `${member.name}${member.isPlayer ? " · YOU" : ""}`, member.billet, `${member.health}%`, `${member.morale}%`, member.weaponName, member.status]) { const td=document.createElement("td"); td.textContent=value; tr.appendChild(td); }
+    tr.addEventListener("click",()=>showPersonProfile(member.id)); tr.classList.add("roster-row"); return tr;
+  }));
 }
-
+function renderPersonnelBrowser(state, indexes, personId) {
+  const ownUnitId = playerAssignmentUnitId(state, indexes, personId);
+  if (!personnelFilterUnitId || !state.entities.units[personnelFilterUnitId]) personnelFilterUnitId = ownUnitId;
+  const current=selectOrganizationView(state,indexes,registries,personnelFilterUnitId), personnel=collectUnitPersonnel(state,indexes,personnelFilterUnitId);
+  els.unitPersonnelMeta.textContent=`${current.name}${current.childUnitIds.length ? " and subordinate units" : ""} · ${personnel.length} assigned personnel`;
+  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const tag=document.createElement("div"); tag.className="mini-tag"; const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}${member.isPlayer ? " · YOU" : ""}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; tag.append(h,p,p2); card.append(tag); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
+  els.personnelMyUnit.disabled = personnelFilterUnitId === ownUnitId;
+}
+function renderOrganization(state, indexes, personId) {
+  const assignment = selectAssignmentView(state, indexes, registries, personId), ownUnitId = assignment.chain.at(-1).unitId;
+  if (!selectedOrganizationUnitId || !state.entities.units[selectedOrganizationUnitId]) selectedOrganizationUnitId = ownUnitId;
+  const current = selectOrganizationView(state, indexes, registries, selectedOrganizationUnitId), aggregate = aggregateStrength(state, indexes, selectedOrganizationUnitId);
+  const browseChain = organizationChain(state, indexes, selectedOrganizationUnitId);
+  els.assignmentCard.replaceChildren(statLine("Duty Position", assignment.billetName), statLine("Assigned Since", assignment.assignmentStartDate), statLine("Chain", assignment.chain.map(x => x.name).join(" › ")));
+  els.unitBreadcrumbs.replaceChildren(...browseChain.map(item => { const b=document.createElement("button"); b.type="button"; b.textContent=item.name; if(item.unitId===selectedOrganizationUnitId) b.disabled=true; b.addEventListener("click",()=>{selectedOrganizationUnitId=item.unitId; render();}); return b; }));
+  els.organizationBrowser.replaceChildren(); const summary=document.createElement("div"); summary.className="unit-summary"; summary.append(statLine("Echelon", current.echelon),statLine("Branch",current.branch),statLine("Strength",`${aggregate.assigned} / ${aggregate.authorized}`),statLine("Vacancies",aggregate.vacancies),statLine("Readiness",`${current.readiness}%`),statLine("Morale",`${current.morale}%`)); els.organizationBrowser.append(summary);
+  if(current.childUnitIds.length){ const children=document.createElement("div"); children.className="unit-children"; for(const id of current.childUnitIds){ const child=state.entities.units[id], b=document.createElement("button"); b.type="button"; b.className="unit-child"; b.textContent=`${child.name} · ${registries.echelons.get(child.echelonId).name}${id===ownUnitId ? " · YOUR UNIT" : ""}`; b.addEventListener("click",()=>{selectedOrganizationUnitId=id; render();}); children.appendChild(b);} els.organizationBrowser.append(children); }
+  els.returnMyUnit.disabled = selectedOrganizationUnitId === ownUnitId;
+  els.viewSelectedPersonnel.textContent = `View ${current.name} in Personnel`;
+  renderUnitRoster(state, indexes, selectedOrganizationUnitId);
+  renderPersonnelBrowser(state, indexes, personId);
+  const orderIds=indexes.ordersByPersonId?.get(personId)??[]; els.ordersList.replaceChildren(); if(!orderIds.length){const p=document.createElement("p");p.className="muted";p.textContent="No orders recorded yet.";els.ordersList.append(p);} else for(const id of orderIds.slice().reverse()){const o=state.entities.orderRecords[id], card=document.createElement("article");card.className="order-card military-order";const mast=document.createElement("div");mast.className="order-masthead";mast.textContent="HEADQUARTERS · OFFICIAL ORDERS";const h=document.createElement("h3");h.textContent=o.title;const p1=document.createElement("p");p1.className="order-summary";p1.textContent=o.summary;const p2=document.createElement("p");p2.className="order-meta";p2.textContent=`ISSUED ${o.issueDate} · EFFECTIVE ${o.effectiveDate} · ${o.status.toUpperCase()}`;card.append(mast,h,p1,p2);els.ordersList.append(card);}
+}
 
 function renderServiceCareer(state, indexes, personId) {
   const view = selectServiceCareer(state, indexes, registries, personId);
@@ -172,8 +207,6 @@ function render() {
   els.newCareerPanel.hidden = hasPlayer; els.careerContent.hidden = !hasPlayer;
   if (!hasPlayer) { els.diagnostics.textContent = ""; return; }
   const squad = selectCurrentSquad(state, indexes, registries, state.playerPersonId), career = selectCareerRecord(state, indexes, registries, state.playerPersonId);
-  els.squadMeta.textContent = `${squad.unitName} · ${squad.members.length} personnel · Readiness ${squad.readiness}% · Morale ${squad.morale}% · ${state.world.date}`;
-  els.squadBody.replaceChildren(...squad.members.map(member => { const tr = document.createElement("tr"); if (member.isPlayer) tr.className = "player-row"; for (const value of [member.rank, member.name, member.role, `${member.health}%`, `${member.morale}%`, member.weaponName, member.status]) { const td = document.createElement("td"); td.textContent = value; tr.appendChild(td); } return tr; }));
   const assignment = selectAssignmentView(state, indexes, registries, state.playerPersonId);
   els.careerSummary.replaceChildren();
   const identity = document.createElement("div"); identity.className = "career-identity";
@@ -258,9 +291,12 @@ els.newCareer.addEventListener("click", async () => {
     els.branchSelect.value = scenario.branchId; els.componentSelect.value = scenario.componentId; els.specialtySelect.value = scenario.specialtyId;
     els.contractSelect.value = scenario.allowedContractDefinitionIds[0] ?? registries.components.get(scenario.componentId).defaultContractDefinitionId;
   }
-  els.worldSeed.value = String(seed); activeView = "career"; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
+  els.worldSeed.value = String(seed); activeView = "career"; selectedOrganizationUnitId = null; personnelFilterUnitId = null; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
 });
 
+els.returnMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); selectedOrganizationUnitId=playerAssignmentUnitId(state,indexes); render(); });
+els.viewSelectedPersonnel.addEventListener("click", () => { personnelFilterUnitId=selectedOrganizationUnitId; setActiveView("personnel"); render(); });
+els.personnelMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); personnelFilterUnitId=playerAssignmentUnitId(state,indexes); render(); });
 document.querySelectorAll("#bottom-nav [data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
 els.appErrorDismiss.addEventListener("click", () => { els.appError.hidden = true; });
 

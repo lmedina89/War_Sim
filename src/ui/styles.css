@@ -158,3 +158,53 @@ pre { white-space: pre-wrap; word-break: break-word; margin: 0; color: var(--goo
   .seed-control { flex-direction: column; }
   .seed-control button { width: 100%; }
 }
+
+/* v0.3.2.3 military presentation layer */
+:root {
+  --mil-olive: #9aa56a;
+  --mil-olive-soft: color-mix(in srgb, var(--mil-olive) 12%, transparent);
+  --mil-steel: #8394a3;
+  --mil-paper: #d7d1b8;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .045;
+  background-image: linear-gradient(rgb(255 255 255 / .12) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .08) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, #000, transparent 65%);
+}
+.hero { border-bottom: 1px solid color-mix(in srgb, var(--mil-olive) 35%, var(--border)); padding-bottom: 14px; }
+.eyebrow, .section-kicker { color: color-mix(in srgb, var(--accent) 72%, var(--mil-olive)); }
+.panel { position: relative; }
+.panel::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 2px; border-radius: 999px; background: linear-gradient(var(--mil-olive), transparent 80%); opacity: .22; }
+.selected-unit-panel { border-color: color-mix(in srgb, var(--mil-olive) 34%, var(--border)); }
+.browse-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.roster-row { cursor: pointer; transition: background .15s ease; }
+.roster-row:hover { background: rgb(255 255 255 / .035); }
+.roster-row.player-row { box-shadow: inset 3px 0 0 var(--accent); }
+.unit-child { border-left: 3px solid color-mix(in srgb, var(--mil-olive) 60%, var(--border)); }
+.person-card { overflow: hidden; }
+.person-card::before { content: "PERSONNEL FILE"; display: block; margin: -12px -12px 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--mil-olive) 8%, var(--surface-soft)); color: var(--mil-steel); font-size: .63rem; font-weight: 900; letter-spacing: .14em; }
+.person-card.player-row::before { content: "PERSONNEL FILE · YOU"; color: var(--accent); }
+.dog-tag { position: relative; margin: 16px 0; padding: 18px 20px 16px 28px; border: 1px solid #68747d; border-radius: 24px 7px 24px 7px; background: linear-gradient(145deg, #727d84, #3d474f 48%, #252e35); box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), inset 0 -1px 0 rgb(0 0 0 / .4), 0 12px 28px rgb(0 0 0 / .25); color: #f2f4ef; text-shadow: 0 1px 0 rgb(0 0 0 / .45); }
+.dog-tag::before { content: ""; position: absolute; left: 9px; top: 50%; width: 9px; height: 9px; transform: translateY(-50%); border-radius: 50%; background: #111820; border: 2px solid #89939a; box-shadow: inset 0 0 0 1px #000; }
+.dog-tag-row { display: grid; grid-template-columns: 6.8rem minmax(0, 1fr); gap: 12px; padding: 4px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-transform: uppercase; letter-spacing: .045em; }
+.dog-tag-row span { color: #c8d0d3; font-size: .72rem; }
+.dog-tag-row strong { font-size: .82rem; text-align: left; }
+.personnel-file-card { border-color: #64717a; background: linear-gradient(180deg, #111a22, #0e151c); }
+.personnel-profile-body { border-top: 1px dashed color-mix(in srgb, var(--mil-olive) 45%, var(--border)); padding-top: 5px; }
+.military-order { border: 1px solid color-mix(in srgb, var(--mil-olive) 42%, var(--border)); border-left: 5px solid var(--mil-olive); background: linear-gradient(180deg, color-mix(in srgb, var(--mil-olive) 8%, var(--surface-raised)), var(--surface-raised)); }
+.order-masthead { margin: -12px -12px 10px; padding: 7px 12px; border-bottom: 1px solid color-mix(in srgb, var(--mil-olive) 30%, var(--border)); color: var(--mil-olive); font-size: .65rem; font-weight: 950; letter-spacing: .14em; }
+.order-summary { font-size: 1rem; line-height: 1.45; }
+.order-meta { margin-top: 10px !important; color: var(--mil-steel); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .75rem; letter-spacing: .035em; }
+.bottom-nav { border-color: color-mix(in srgb, var(--mil-olive) 28%, var(--border-strong)); }
+.bottom-nav button[aria-current="page"] { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent) 75%, var(--mil-olive)); }
+@media (max-width: 760px) {
+  .browse-actions { width: 100%; justify-content: stretch; }
+  .browse-actions button { flex: 1 1 150px; }
+  .dog-tag { padding-right: 14px; }
+  .dog-tag-row { grid-template-columns: 5.6rem minmax(0, 1fr); gap: 8px; }
+}

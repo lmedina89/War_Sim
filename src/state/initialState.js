@@ -20,7 +20,7 @@ export function createInitialWorldState({
   const normalizedSeed = Number(seed) >>> 0 || 0x6d2b79f5;
   const state = {
     schemaVersion: 11,
-    gameVersion: "0.3.2.2",
+    gameVersion: "0.3.2.3",
     playerPersonId: null,
     world: {
       date: "2046-02-10",

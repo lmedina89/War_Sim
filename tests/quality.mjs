@@ -36,6 +36,12 @@ assert.match(html, /viewport-fit=cover/);
 assert.match(html, /aria-live="polite"/);
 assert.match(html, /aria-current="page"/);
 assert.equal([...html.matchAll(/class="game-view" data-view=/g)].length, 5);
+assert.ok(ids.includes("return-my-unit") && ids.includes("view-selected-personnel") && ids.includes("personnel-my-unit"), "unit/personnel scope controls must exist");
+assert.ok(ids.includes("person-dog-tag"), "personnel identification plate must exist");
+assert.match(app, /selectedOrganizationUnitId/, "Unit view must own organization selection state");
+assert.match(app, /personnelFilterUnitId/, "Personnel view must own independent filter state");
+assert.doesNotMatch(app, /selectedUnitId/, "legacy shared Unit/Personnel selection state must not return");
+assert.match(app, /renderUnitRoster\(state, indexes, selectedOrganizationUnitId\)/, "Unit roster must follow selected organization scope");
 
 // Security / containment hygiene: no eval-style execution, document.write, or HTML injection in runtime UI.
 for (const file of jsFiles) {
@@ -111,5 +117,7 @@ console.log(JSON.stringify({
   concreteRuntimeIdAudit:true,
   domIntegrity:true,
   importGraphIntegrity:true,
-  renderContainment:true
+  renderContainment:true,
+  independentUnitPersonnelState:true,
+  militaryPresentationDom:true
 }, null, 2));

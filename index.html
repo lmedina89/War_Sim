@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.3.2.2</title>
+  <title>War Sim v0.3.2.3</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.3.2.2</p>
+        <p class="eyebrow">WAR SIM · v0.3.2.3</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -85,8 +85,8 @@
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">CHAIN OF COMMAND</p><h2>Organization</h2></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article>
         </section>
 
-        <section class="panel">
-          <div class="panel-head"><div><p class="section-kicker">CURRENT SQUAD</p><h2>Roster</h2><p id="squad-meta" class="muted">Loading…</p></div></div>
+        <section class="panel selected-unit-panel">
+          <div class="panel-head"><div><p class="section-kicker">SELECTED UNIT</p><h2>Unit Roster</h2><p id="squad-meta" class="muted">Loading…</p></div><div class="browse-actions"><button id="return-my-unit" type="button" class="secondary compact-button">Return to My Unit</button><button id="view-selected-personnel" type="button" class="compact-button">View in Personnel</button></div></div>
           <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Role</th><th>Health</th><th>Morale</th><th>Weapon</th><th>Status</th></tr></thead><tbody id="squad-body"></tbody></table></div>
         </section>
 
@@ -94,7 +94,7 @@
       </section>
 
       <section class="game-view" data-view="personnel" hidden>
-        <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">PERSONNEL</p><h2>Unit Roster</h2><p id="unit-personnel-meta" class="muted"></p></div></div><div id="unit-personnel" class="personnel-grid"></div></section>
+        <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">PERSONNEL</p><h2>Personnel Files</h2><p id="unit-personnel-meta" class="muted"></p></div><button id="personnel-my-unit" type="button" class="secondary compact-button">My Unit</button></div><div id="unit-personnel" class="personnel-grid"></div></section>
         <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RELATIONSHIPS</p><h2>People You Know</h2></div><div id="relationships"></div></section>
       </section>
 
@@ -121,7 +121,7 @@
 
   <dialog id="achievement-dialog" class="modal"><div class="modal-card"><p id="achievement-type" class="eyebrow"></p><h2 id="achievement-title"></h2><p id="achievement-message"></p><button id="achievement-ok" type="button">Continue</button></div></dialog>
   <dialog id="save-dialog" class="modal"><div class="modal-card save-manager"><div class="panel-head"><div><p id="save-mode-label" class="eyebrow"></p><h2 id="save-dialog-title">Save Manager</h2></div><button id="save-dialog-close" type="button" class="secondary compact-button">Close</button></div><div id="save-slots" class="save-slots"></div></div></dialog>
-  <dialog id="person-dialog" class="modal"><div class="modal-card"><div class="panel-head"><div><p class="eyebrow">PERSONNEL PROFILE</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-profile-body"></div></div></dialog>
+  <dialog id="person-dialog" class="modal personnel-modal"><div class="modal-card personnel-file-card"><div class="panel-head"><div><p class="eyebrow">PERSONNEL FILE</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-dog-tag" class="dog-tag" aria-label="Military personnel identification plate"></div><div id="person-profile-body" class="personnel-profile-body"></div></div></dialog>
   <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card"><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
   <script type="module" src="./src/app.js"></script>
 </body>

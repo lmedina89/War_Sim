@@ -1,11 +1,26 @@
-# War Sim v0.3.2.2 — Foundation Cleanup & Interface Overhaul
+# War Sim v0.3.2.3 — Military Interface & Unit Browsing Hotfix
 
-War Sim v0.3.2.2 is the final planned 0.3.x foundation-cleanup checkpoint before broader MOS, training, and career expansion.
+War Sim v0.3.2.3 fixes Unit/Personnel browsing state and adds the first deliberate military presentation layer while preserving the tested v0.3.2.2 simulation foundation.
 
 ## What changed
 
+### Unit and Personnel browsing fix
+- Unit browsing owns its own `selectedOrganizationUnitId`.
+- The roster directly under the Unit browser follows the unit actually selected: squad, platoon, or company.
+- `My Assignment` remains tied to the player’s real billet and never changes while browsing.
+- Personnel uses an independent `personnelFilterUnitId`; browsing Unit no longer silently changes Personnel.
+- `View in Personnel`, `Return to My Unit`, and `My Unit` make scope changes explicit.
+- Scoped personnel collection uses derived unit indexes and de-duplicates IDs once per selected organization.
+
+### Military presentation
+- personnel profiles include a dog-tag-style identification plate built only from canonical branch, rank, specialty, and unit data
+- Personnel cards are presented as personnel files
+- Orders use an official-orders treatment with a headquarters masthead and effective-date metadata
+- Unit roster rows are interactive and open the canonical personnel profile
+- steel/olive accents, subtle grid texture, section rails, and stronger hierarchy add military character without coupling presentation to simulation logic
+
 ### Real gameplay navigation
-The old bottom bar only scrolled around one very long page. v0.3.2.2 introduces five actual primary views:
+The old bottom bar only scrolled around one very long page. v0.3.2.3 introduces five actual primary views:
 
 - Career
 - Unit
@@ -57,7 +72,7 @@ Save slots now retain and display more useful context including specialty and cu
 ## Compatibility
 - World schema remains **11**.
 - Existing v0.3.2.1 schema-11 saves do not require destructive migration.
-- Loaded saves are normalized to game version **0.3.2.2** by the save migration pipeline.
+- Loaded saves are normalized to game version **0.3.2.3** by the save migration pipeline.
 - Existing v0.3.2 and older supported saves continue through the existing migration chain.
 
 ## Verification
@@ -82,7 +97,7 @@ See `SOFTWARE_QUALITY_REPORT.md` for the full audit results.
 - new branches, specialties, ranks, billets, equipment, and starting scenarios should be definition/profile additions rather than runtime conditionals
 
 ## Roadmap
-- **v0.3.2.2** — Foundation Cleanup & Interface Overhaul (current)
+- **v0.3.2.3** — Military Interface & Unit Browsing Hotfix (current)
 - **v0.4.x** — MOS, Training & Career Expansion
 - **v0.5.x** — Locations, Installations & PCS
 - **v0.6.x** — Equipment & Logistics
