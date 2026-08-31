@@ -1,6 +1,7 @@
 import { calculateUnitReadiness } from "../services/unitReadiness.js";
 import { readinessTrendFromSnapshots } from "../services/livingUnit.js";
 import { describeScheduleConflict, scheduleConflictForActivity } from "../services/scheduleRules.js";
+import { schoolOpportunitySourceLabel } from "../services/schoolEligibility.js";
 
 function overlaps(startA, endA, startB, endB) { return startA <= endB && startB <= endA; }
 
@@ -50,7 +51,8 @@ export function selectGameplay(state, indexes, registries, personId) {
   const eventIds = indexes.gameplayEventsByPersonId?.get(personId) ?? [];
   const pendingDecisions = eventIds.map(id => state.entities.gameplayEventRecords[id]).filter(record => record?.status === "pending").map(record => {
     const def = registries.gameplayEvents.get(record.definitionId);
-    return { id: record.id, title: def.title, message: def.message, deadlineElapsedDay: record.expiresElapsedDay, daysRemaining: record.expiresElapsedDay == null ? null : Math.max(0, record.expiresElapsedDay - currentElapsedDay), choices: (def.choices ?? []).map(choice => ({ id: choice.id, label: choice.label })) };
+    const targetName = record.targetPersonId ? state.entities.people?.[record.targetPersonId]?.identity?.displayName ?? null : null;
+    return { id: record.id, title: def.title, message: targetName ? `${def.message} Teammate: ${targetName}.` : def.message, targetPersonId: record.targetPersonId ?? null, targetName, deadlineElapsedDay: record.expiresElapsedDay, daysRemaining: record.expiresElapsedDay == null ? null : Math.max(0, record.expiresElapsedDay - currentElapsedDay), choices: (def.choices ?? []).map(choice => ({ id: choice.id, label: choice.label })) };
   });
 
   const activeSchedule = scheduleRecords.filter(record => ["scheduled","in_progress"].includes(record.status) && record.endElapsedDay >= currentElapsedDay).sort((a,b) => a.startElapsedDay - b.startElapsedDay);
@@ -75,7 +77,7 @@ export function selectGameplay(state, indexes, registries, personId) {
   const opportunities = opportunityRecords.map(record => {
     const def = registries.opportunities.get(record.definitionId);
     const school = def.schoolId ? registries.schools.get(def.schoolId) : null;
-    return { ...record, name: def.name, title: def.title, message: def.message, schoolName: school?.name ?? null, durationDays: school?.durationDays ?? null, daysRemaining: record.status === "open" ? Math.max(0, record.expiresElapsedDay - currentElapsedDay) : null };
+    return { ...record, name: def.name, title: def.title, message: def.message, schoolName: school?.name ?? null, durationDays: school?.durationDays ?? null, sourceLabel:schoolOpportunitySourceLabel(record.sourceType ?? "random_eligible"), daysRemaining: record.status === "open" ? Math.max(0, record.expiresElapsedDay - currentElapsedDay) : null };
   });
 
   const objectiveRecords = (indexes.objectiveRecordsByPersonId?.get(personId) ?? []).map(id => state.entities.objectiveRecords[id]).filter(Boolean);

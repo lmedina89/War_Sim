@@ -11,7 +11,7 @@ const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 
-assert.match(html,/v0\.4\.1\.7/);
+assert.match(html,/v0\.4\.2/);
 assert.match(html,/data-persist-key="career-activities"/,"activities should be collapsible on long career pages");
 assert.match(app,/CAREER_HISTORY_PREVIEW_LIMIT\s*=\s*5/);
 assert.match(app,/UNIT_TRAINING_PREVIEW_LIMIT\s*=\s*4/);
@@ -38,4 +38,4 @@ for(const notice of opportunityNotices){assert.ok(notice.references?.opportunity
 const view=selectGameplay(state,store.getIndexes(),registries,personId);
 assert.ok(Array.isArray(view.recentActivities));
 assert.ok(Array.isArray(view.recentDuties));
-console.log("War Sim v0.4.1.7 mobile UX and career-page consolidation QA passed");
+console.log("War Sim v0.4.2 mobile UX and career-page consolidation QA passed");

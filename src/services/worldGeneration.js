@@ -1,8 +1,9 @@
 import { randomInt } from "../core/rng.js";
 import { personnelGenerationDefinition as personnelData } from "../data/personnelGeneration.js";
 import { initializeUnitTrainingProfiles } from "./unitReadiness.js";
+import { seedPriorServiceHistories } from "./priorServiceHistory.js";
 
-export const CURRENT_WORLD_GENERATOR_VERSION = 2;
+export const CURRENT_WORLD_GENERATOR_VERSION = 3;
 
 function cloneCondition(state) {
   return {
@@ -114,6 +115,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
   }
 
   initializeUnitTrainingProfiles(state, profile.readinessModelId);
+  seedPriorServiceHistories(state, registries);
 
   state.world.generation = {
     generatorVersion: CURRENT_WORLD_GENERATOR_VERSION,

@@ -1,42 +1,45 @@
-# War Sim v0.4.1.7 — Mobile UX & Career Page Consolidation
+# War Sim v0.4.2 — Army Service Record & Career Achievement Foundation
 
-War Sim v0.4.1.7 is a presentation-focused stabilization update built on the verified v0.4.1.6 training foundation. It keeps **world schema 14** and **save format 3**. The simulation rules from v0.4.1.6 are intentionally preserved; this release focuses on mobile usability, history presentation, and making important career opportunities impossible to miss.
+War Sim v0.4.2 begins the next major gameplay layer after the v0.4.1.x soldier/unit foundation: a durable, definition-driven Army career record that can eventually feed unit capability and conflict simulation. The stable v0.4.1.8 controller/UI architecture is preserved; this release extends it rather than replacing it.
 
-## v0.4.1.7 changes
+## v0.4.2 changes
 
-- **Long Career page reduction**
-  - The Activities panel is now a remembered disclosure panel and can be collapsed without losing state.
-  - Activity Log shows a short recent preview by default with Show More / Recent Only controls.
-  - Recent Unit Training uses the same bounded-preview pattern.
-- **Presentation-only archive controls**
-  - Individual Activity Log and Recent Unit Training entries can be archived from the current UI, similar to Personnel Dispatches.
-  - Archived UI entries do **not** delete or mutate canonical simulation records; archive state is local presentation state scoped to the player.
-  - Archived entries can be restored.
-- **Routine PT history compression**
-  - Repeated Unit Physical Training records are summarized in Recent Unit Training instead of filling the page with one card per routine PT occurrence.
-  - The canonical scheduled-duty records remain intact for simulation/history use.
-- **Career opportunity visibility and navigation**
-  - Major career/school opportunities now join the high-visibility popup queue.
-  - The popup action changes to **Open Opportunity** and takes the player directly to the matching opportunity card.
-  - Career-opportunity dispatches also expose a working Open Opportunity action.
-  - Opening an opportunity highlights the target card briefly.
-- **Mobile modal hardening**
-  - Long AAR/personnel/save dialogs are bounded by the dynamic mobile viewport and scroll internally.
-  - Modal header/Close controls remain reachable while scrolling long content.
-  - Safe-area bottom padding is included.
-- **Narrow-screen wrapping fixes**
-  - Current Duty stacks vertically on narrow phones instead of letting duty name/date fields collide.
-  - Long military labels, qualifications, orders, opportunity text, status blocks, and record values wrap rather than spill outside their cards.
-  - Activity/duty history rows reflow cleanly on narrow screens.
+- World schema advances to **15** while save format remains **3**. Fresh-world generator advances to **v3**.
+- Adds canonical `militaryEducationRecords`, separate from qualifications and awards, so school attendance/graduation has its own durable history.
+- School completion now records military education, associated qualifications, awards/badges, dates, source opportunity, and career history without collapsing those concepts into one generic record.
+- School definitions now carry reusable, data-driven eligibility rules, opportunity sources, completion effects, and future-facing capability-contribution metadata.
+- Adds a **Career Development / Military Schools** catalog showing available, locked, completed, and active schools with prerequisite reasons.
+- Eligible players can **Request Volunteer Slot** for a school. Requests enter the same canonical opportunity → orders → attendance → outcome → credential/history pipeline as other opportunity sources.
+- Existing random school opportunities remain supported, but now record/explain their opportunity source instead of being the only conceptual path.
+- The Career Service Record is reorganized into Military Education, Qualifications, Badges & Tabs, and Ribbons/Medals/Decorations with summary counts.
+- NPCs receive deterministic prior-service histories derived from rank, time in service, specialty context, and the world seed. Experienced NCOs no longer universally appear with empty service records.
+- Prior-service generation can seed appropriate Army Service Ribbon, service-rifle qualification, Basic Leader Course history, NCO Professional Development Ribbon, Army Good Conduct Medal, and rarer Airborne/Parachutist records while preserving deterministic generation and eligibility constraints.
+- Existing schema-14 careers migrate to schema 15, backfill school education history from legacy school-linked qualifications where possible, and deterministically seed plausible NPC prior-service history. The player’s earned history is not fabricated.
+- Qualification, school, and award definitions now include stable record-group/capability metadata intended for the future capability engine; v0.4.2 does **not** yet implement combat bonuses from badges.
+
+## Current content represented by the foundation
+
+The first catalog deliberately stays small while the architecture is proven: Airborne School, Basic Leader Course, Service Rifle / Carbine qualification, Airborne qualification, Basic Leader Course graduation, Parachutist Badge, Army Service Ribbon, NCO Professional Development Ribbon, Army Good Conduct Medal, plus the existing campaign/combat definitions retained for future use.
+
+The design is intentionally extensible: future Air Assault, Ranger, Sniper, Sapper, Pathfinder, MOS/specialty courses, badges, tabs, decorations, campaign/service awards, identification badges, weapon qualifications, and other Army credentials can be added through definitions and shared rule engines rather than special-case UI code.
+
+## Architecture direction
+
+The service record is not merely collectible decoration. The intended future chain is:
+
+**school/training/experience → capabilities → individual readiness/proficiency → collective unit capability → mission/conflict resolution → operational history/award eligibility**
+
+Credentials remain separate from underlying capabilities. A Ranger Tab, for example, will be evidence of completed training whose developed capabilities can matter to a future mission; combat will not use arbitrary “badge = +combat” magic numbers.
+
+Unit type, doctrine, personnel mix, leadership, qualifications, collective proficiency, experience, equipment, sustainment, readiness, mission, terrain, enemy, and uncertainty are planned as distinct future combat inputs.
 
 ## Compatibility
 
-- Runtime: **0.4.1.7**
+- Runtime: **0.4.2**
+- World schema: **15**
 - Save format: **3**
-- World schema: **14**
-- Existing schema-14 careers are normalized to the current runtime version on load.
-- Legacy schema migrations remain supported through the existing migration chain.
+- Generator: **v3**
 
-## Architecture note
+Schema-versioned migration remains authoritative. v0.4.2 preserves the deterministic scheduler, qualification history, school absence rules, activity scope, Unit view, save/checksum pipeline, and other verified v0.4.1.8 systems.
 
-History archiving in this release is deliberately a **UI concern only**. War Sim continues to preserve canonical activity, duty, qualification, career, and notification records so those records remain available to future service-record, capability, readiness, and combat-simulation systems.
+See `SOFTWARE_QUALITY_REPORT.md` for exact release-gate results.

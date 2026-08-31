@@ -614,7 +614,7 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .routine-duty-summary strong{display:block;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#9aa9b8)}
 .routine-duty-summary p{margin:.35rem 0 0;color:var(--text,#edf2f7);font-size:.92rem;line-height:1.35}
 
-/* v0.4.1.7 mobile UX and career-page consolidation */
+/* v0.4.2 mobile UX and career-page consolidation */
 .compact-intro{margin:.15rem 0 .75rem}
 .history-row-shell{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.45rem;align-items:stretch;min-width:0}
 .history-row-shell>.activity-item,.history-row-shell>.duty-history-row{min-width:0}
@@ -657,3 +657,82 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
   .aar-performance,.aar-header{min-width:0}
 }
 @media (prefers-reduced-motion:reduce){.attention-flash{animation:none;outline:2px solid var(--accent)}}
+
+/* v0.4.2 interaction feedback, scope integrity, and Unit-view audit */
+.career-achievement-highlights{display:flex;flex-wrap:wrap;gap:.45rem;padding-top:.75rem;border-top:1px dashed var(--mil-line)}
+.achievement-highlight-label{flex:1 0 100%;color:var(--mil-field-strong);font:900 .58rem/1 var(--doc-font);letter-spacing:.12em}
+.achievement-highlight{display:inline-flex;align-items:center;min-height:32px;max-width:100%;padding:.38rem .58rem;border:1px solid var(--mil-line);border-radius:4px;background:color-mix(in srgb,var(--mil-field) 8%,transparent);color:var(--text);font:800 .68rem/1.25 var(--doc-font);overflow-wrap:anywhere}
+.empty-highlight{color:var(--muted);font-weight:700}
+.aar-participation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;margin:.75rem 0}
+
+/* Unit is the organizational dashboard: one authoritative selected-unit summary, then details. */
+.organization-grid{align-items:start}
+#assignment-card .statline{padding:6px 0}
+#organization-browser{min-width:0}
+.unit-command-header{margin-bottom:0}
+.unit-command-header>div,.unit-command-metrics,.unit-command-metrics>*{min-width:0}
+.unit-command-metrics .mil-metric>strong{white-space:normal;overflow-wrap:anywhere}
+.browse-actions{display:flex;flex-wrap:wrap;gap:.45rem}
+.selected-unit-panel .table-wrap{margin-top:.5rem}
+#unit-history .history-row-shell{align-items:stretch}
+#unit-history .unit-history-row{padding:.7rem .75rem;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,.018)}
+#unit-history .history-row-shell+.history-row-shell{margin-top:.4rem}
+
+/* Avoid desktop-like situation layout on tablet-width phone renderings. */
+@media (max-width: 900px){
+  .situation-strip{grid-template-columns:1fr;gap:8px}
+  .situation-metrics{justify-content:stretch;grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+
+/* Turn the selected-unit roster into readable tap cards instead of a squeezed desktop table. */
+@media (max-width: 680px){
+  .game-view[data-view="unit"] .panel{padding:14px}
+  .game-view[data-view="unit"] .section-heading{margin-bottom:.6rem}
+  .game-view[data-view="unit"] .panel-head{gap:.6rem}
+  .game-view[data-view="unit"] .browse-actions{width:100%}
+  .game-view[data-view="unit"] .browse-actions button{flex:1 1 150px;min-width:0}
+  .unit-command-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .readiness-component-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .readiness-overall .mil-metric{min-width:0;width:100%}
+  .admin-grid{grid-template-columns:1fr}
+  .game-view[data-view="unit"] .table-wrap{overflow:visible;margin:0}
+  .game-view[data-view="unit"] table{min-width:0;width:100%;display:block}
+  .game-view[data-view="unit"] thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .game-view[data-view="unit"] tbody{display:grid;gap:.5rem}
+  .game-view[data-view="unit"] .roster-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem .65rem;padding:.65rem .7rem;border:1px solid var(--border);border-left:3px solid var(--mil-field);border-radius:5px;background:#121c22;cursor:pointer}
+  .game-view[data-view="unit"] .roster-row.player-row{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,#121c22)}
+  .game-view[data-view="unit"] .roster-row td{display:grid;grid-template-columns:minmax(4.4rem,.75fr) minmax(0,1.25fr);gap:.45rem;padding:.22rem 0;border:0;min-width:0;text-align:left;overflow-wrap:anywhere}
+  .game-view[data-view="unit"] .roster-row td::before{content:attr(data-label);color:var(--mil-field-strong);font:800 .58rem/1.25 var(--doc-font);letter-spacing:.08em;text-transform:uppercase}
+  .game-view[data-view="unit"] .roster-row td:nth-child(2),.game-view[data-view="unit"] .roster-row td:nth-child(3){grid-column:1/-1}
+  .game-view[data-view="unit"] .roster-row td:nth-child(2){font-weight:850}
+  .game-view[data-view="unit"] .roster-row td:nth-child(6){grid-column:1/-1}
+  .game-view[data-view="unit"] .roster-row td:nth-child(7){grid-column:1/-1}
+  .aar-participation{grid-template-columns:1fr}
+}
+
+@media (max-width: 440px){
+  .game-view[data-view="unit"] .panel{padding:12px}
+  .game-view[data-view="unit"] .breadcrumbs{gap:.35rem}
+  .game-view[data-view="unit"] .breadcrumbs button{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+  .game-view[data-view="unit"] .unit-command-header{padding:10px}
+  .game-view[data-view="unit"] .roster-row{grid-template-columns:1fr}
+  .game-view[data-view="unit"] .roster-row td{grid-column:1!important}
+  .current-duty-card{grid-template-columns:1fr}
+  .current-duty-card .mil-status-stamp{grid-column:1}
+  .record-strip{grid-template-columns:1fr}
+  .record-strip>*{grid-column:1!important}
+}
+
+/* v0.4.2 career development / service-record foundation */
+.school-catalog-card{border:1px solid var(--line);border-left:4px solid var(--olive);border-radius:12px;padding:14px;margin:10px 0;background:var(--panel-2);min-width:0}
+.school-catalog-card.eligible{border-left-color:var(--good)}
+.school-catalog-card.locked{opacity:.88}
+.school-catalog-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;min-width:0}
+.school-catalog-head strong{font-size:1.05rem;min-width:0;overflow-wrap:anywhere}
+.school-catalog-status,.school-source{font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;color:var(--muted)}
+.school-catalog-status{flex:0 0 auto;color:var(--olive-light)}
+.school-requirements{margin:.5rem 0 .75rem;padding-left:1.2rem;color:var(--muted)}
+.school-requirements li{margin:.25rem 0;overflow-wrap:anywhere}
+.service-record-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.record-group-title{margin:18px 0 8px;font-family:var(--mono);font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@media(max-width:560px){.school-catalog-head{flex-direction:column}.school-catalog-status{align-self:flex-start}.service-record-counts{grid-template-columns:1fr}.career-development-panel .compact-button{width:100%}}

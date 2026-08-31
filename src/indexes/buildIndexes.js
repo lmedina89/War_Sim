@@ -37,13 +37,14 @@ function billetsGroup(state) {
 
 function personHistoryGroup(state) {
   const maps = {
-    careerEventsByPersonId: new Map(), qualificationsByPersonId: new Map(), awardsByPersonId: new Map(),
+    careerEventsByPersonId: new Map(), qualificationsByPersonId: new Map(), awardsByPersonId: new Map(), militaryEducationByPersonId: new Map(),
     assignmentsByPersonId: new Map(), promotionsByPersonId: new Map(), deploymentsByPersonId: new Map(),
     casualtiesByPersonId: new Map(), relationshipsByPersonId: new Map()
   };
   for (const record of Object.values(state.entities.careerEvents)) addToIndex(maps.careerEventsByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.qualificationRecords)) addToIndex(maps.qualificationsByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.awardRecords)) addToIndex(maps.awardsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.militaryEducationRecords ?? {})) addToIndex(maps.militaryEducationByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.assignmentRecords)) addToIndex(maps.assignmentsByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.promotionRecords)) addToIndex(maps.promotionsByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.deploymentRecords)) addToIndex(maps.deploymentsByPersonId, record.personId, record.id);

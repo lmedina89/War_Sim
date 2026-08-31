@@ -1,51 +1,39 @@
-# War Sim v0.4.1.7 — Software Quality Report
+# War Sim v0.4.2 — Software Quality Report
 
-- Runtime version: **0.4.1.7**
-- Save format: **3**
-- World schema: **14**
-- Scope: mobile UX, history presentation, opportunity navigation, responsive layout. No intended simulation-model expansion.
+## Release scope
 
-## Dedicated v0.4.1.7 release gate
+v0.4.2 is the Army Service Record & Career Achievement Foundation. It advances the world schema to 15 and generator to v3 while keeping save format 3. The stable v0.4.1.8 controller/UI foundation is extended, not replaced.
 
-`tests/mobile-ux-consolidation.mjs` verifies:
-- collapsible Activities presentation exists;
-- recent-history preview limits and UI-only archive storage are present;
-- restore/archive controls exist without adding world-schema state;
-- major `career_opportunity` notifications enter the popup path;
-- opportunity records retain concrete navigation references;
-- Open Opportunity routing exists;
-- routine PT presentation is summarized;
-- dialogs use dynamic-viewport bounds and internal scrolling support;
-- narrow-screen Current Duty stacking and long-text wrapping rules are present;
-- generated eligible school opportunities still produce valid referenced records.
+## Major implementation checks
 
-## Regression suites
+- Canonical military education records are separate from qualifications and awards.
+- School eligibility and opportunity sources are definition-driven.
+- Player school requests use the existing opportunity/orders/school-completion pipeline.
+- NPC prior-service generation is deterministic and excludes the player.
+- Schema-14 migration backfills school-linked education and seeds deterministic NPC prior history.
+- Career and personnel service records expose categorized education, qualifications, badges, ribbons/medals, and counts.
+- Capability-contribution metadata is data only in this release; no combat system or arbitrary badge combat bonus was added.
 
-The existing v0.4.1.x suites remain release gates:
-- smoke
-- living-unit / training tempo
+## Pre-package automated QA
+
+All JS/MJS syntax checks passed. The complete test set passed:
+
+- availability / qualification-history / school-effects
 - career continuity
-- stability hotfix
-- migration / qualification
-- availability / qualification history / school effects
-- training results / schedule clarity
-- full quality audit
+- living unit / training tempo
+- migration / qualification / collective activity
+- mobile UX consolidation
+- quality suite
+- Army Service Record foundation
+- smoke suite
+- stability regression
+- training consolidation
+- Unit interaction integrity
 
-## Mobile validation boundary
+Quality suite result: PASS; 84 runtime source modules; 300 generated worlds validated; 10,000-person index stress passed; deterministic RNG, import graph, DOM integrity, render containment, scheduler, readiness, migration, indexing, and presentation audits passed. Pre-package index build observed: 12.78 ms.
 
-Static/Node QA can validate DOM contracts, responsive CSS rules, state integrity, migration behavior, deterministic simulation, and command/selectors. It **cannot certify actual iPhone Safari pixels, touch scrolling, or visual fit**. Live-device validation remains required before freezing the v0.4.1.x line.
+Additional pre-package generation sweep: 5,000 deterministic worlds / 450,000 NPCs, 0 validation failures. Airborne prior-service incidence was approximately 7.65% in the generated conventional infantry population. A 365-day career simulation also completed with 0 world-validation errors.
 
-## Pre-package observed QA
+## Static QA limitation
 
-- JS/MJS syntax check: **PASS — 89 files**
-- Forbidden runtime pattern audit (`Math.random`, `eval`, `new Function`, `document.write`, runtime `.innerHTML =`): **PASS**
-- All 9 test suites: **PASS**
-- `tests/quality.mjs`: **PASS**
-  - source files: 80
-  - generated world seeds validated: 300
-  - 10,000-person index stress: PASS
-  - observed index build in this run: 13.61 ms
-- Additional deterministic fresh-career sweep: **5,000 seeds, 0 failures**
-- 365-day career progression validation: **2047-02-10, 0 world-validation errors**
-
-The final release package is re-extracted and these gates are rerun from the extracted copy before delivery.
+Automated/static QA cannot certify iPhone Safari pixel layout, touch behavior, or the subjective realism of every generated career. Live device validation remains required.

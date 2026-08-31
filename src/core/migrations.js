@@ -3,8 +3,9 @@ import { initializeUnitTrainingProfiles } from "../services/unitReadiness.js";
 import { ensureScheduleCoverageInDraft, seedCareerGameplayRecords, seedScheduleThrough, setTrainingPhaseInDraft } from "../services/careerGameplay.js";
 import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
 import { registries } from "../data/registries.js";
+import { seedPriorServiceHistories } from "../services/priorServiceHistory.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 14;
+export const CURRENT_WORLD_SCHEMA_VERSION = 15;
 
 
 function normalizeScheduleAvailabilityFlags(worldState) {
@@ -287,6 +288,28 @@ function migrateWorldV13ToV14(worldState) {
   return next;
 }
 
+
+function migrateWorldV14ToV15(worldState) {
+  const next=structuredClone(worldState);
+  next.entities.militaryEducationRecords ??= {};
+
+  // Backfill school history from durable qualification records created by earlier builds.
+  for (const record of Object.values(next.entities.qualificationRecords ?? {})) {
+    if (!record.schoolId || !registries.schools.has(record.schoolId)) continue;
+    const exists=Object.values(next.entities.militaryEducationRecords).some(edu=>edu.personId===record.personId&&edu.schoolId===record.schoolId&&edu.status==="graduated");
+    if (exists) continue;
+    const id=`edu_migrated_${record.id}`;
+    next.entities.militaryEducationRecords[id]={id,schemaVersion:1,personId:record.personId,schoolId:record.schoolId,status:"graduated",startDate:null,completedDate:record.completedDate??next.world.date,sourceType:"legacy_qualification_backfill",sourceQualificationRecordId:record.id};
+  }
+
+  // Existing generated NPCs receive deterministic, rank/TIS-consistent prior-service records.
+  // The player is deliberately excluded by the seeding service.
+  seedPriorServiceHistories(next,registries);
+  next.schemaVersion=15;
+  next.gameVersion="0.4.2";
+  return next;
+}
+
 function migrateWorldV11ToV12(worldState) {
   const next = structuredClone(worldState);
   next.entities.skillProfiles ??= {};
@@ -407,16 +430,19 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 11) next.worldState = migrateWorldV11ToV12(next.worldState);
   if (next.worldState.schemaVersion === 12) next.worldState = migrateWorldV12ToV13(next.worldState);
   if (next.worldState.schemaVersion === 13) next.worldState = migrateWorldV13ToV14(next.worldState);
+  if (next.worldState.schemaVersion === 14) next.worldState = migrateWorldV14ToV15(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
+  next.worldState.entities.qualificationAttemptRecords ??= {};
+  next.worldState.entities.militaryEducationRecords ??= {};
   repairLegacyAffiliationFields(next.worldState);
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.1.7";
-  next.worldState.gameVersion = "0.4.1.7";
+  next.gameVersion = "0.4.2";
+  next.worldState.gameVersion = "0.4.2";
   return next;
 }

@@ -6,7 +6,7 @@ const ENTITY_STORES = [
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
-  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords",
+  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords","qualificationAttemptRecords","militaryEducationRecords",
   "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords","unitEventRecords","unitReadinessSnapshots"
 ];
 
@@ -20,8 +20,8 @@ export function createInitialWorldState({
 } = {}) {
   const normalizedSeed = Number(seed) >>> 0 || 0x6d2b79f5;
   const state = {
-    schemaVersion: 14,
-    gameVersion: "0.4.1.7",
+    schemaVersion: 15,
+    gameVersion: "0.4.2",
     playerPersonId: null,
     world: {
       date: "2046-02-10",

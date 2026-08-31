@@ -7,6 +7,7 @@ import { completeSchoolInDraft } from "./schoolCompletion.js";
 import { recordNotification } from "./recordServices.js";
 import { dutyBlocksFocusedActivities, scheduleRecordBlocksFocusedActivities } from "./scheduleRules.js";
 import { calculateDutyPerformanceScore, resolvePerformanceRating } from "./performance.js";
+import { evaluateSchoolEligibility } from "./schoolEligibility.js";
 import { applyNpcParticipationForDuty, recordUnitEvent, recordReadinessSnapshot, recordDutyQualification } from "./livingUnit.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
@@ -119,35 +120,52 @@ export function ensureScheduleCoverageInDraft(draft,registries,personId,unitId,a
   const firm=phase.firmWindowDays??21;for(const r of Object.values(draft.entities.scheduleRecords??{}))if(r.personId===personId&&r.status==="scheduled")r.planningStatus=r.startElapsedDay-draft.world.clock.elapsedDays<=firm?"firm":"tentative";
 }
 
-function hasQualification(draft, personId, schoolId) {
-  return Object.values(draft.entities.qualificationRecords).some(record => record.personId === personId && record.schoolId === schoolId);
+function activeOpportunityForSchool(draft, registries, personId, schoolId) {
+  return Object.values(draft.entities.opportunityRecords ?? {}).find(record => {
+    if (record.personId !== personId || !["open","accepted","in_progress"].includes(record.status)) return false;
+    const def = registries.opportunities.has(record.definitionId) ? registries.opportunities.get(record.definitionId) : null;
+    return def?.schoolId === schoolId;
+  }) ?? null;
+}
+
+function createSchoolOpportunityInDraft(draft, registries, personId, def, { sourceType="random_eligible" }={}) {
+  const id = createEntityId(draft, "opportunity");
+  draft.entities.opportunityRecords[id] = {
+    id, schemaVersion: 2, definitionId: def.id, personId, status: "open", sourceType,
+    offeredDate: draft.world.date, offeredElapsedDay: draft.world.clock.elapsedDays,
+    expiresDate: addDaysIso(draft.world.date, def.expiresAfterDays),
+    expiresElapsedDay: draft.world.clock.elapsedDays + def.expiresAfterDays,
+    acceptedDate: null, reportDate: null, completionDate: null, orderId: null
+  };
+  const noticeId = recordNotification(draft, { personId, type: "career_opportunity", title: def.title, message: def.message, priority: "high", references: { opportunityRecordId: id, opportunityDefinitionId: def.id, schoolId:def.schoolId, sourceType } });
+  return { opportunityRecordId:id, notificationId:noticeId };
+}
+
+export function requestSchoolOpportunityInDraft(draft, registries, personId, schoolId) {
+  draft.entities.opportunityRecords ??= {};
+  const eligibility=evaluateSchoolEligibility(draft,registries,personId,schoolId);
+  if(!eligibility.eligible) throw new Error(`School request blocked: ${eligibility.reasons.join("; ")}.`);
+  const existing=activeOpportunityForSchool(draft,registries,personId,schoolId);
+  if(existing) throw new Error("A school opportunity for this course is already active.");
+  const def=registries.opportunities.values().find(item=>item.schoolId===schoolId && (item.sourceTypes??[]).includes("player_request"));
+  if(!def) throw new Error("This school is not currently requestable through the career-development channel.");
+  return { ...createSchoolOpportunityInDraft(draft,registries,personId,def,{sourceType:"player_request"}), definitionId:def.id, schoolId };
 }
 
 export function evaluateCareerOpportunitiesInDraft(draft, registries, personId) {
   draft.entities.opportunityRecords ??= {};
   const person = draft.entities.people[personId];
   if (!person) return [];
-  const rank = registries.ranks.get(person.affiliation.rankId);
-  const serviceDays = daysBetweenIso(person.career.enlistmentDate, draft.world.date);
   const created = [];
-  const existingDefinitionIds = new Set(Object.values(draft.entities.opportunityRecords).filter(r => r.personId === personId).map(r => r.definitionId));
   for (const def of registries.opportunities.values()) {
-    if (existingDefinitionIds.has(def.id)) continue;
-    if (serviceDays < (def.minimumServiceDays ?? 0)) continue;
-    if (rank.hierarchyLevel < (def.minimumRankLevel ?? 0)) continue;
-    if (person.condition.health < (def.minimumHealth ?? 0)) continue;
-    if (def.allowedStatuses && !def.allowedStatuses.includes(person.condition.status)) continue;
-    if (def.schoolId && hasQualification(draft, personId, def.schoolId)) continue;
-    const id = createEntityId(draft, "opportunity");
-    draft.entities.opportunityRecords[id] = {
-      id, schemaVersion: 1, definitionId: def.id, personId, status: "open",
-      offeredDate: draft.world.date, offeredElapsedDay: draft.world.clock.elapsedDays,
-      expiresDate: addDaysIso(draft.world.date, def.expiresAfterDays),
-      expiresElapsedDay: draft.world.clock.elapsedDays + def.expiresAfterDays,
-      acceptedDate: null, reportDate: null, completionDate: null, orderId: null
-    };
-    const noticeId = recordNotification(draft, { personId, type: "career_opportunity", title: def.title, message: def.message, priority: "high", references: { opportunityRecordId: id, opportunityDefinitionId: def.id } });
-    created.push({ opportunityRecordId: id, notificationId: noticeId });
+    if (!(def.sourceTypes ?? ["random_eligible"]).includes("random_eligible")) continue;
+    if (def.schoolId) {
+      const eligibility=evaluateSchoolEligibility(draft,registries,personId,def.schoolId);
+      if(!eligibility.eligible || activeOpportunityForSchool(draft,registries,personId,def.schoolId)) continue;
+    }
+    const priorSame = Object.values(draft.entities.opportunityRecords).some(r => r.personId === personId && r.definitionId === def.id && !["declined","expired"].includes(r.status));
+    if(priorSame) continue;
+    created.push(createSchoolOpportunityInDraft(draft,registries,personId,def,{sourceType:"random_eligible"}));
   }
   return created;
 }
@@ -241,7 +259,7 @@ export function processOpportunityLifecycleForDay(draft, registries, personId) {
       notificationIds.push(recordNotification(draft, { personId, type: "school_reported", title: `${def.name} Started`, message: `Reported for ${def.name}.`, priority: "high", references: { opportunityRecordId: record.id, orderId: record.orderId } }));
     }
     if (record.status === "in_progress" && draft.world.clock.elapsedDays >= record.completeElapsedDay) {
-      const completion = completeSchoolInDraft(draft, registries, personId, def.schoolId, { sourceType: "scheduled_school" });
+      const completion = completeSchoolInDraft(draft, registries, personId, def.schoolId, { sourceType: "scheduled_school", opportunityRecordId: record.id });
       notificationIds.push(...completion.notificationIds);
       record.status = "completed";
       record.completedDate = draft.world.date;

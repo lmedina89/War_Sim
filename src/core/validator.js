@@ -3,7 +3,7 @@ const REQUIRED_STORES = [
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
-  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords",
+  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords","militaryEducationRecords",
   "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords","unitEventRecords","unitReadinessSnapshots"
 ];
 
@@ -12,7 +12,7 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 14) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 15) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };
@@ -76,6 +76,7 @@ export function validateWorldState(state, registries) {
   for (const record of Object.values(e.promotionRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.ranks.has(record.rankId)) errors.push(`${record.id}: invalid rankId.`); }
   for (const record of Object.values(e.qualificationRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.qualifications.has(record.qualificationId)) errors.push(`${record.id}: invalid qualificationId.`); if (record.schoolId != null && !registries.schools.has(record.schoolId)) errors.push(`${record.id}: invalid schoolId.`); }
   for (const record of Object.values(e.awardRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.awards.has(record.awardId)) errors.push(`${record.id}: invalid awardId.`); }
+  for (const record of Object.values(e.militaryEducationRecords ?? {})) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.schools.has(record.schoolId)) errors.push(`${record.id}: invalid schoolId.`); if (!["graduated","failed","recycled","withdrawn"].includes(record.status)) errors.push(`${record.id}: invalid education status ${record.status}.`); }
   for (const record of Object.values(e.relationshipRecords)) { requireRef(errors, e.people, record.personAId, `${record.id}.personAId`); requireRef(errors, e.people, record.personBId, `${record.id}.personBId`); }
   for (const record of Object.values(e.personnelActionRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.fromUnitId, `${record.id}.fromUnitId`); requireRef(errors, e.units, record.toUnitId, `${record.id}.toUnitId`); requireRef(errors, e.billets, record.fromBilletId, `${record.id}.fromBilletId`); requireRef(errors, e.billets, record.toBilletId, `${record.id}.toBilletId`); }
   for (const record of Object.values(e.replacementRequestRecords)) { requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`); requireRef(errors, e.people, record.replacementPersonId, `${record.id}.replacementPersonId`); }

@@ -98,4 +98,4 @@ function careerStore(seed=414001) {
   assert.ok(afterRows.some(r=>r.notes==="Participated in Squad Tactical Drills."));
 }
 
-console.log("War Sim v0.4.1.7 migration, qualification, and collective-activity QA passed");
+console.log("War Sim v0.4.2 migration, qualification, and collective-activity QA passed");

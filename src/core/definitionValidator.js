@@ -36,12 +36,21 @@ export function validateDefinitions(registries) {
   }
 
   for (const school of registries.schools.values()) {
+    if (!Number.isInteger(school.durationDays) || school.durationDays <= 0) errors.push(`${school.id}: invalid durationDays.`);
     for (const id of school.grantsQualificationIds ?? []) {
       if (!registries.qualifications.has(id)) errors.push(`${school.id}: invalid qualification ${id}.`);
     }
     for (const id of school.completionAwardIds ?? []) {
       if (!registries.awards.has(id)) errors.push(`${school.id}: invalid completion award ${id}.`);
     }
+    const eligibility=school.eligibility ?? {};
+    for (const key of ["minimumServiceDays","minimumRankLevel","maximumRankLevel","minimumHealth","minimumReadiness","maximumFatigue"]) if (eligibility[key] != null && (!Number.isFinite(eligibility[key]) || eligibility[key] < 0)) errors.push(`${school.id}: invalid eligibility.${key}.`);
+    for (const [skillId,value] of Object.entries(eligibility.minimumSkills ?? {})) { if (!registries.skills.has(skillId)) errors.push(`${school.id}: invalid minimum skill ${skillId}.`); if (!Number.isFinite(value)) errors.push(`${school.id}: invalid minimum skill value for ${skillId}.`); }
+    for (const id of eligibility.prerequisiteQualificationIds ?? []) if (!registries.qualifications.has(id)) errors.push(`${school.id}: invalid prerequisite qualification ${id}.`);
+    for (const id of eligibility.allowedSpecialtyIds ?? []) if (!registries.specialties.has(id)) errors.push(`${school.id}: invalid allowed specialty ${id}.`);
+    for (const id of eligibility.allowedComponentIds ?? []) if (!registries.components.has(id)) errors.push(`${school.id}: invalid allowed component ${id}.`);
+    for (const category of eligibility.allowedRankCategories ?? []) if (!["enlisted","warrant","officer"].includes(category)) errors.push(`${school.id}: invalid allowed rank category ${category}.`);
+    for (const effect of school.completionEffects ?? []) validateEffect(errors, school.id, effect, registries);
   }
 
   for (const billet of registries.billets.values()) {
@@ -176,7 +185,8 @@ export function validateDefinitions(registries) {
   for (const opportunity of registries.opportunities.values()) {
     if (opportunity.schoolId && !registries.schools.has(opportunity.schoolId)) errors.push(`${opportunity.id}: invalid schoolId ${opportunity.schoolId}.`);
     if (opportunity.presentationId && !registries.feedbackPresentations.has(opportunity.presentationId)) errors.push(`${opportunity.id}: invalid presentationId ${opportunity.presentationId}.`);
-    for (const key of ["minimumServiceDays","minimumRankLevel","minimumHealth","expiresAfterDays","reportDelayDays"]) if (opportunity[key] != null && (!Number.isFinite(opportunity[key]) || opportunity[key] < 0)) errors.push(`${opportunity.id}: invalid ${key}.`);
+    for (const key of ["expiresAfterDays","reportDelayDays"]) if (opportunity[key] != null && (!Number.isFinite(opportunity[key]) || opportunity[key] < 0)) errors.push(`${opportunity.id}: invalid ${key}.`);
+    if (!Array.isArray(opportunity.sourceTypes) || !opportunity.sourceTypes.length) errors.push(`${opportunity.id}: school opportunity requires sourceTypes.`);
   }
   for (const objective of registries.careerObjectives.values()) {
     if (!["has_assignment","has_activity","minimum_readiness","promotion_eligible","unit_readiness_at_phase_target","qualification_current","no_open_opportunity"].includes(objective.completionRule)) errors.push(`${objective.id}: invalid completionRule ${objective.completionRule}.`);

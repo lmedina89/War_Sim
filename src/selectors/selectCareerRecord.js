@@ -27,12 +27,19 @@ export function selectCareerRecord(state, indexes, registries, personId) {
     };
   });
 
+  const educationIds = indexes.militaryEducationByPersonId?.get(personId) ?? [];
+  const education = educationIds.map(id => {
+    const record=state.entities.militaryEducationRecords[id];
+    const school=registries.schools.get(record.schoolId);
+    return { id, schoolId:record.schoolId, name:school.name, schoolType:school.schoolType ?? school.category, status:record.status, startDate:record.startDate ?? null, completedDate:record.completedDate ?? null, sourceType:record.sourceType ?? null };
+  }).sort((a,b)=>String(b.completedDate??"").localeCompare(String(a.completedDate??""))||a.name.localeCompare(b.name));
+
   const awardIds = indexes.awardsByPersonId.get(personId) ?? [];
   const awards = awardIds.map(id => {
     const record = state.entities.awardRecords[id];
     const award = registries.awards.get(record.awardId);
-    return { id, name: award.name, category: award.category, earnedDate: record.earnedDate };
-  });
+    return { id, awardId:record.awardId, name: award.name, category: award.category, awardGroup:award.awardGroup ?? award.category, earnedDate: record.earnedDate, sourceType:record.sourceType ?? null };
+  }).sort((a,b)=>String(b.earnedDate??"").localeCompare(String(a.earnedDate??""))||a.name.localeCompare(b.name));
 
   const relationshipIds = indexes.relationshipsByPersonId.get(personId) ?? [];
   const relationships = relationshipIds.map(id => {
@@ -76,7 +83,9 @@ export function selectCareerRecord(state, indexes, registries, personId) {
     experience: person.career.experience,
     prestige: person.career.prestige,
     qualifications,
+    education,
     awards,
+    achievementCounts: { schools: education.filter(item=>item.status==="graduated").length, qualifications: qualifications.length, badges: awards.filter(item=>item.category==="badge"||item.category==="tab").length, ribbonsAndMedals: awards.filter(item=>["ribbon","medal","decoration"].includes(item.category)).length },
     relationships,
     events,
     promotion: evaluatePromotionEligibility(state, indexes, registries, personId)

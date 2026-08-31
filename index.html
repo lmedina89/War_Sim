@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.1.7</title>
+  <title>War Sim v0.4.2</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.1.7</p>
+        <p class="eyebrow">WAR SIM · v0.4.2</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -57,6 +57,7 @@
         <section class="panel schedule-panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT TRAINING CYCLE</p><h2>Duty Schedule</h2><p id="training-phase-summary" class="muted">Loading training phase…</p><p class="muted">Routine background duties are processed without crowding the major-event calendar; significant events remain visible and are planned through the canonical world scheduler.</p></div><div id="duty-schedule"></div></section>
 
         <section class="panel opportunity-panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER CHANNEL</p><h2>Opportunities</h2><p class="muted">Eligible schools and career opportunities appear here with response deadlines and generate orders when accepted.</p></div><div id="career-opportunities"></div></section>
+        <details class="panel disclosure-panel career-development-panel" data-persist-key="career-development" open><summary><span class="summary-kicker">CAREER DEVELOPMENT</span><strong>Military Schools</strong></summary><div class="disclosure-body"><p class="muted compact-intro">Review available and locked schools, see why you qualify or do not qualify, and request supported volunteer opportunities.</p><div id="school-catalog"></div></div></details>
 
         <details class="panel gameplay-panel disclosure-panel" data-persist-key="career-activities" open>
           <summary><span class="summary-kicker">DAILY OPERATIONS</span><strong>Activities</strong></summary>

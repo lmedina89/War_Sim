@@ -18,8 +18,8 @@ export const gameplayEventDefinitions = [
     effects: [{ target: "unitTraining", field: "cohesion", operation: "add", value: 2, clamp: [0,100] }, { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }]
   },
   {
-    id: "event_training_leadership_moment", schemaVersion: 1, name: "Leadership Moment", type: "decision", priority: "attention",
-    presentationId: "feedback_attention",
+    id: "event_training_leadership_moment", schemaVersion: 2, name: "Leadership Moment", type: "decision", priority: "attention",
+    presentationId: "feedback_attention", relationshipTargetMode: "one_unit_relationship",
     title: "A Teammate Is Struggling", message: "During squad drills, a teammate falls behind and the team starts to lose rhythm. How do you respond?",
     choices: [
       { id: "choice_help_teammate", label: "Coach the teammate", effects: [{ target: "skill", skillId: "skill_leadership", operation: "add", value: 2 }, { target: "relationships", field: "trust", operation: "add", value: 2, clamp: [-100,100] }, { target: "person", field: "career.experience", operation: "add", value: 20 }] },
