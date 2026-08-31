@@ -7,6 +7,7 @@ import { equipmentDefinitions } from "./equipment.js";
 import { awardDefinitions } from "./awards.js";
 import { schoolDefinitions } from "./schools.js";
 import { qualificationDefinitions } from "./qualifications.js";
+import { simulationTierDefinitions } from "./simulationTiers.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -16,5 +17,6 @@ export const registries = Object.freeze({
   equipment: createRegistry(equipmentDefinitions, "equipment"),
   awards: createRegistry(awardDefinitions, "awards"),
   schools: createRegistry(schoolDefinitions, "schools"),
-  qualifications: createRegistry(qualificationDefinitions, "qualifications")
+  qualifications: createRegistry(qualificationDefinitions, "qualifications"),
+  simulationTiers: createRegistry(simulationTierDefinitions, "simulationTiers")
 });

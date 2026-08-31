@@ -1,21 +1,23 @@
-function addDays(isoDate, days) {
-  const date = new Date(`${isoDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
+import { commandResult } from "../core/commandResult.js";
+import { advanceClock } from "../services/simulationClock.js";
+import { recordAction } from "../services/recordServices.js";
 
 export function advanceWorldDays(store, days) {
-  if (!Number.isInteger(days) || days < 1 || days > 3650) throw new Error("Days must be between 1 and 3650.");
+  const actorPersonId = store.getState().playerPersonId;
   store.mutate(draft => {
-    draft.world.date = addDays(draft.world.date, days);
-  });
+    advanceClock(draft, days);
+    recordAction(draft, { actorPersonId, commandType: "advance_time", payload: { days }, resultCode: "time_advanced" });
+  }, ["actions"]);
+  return commandResult({ code: "time_advanced", message: `Advanced ${days} days.`, data: { days } });
 }
 
 export function grantTrainingExperience(store, personId, amount) {
   if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) throw new Error("Invalid experience amount.");
-  const state = store.getState();
-  if (!state.entities.people[personId]) throw new Error(`Unknown person: ${personId}`);
+  if (!store.getState().entities.people[personId]) throw new Error(`Unknown person: ${personId}`);
+  const rounded = Math.floor(amount);
   store.mutate(draft => {
-    draft.entities.people[personId].career.experience += Math.floor(amount);
-  });
+    draft.entities.people[personId].career.experience += rounded;
+    recordAction(draft, { actorPersonId: personId, commandType: "training", payload: { experience: rounded }, resultCode: "training_completed" });
+  }, ["actions"]);
+  return commandResult({ code: "training_completed", message: `Training complete: +${rounded} experience.`, data: { experience: rounded } });
 }

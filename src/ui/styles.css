@@ -55,3 +55,27 @@ pre { white-space: pre-wrap; word-break: break-word; margin: 0; color: var(--goo
 @media (max-width: 760px) {
   .grid, .career-form { grid-template-columns: 1fr; }
 }
+
+
+.setup-actions { margin-top: 12px; }
+.badge { display: inline-flex; min-width: 28px; min-height: 28px; align-items: center; justify-content: center; border-radius: 999px; background: var(--accent); color: #0b1020; font-weight: 900; padding: 0 8px; }
+.inbox-list { display: grid; gap: 10px; }
+.inbox-item { border: 1px solid var(--border); background: var(--panel-2); border-radius: 12px; padding: 12px; }
+.inbox-item.unread { border-color: var(--accent); }
+.inbox-item h3 { margin: 0 0 4px; font-size: 1rem; }
+.inbox-item p { margin: 0; color: var(--muted); }
+.inbox-meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: var(--muted); font-size: .8rem; }
+details.panel summary { cursor: pointer; font-weight: 800; font-size: 1.15rem; }
+details.panel[open] summary { margin-bottom: 14px; }
+.modal { border: 0; padding: 0; background: transparent; max-width: min(680px, calc(100% - 24px)); width: 100%; color: var(--text); }
+.modal::backdrop { background: rgb(0 0 0 / .72); }
+.modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px; color: var(--text); }
+.modal-card h2 { margin-bottom: 8px; }
+.compact-button { min-height: 40px; padding: .5rem .7rem; }
+.save-manager { max-height: 80vh; overflow-y: auto; }
+.save-slots { display: grid; gap: 10px; }
+.save-slot { border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); padding: 12px; }
+.save-slot h3 { margin: 0 0 6px; }
+.save-slot p { margin: 3px 0; color: var(--muted); }
+.save-slot .actions { margin-top: 10px; }
+.autosave-slot { opacity: .85; }

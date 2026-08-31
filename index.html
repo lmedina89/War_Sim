@@ -3,103 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Sim v0.1.1</title>
+  <title>War Sim v0.1.2</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <section class="hero">
-      <p class="eyebrow">WAR SIM · v0.1.1</p>
-      <h1>Personnel & Career Foundation</h1>
-      <p class="lede">Persistent people, service records, career progression, equipment instances, relationships, casualties, and memorial-ready history.</p>
+      <p class="eyebrow">WAR SIM · v0.1.2</p>
+      <h1>Career Foundation Hardening</h1>
+      <p class="lede">Multi-slot saves, persistent career notifications, deterministic simulation services, migrations, and developer tooling separation.</p>
     </section>
 
     <section id="new-career-panel" class="panel setup-panel" hidden>
       <h2>New Career</h2>
-      <p class="muted">Create the player as a normal persistent Person entity. The same career systems used for NPCs will apply to you.</p>
+      <p class="muted">Create the player as a normal persistent Person entity. The same career systems used for NPCs apply to you.</p>
       <form id="new-career-form" class="career-form">
-        <label>
-          <span>First name</span>
-          <input id="first-name" name="firstName" autocomplete="given-name" maxlength="40" required />
-        </label>
-        <label>
-          <span>Last name</span>
-          <input id="last-name" name="lastName" autocomplete="family-name" maxlength="40" required />
-        </label>
-        <label>
-          <span>Branch</span>
-          <select id="branch-select" name="branchId" required></select>
-        </label>
+        <label><span>First name</span><input id="first-name" name="firstName" autocomplete="given-name" maxlength="40" required /></label>
+        <label><span>Last name</span><input id="last-name" name="lastName" autocomplete="family-name" maxlength="40" required /></label>
+        <label><span>Branch</span><select id="branch-select" name="branchId" required></select></label>
         <button type="submit">Begin Career</button>
       </form>
+      <div class="setup-actions"><button id="load-from-start" type="button" class="secondary">Load Existing Career</button></div>
     </section>
 
     <div id="career-content" hidden>
       <section class="panel">
         <div class="panel-head">
-          <div>
-            <h2>Current Squad</h2>
-            <p id="squad-meta" class="muted">Loading…</p>
-          </div>
+          <div><h2>Current Squad</h2><p id="squad-meta" class="muted">Loading…</p></div>
           <div class="actions">
-            <button id="train-player" type="button">Train +250 XP</button>
-            <button id="advance-time" type="button">Advance 30 Days</button>
-            <button id="promote-player" type="button">Request Promotion</button>
-            <button id="airborne-player" type="button">Complete Airborne</button>
-            <button id="leadership-player" type="button">Complete BLC</button>
-            <button id="save-game" type="button">Save</button>
-            <button id="load-game" type="button">Load</button>
-            <button id="new-career" type="button" class="secondary">New Career</button>
+            <button id="train-player" type="button">Train +250 XP</button><button id="advance-time" type="button">Advance 30 Days</button><button id="promote-player" type="button">Request Promotion</button>
+            <button id="airborne-player" type="button">Complete Airborne</button><button id="leadership-player" type="button">Complete BLC</button>
+            <button id="save-game" type="button">Save</button><button id="load-game" type="button">Load</button><button id="new-career" type="button" class="secondary">New Career</button>
           </div>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Rank</th><th>Name</th><th>Role</th><th>Health</th><th>Morale</th><th>Weapon</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="squad-body"></tbody>
-          </table>
-        </div>
+        <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Role</th><th>Health</th><th>Morale</th><th>Weapon</th><th>Status</th></tr></thead><tbody id="squad-body"></tbody></table></div>
       </section>
 
-      <section class="grid">
-        <article class="panel">
-          <h2>Player Career</h2>
-          <div id="career-card"></div>
-        </article>
-        <article class="panel">
-          <h2>Promotion Status</h2>
-          <div id="promotion-card"></div>
-        </article>
-      </section>
-
-      <section class="grid">
-        <article class="panel">
-          <h2>Schools & Awards</h2>
-          <div id="schools-awards"></div>
-        </article>
-        <article class="panel">
-          <h2>Squad Relationships</h2>
-          <div id="relationships"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <h2>Career Timeline</h2>
-        <ol id="career-events" class="timeline"></ol>
-      </section>
-
-      <section class="panel diagnostics-panel">
-        <h2>Architecture Diagnostics</h2>
-        <pre id="diagnostics">Loading…</pre>
-      </section>
+      <section class="grid"><article class="panel"><h2>Player Career</h2><div id="career-card"></div></article><article class="panel"><h2>Promotion Status</h2><div id="promotion-card"></div></article></section>
+      <section class="grid"><article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article><article class="panel"><h2>Squad Relationships</h2><div id="relationships"></div></article></section>
+      <section class="panel"><div class="panel-head"><div><h2>Career Inbox</h2><p class="muted">Persistent player-facing milestones and important events.</p></div><span id="unread-badge" class="badge" hidden></span></div><div id="career-inbox"></div></section>
+      <section class="panel"><h2>Career Timeline</h2><ol id="career-events" class="timeline"></ol></section>
+      <details class="panel diagnostics-panel"><summary>Developer Diagnostics</summary><pre id="diagnostics">Loading…</pre></details>
     </div>
-
     <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
   </main>
+
+  <dialog id="achievement-dialog" class="modal"><div class="modal-card"><p id="achievement-type" class="eyebrow"></p><h2 id="achievement-title"></h2><p id="achievement-message"></p><button id="achievement-ok" type="button">Continue</button></div></dialog>
+
+  <dialog id="save-dialog" class="modal"><div class="modal-card save-manager"><div class="panel-head"><div><p id="save-mode-label" class="eyebrow"></p><h2 id="save-dialog-title">Save Manager</h2></div><button id="save-dialog-close" type="button" class="secondary compact-button">Close</button></div><div id="save-slots" class="save-slots"></div></div></dialog>
+
+  <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card"><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
 
   <script type="module" src="./src/app.js"></script>
 </body>
