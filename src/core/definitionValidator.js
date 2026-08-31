@@ -130,5 +130,16 @@ export function validateDefinitions(registries) {
     if (i > 0 && band.minimumTrust !== relationshipBands[i-1].maximumTrust + 1) errors.push(`${band.id}: relationship trust bands must be contiguous.`);
   }
 
+  const allowedPresentationTones = new Set(["routine","attention","critical","good","warning","bad","excellent"]);
+  for (const status of registries.statusPresentations.values()) {
+    if (!status.label || typeof status.label !== "string") errors.push(`${status.id}: status presentation missing label.`);
+    if (!allowedPresentationTones.has(status.tone)) errors.push(`${status.id}: invalid status presentation tone ${status.tone}.`);
+    if (!Number.isFinite(status.priority)) errors.push(`${status.id}: invalid status presentation priority.`);
+  }
+  for (const document of registries.documentPresentations.values()) {
+    if (!document.label || typeof document.label !== "string") errors.push(`${document.id}: document presentation missing label.`);
+    if (!/^[A-Z0-9-]{2,12}$/.test(document.prefix ?? "")) errors.push(`${document.id}: invalid document prefix.`);
+  }
+
   return { ok: errors.length === 0, errors };
 }

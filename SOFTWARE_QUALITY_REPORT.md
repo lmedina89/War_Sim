@@ -1,109 +1,190 @@
-# War Sim v0.4.0.2 — Software Quality Report
+# War Sim v0.4.0.3 — Software Quality Report
 
-## Result
+## Executive result
+
+**PASS — approved for live mobile validation.**
+
+v0.4.0.3 is a presentation/interaction release built on the v0.4.0.2 simulation foundation. No world-schema bump was introduced. The audit focused on preventing the visual overhaul from leaking branch-specific content into runtime code, duplicating simulation state, breaking Unit/Personnel scope isolation, regressing save compatibility, or introducing expensive broad scans.
+
+## Release identity
+
+- Runtime version: **0.4.0.3**
+- Save format: **3**
+- World schema: **12**
+- Primary views: **5** — Career, Unit, Personnel, Orders, More
+- JavaScript source modules checked: **69**
+- JavaScript source lines: approximately **3,293**
+
+## Verification performed
+
+### Syntax and module graph
 
 **PASS**
 
-This audit was run separately from feature implementation against the v0.4.0.2 source tree. The exact packaged ZIP is re-extracted and re-tested before release.
+- every JS/MJS source and test file passed `node --check`
+- every relative static import resolves to an existing file
+- no broken module references were found
 
-## Scope
+### DOM/controller integrity
 
-- 69 JavaScript source modules
-- ~3,191 JavaScript source lines
-- 5 primary player views
-- world schema 12 / save format 3
-- plain HTML/CSS/ES modules, no runtime framework dependency
+**PASS**
 
-## Automated verification
+The audit confirms:
+- no duplicate DOM IDs
+- every `app.js` `#id` dependency exists in `index.html`
+- all five primary views still exist
+- independent Unit/Personnel navigation controls remain present
+- Current Situation display exists
+- personnel-file reference and assignment breadcrumbs exist
+- AAR/SITREP reference field exists
+- persisted disclosure controls exist for major collapsible sections
 
-### Syntax and module integrity — PASS
+### Data-driven military presentation
 
-- Every `.js` and `.mjs` source/test file passes `node --check`.
-- Every relative static import resolves to an existing file.
-- No duplicate DOM IDs.
-- Every `app.js` DOM selector used through the project selector helper resolves to an element in `index.html`.
+**PASS**
 
-### Data/definition integrity — PASS
+New immutable registries provide:
+- standard status presentation definitions
+- military document presentation definitions
 
-- Branch, rank, billet, specialty, equipment, organization, generation, skill, activity, event, contract, and presentation references validate.
-- Activity and gameplay-event presentation IDs resolve through immutable registries.
-- Relationship-band definitions cover the complete -100…100 trust range with contiguous intervals.
-- Performance and feedback presentation definitions are immutable registry data rather than canonical runtime state.
+The audit validates required statuses including active, training, deployed, wounded, missing, POW, separated, retired, deceased, executed, and pending.
 
-### Determinism — PASS
+The audit validates document types including personnel file, order, AAR, notification, service record, unit status, and career record.
 
-- Runtime source contains no direct `Math.random()` calls.
-- Identical seeds + identical activity sequences produce identical states.
-- Formal QA validates 300 generated seeds.
-- Additional independent sweep validates 1,000 generated seeds with zero failures.
-- Personnel monthly progression remains equivalent for 30×1-day versus 1×30-day advancement where the model requires step independence.
+The player-facing visual shell contains no hardcoded `DEPARTMENT OF THE ARMY` / `US ARMY` presentation. Personnel authority labels resolve from canonical branch data at runtime.
 
-### Runtime architecture / hardcoding — PASS
+### Runtime content hardcoding
 
-Normal runtime modules are checked for concrete Army/11B/rank/weapon IDs. Content-specific IDs remain confined to definition data and explicit legacy migration/repair code.
+**PASS**
 
-Scoped lookups added/confirmed in this release use derived indexes for:
+Normal runtime modules were scanned for concrete content IDs that belong in data definitions/profiles. No forbidden Army/11B/rank/weapon/billet IDs were found outside approved data or legacy migration/repair areas.
 
-- notification bulk operations
-- school duplicate-completion checks
-- reenlistment offers
-- starting billet lookup
-- role-based vacant billet assignment
-- player-facing time-summary counts
+### Determinism / safety hygiene
 
-### Gameplay feedback integrity — PASS
+**PASS**
 
-- Activity AAR records preserve before/after snapshots and deltas.
-- AAR performance presentation resolves through `performanceRatings` definitions.
-- Gameplay event emphasis resolves through `feedbackPresentations` definitions.
-- Time advancement emits semantic player-facing summary items instead of raw entity collection names.
-- Relationship cards receive rank/role/status from indexed canonical person/billet data and trust labels from relationship-band definitions.
-- Career navigation attention count is derived from unread notifications + pending decisions.
-
-### Notification lifecycle — PASS
-
-- Mark-all-read and clear-read commands operate only on the selected person's indexed notification IDs.
-- Clear archives records instead of deleting them.
-- Archived records remain retrievable through canonical notification history.
-- Empty/no-op notification actions return user-facing command results.
-
-### Save/migration compatibility — PASS
-
-- Schema remains 12; no unnecessary schema churn.
-- Existing schema-12 v0.4.0.1 saves normalize runtime `gameVersion` to 0.4.0.2 on load.
-- Existing schema-11 saves still migrate to schema 12.
-- Save/checksum round trip preserves canonical state.
-- Deliberately corrupted save payloads are rejected.
-
-### Security / UI containment — PASS
-
-Source audit rejects:
-
-- `eval(...)`
-- `new Function(...)`
-- `document.write(...)`
-- runtime `.innerHTML = ...`
+Runtime source contains no:
 - direct `Math.random()`
+- `eval()`
+- `new Function()`
+- `document.write()`
+- runtime `.innerHTML =`
 
-Top-level rendering remains error-contained so a display error does not mutate canonical save state.
+The deterministic seeded simulation model remains intact.
 
-### Accessibility/mobile — PASS
+### Selector/index efficiency
 
-- safe-area handling remains present for fixed bottom navigation/toasts
-- primary navigation retains current-page semantics
-- dynamic status feedback is announced through the existing polite live region
-- focus-visible styling added for interactive controls
-- reduced-motion CSS is present
-- relationship/personnel interactions use native buttons rather than clickable generic containers
+**PASS**
 
-### Performance — PASS
+- hot selectors do not globally scan the people collection
+- scoped notification/qualification/reenlistment/billet commands retain indexed lookups
+- Unit roster and Personnel browsing continue to use derived indexes
+- descendant-unit traversal was tightened to cursor-based queue iteration rather than repeated array shifting
 
-The quality suite constructs indexes for a synthetic 10,000-person population and enforces a generous regression ceiling to catch accidental quadratic index construction. Current observed runs remain far below the threshold; exact timing varies by environment.
+Synthetic index stress:
+- **10,000 people**
+- packaged-copy index build: approximately **11–17 ms** across repeated verification runs
+- threshold: **2,000 ms**
 
-## Known intentional boundaries
+### Generated-world integrity
 
-This release does **not** implement deployment, tactical combat, a world map, national economics, or deep unit-readiness gameplay. Those remain staged roadmap systems. Legacy organization migration code still contains historical concrete IDs by design and is excluded from normal-runtime hardcoding rules.
+**PASS**
 
-## Release recommendation
+Formal quality suite:
+- **300 generated seeds** validated
+- no invalid worlds
 
-**Approved for live mobile validation.** If the interaction/visual test passes, v0.4.0.2 is suitable as the polished base for v0.4.1 Training & Readiness Gameplay.
+Additional packaged-copy sweep:
+- **1,000 generated seeds** validated
+- **0 failures**
+- sweep completed in approximately **802 ms** in the verification run
+
+### Gameplay regression coverage
+
+**PASS**
+
+Existing gameplay tests still cover:
+- deterministic activities
+- skill progression
+- activity/performance/event records
+- pending decision resolution
+- reenlistment
+- personnel vacancy/replacement pipeline
+- exact-date ETS
+- 30×1-day vs 1×30-day personnel consistency
+- generated billet-specialty integrity
+- low-level billet assignment
+
+### Save / migration integrity
+
+**PASS**
+
+- schema 11 → 12 migration remains valid
+- existing schema-12 v0.4.0.2 saves normalize runtime version to v0.4.0.3 without a schema bump
+- save/load round trip preserves canonical state
+- checksum corruption is rejected
+- disclosure/open-state preferences stay in local UI storage and do not enter canonical world/save state
+
+### Notification/history integrity
+
+**PASS**
+
+- read/clear behavior still archives rather than destroys canonical notifications
+- active Inbox may be cleared while archived history remains recoverable through canonical records
+
+### Mobile/accessibility presentation checks
+
+**PASS — static/contract checks**
+
+Confirmed in source:
+- `viewport-fit=cover`
+- iPhone safe-area handling for fixed navigation/status feedback
+- reduced-motion media query
+- native buttons for interaction
+- focus-visible styling
+- narrow-screen reflow rules for situation metrics, command metrics, personnel rows, record strips, AARs, and order status blocks
+
+A real-device visual check remains appropriate because static QA cannot perfectly predict Safari layout rendering.
+
+## Visual architecture added
+
+The release adds or strengthens:
+- persistent Current Situation strip
+- digital military service-record Career header
+- tactical Unit command-status block
+- dense military roster files
+- dog-tag-inspired detailed personnel record using only real state fields
+- explicit Personnel → Unit and Order → Unit cross-navigation
+- stable human-readable record references derived from canonical IDs
+- operations/orders board styling
+- personnel message-center styling
+- AAR/SITREP document rails
+- military status stamps and metric blocks
+- remembered disclosure state outside simulation state
+- military confirmation-sheet styling
+
+## Deliberate scope boundary
+
+The audit confirms v0.4.0.3 does **not** introduce:
+- deployment simulation
+- tactical combat
+- world map/national simulation
+- new playable branches
+- new playable MOS pipelines
+- logistics/economy systems
+
+This keeps the release a controlled visual/interaction overhaul rather than a simulation rewrite.
+
+## Remaining manual validation
+
+On the live iPhone build, verify:
+1. Current Situation strip does not wrap/clip badly on the narrowest screen you use.
+2. Personnel roster rows remain readable and tappable.
+3. Dog-tag personnel files open, scroll, and cross-navigate to Unit correctly.
+4. Orders with unit references can open the correct unit.
+5. Career Contract/Awards/Service Record and Personnel Connections remember open/closed state after refresh.
+6. AARs, time summaries, Inbox archive behavior, save/load, and bottom navigation still behave normally.
+
+## Final assessment
+
+**Approved for live mobile validation.** No known simulation, save, deterministic-RNG, organization-scope, or data-driven-architecture regression was found in the audited source tree.

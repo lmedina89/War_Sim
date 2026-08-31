@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.0.2</title>
+  <title>War Sim v0.4.0.3</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.0.2</p>
+        <p class="eyebrow">WAR SIM · v0.4.0.3</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -43,8 +43,9 @@
     </section>
 
     <div id="career-content" hidden>
+      <section id="situation-strip" class="situation-strip" aria-label="Current military situation"></section>
       <section class="game-view" data-view="career">
-        <section id="career-home" class="panel career-overview-panel">
+        <section id="career-home" class="panel career-overview-panel military-record-panel">
           <div id="career-summary" class="career-summary"></div>
         </section>
 
@@ -66,28 +67,28 @@
         </section>
 
         <section class="dashboard-grid">
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">SERVICE</p><h2>Contract</h2></div><div id="service-career"></div></article>
+          <details class="panel disclosure-panel" data-persist-key="career-contract" open><summary><span class="summary-kicker">SERVICE</span><strong>Contract</strong></summary><div class="disclosure-body"><div id="service-career"></div></div></details>
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RETENTION</p><h2>Reenlistment</h2><p class="muted">Options open during the final 180 days of your active contract.</p></div><button id="review-reenlistment" type="button">Review Reenlistment Options</button><div id="reenlistment-offers"></div></article>
         </section>
 
         
 
         <section class="dashboard-grid">
-          <article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article>
-          <article class="panel"><div class="panel-head"><div><p class="section-kicker">NOTIFICATIONS</p><h2>Inbox</h2></div><span id="unread-badge" class="badge" hidden></span></div><div class="inbox-actions"><button id="mark-all-read" type="button" class="secondary compact-button">Mark All Read</button><button id="clear-read" type="button" class="secondary compact-button">Clear Read</button></div><div id="career-inbox"></div></article>
+          <details class="panel record-panel disclosure-panel" data-persist-key="career-awards" open><summary><span class="summary-kicker">SERVICE RECORD</span><strong>Education, Qualifications & Awards</strong></summary><div class="disclosure-body"><div id="schools-awards"></div></div></details>
+          <article class="panel dispatch-panel"><div class="panel-head"><div><p class="section-kicker">MESSAGE CENTER</p><h2>Personnel Dispatches</h2></div><span id="unread-badge" class="badge" hidden></span></div><div class="inbox-actions"><button id="mark-all-read" type="button" class="secondary compact-button">Mark All Read</button><button id="clear-read" type="button" class="secondary compact-button">Clear Read</button></div><div id="career-inbox"></div></article>
         </section>
 
-        <details class="panel"><summary>Service Record</summary><p class="muted">Permanent career milestones only.</p><ol id="career-events" class="timeline"></ol></details>
+        <details class="panel service-record-panel disclosure-panel" data-persist-key="service-record"><summary><span class="summary-kicker">PERMANENT RECORD</span><strong>Service Record</strong></summary><p class="muted">Permanent career milestones only.</p><ol id="career-events" class="timeline"></ol></details>
       </section>
 
       <section class="game-view" data-view="unit" hidden>
         <section id="unit-section" class="dashboard-grid organization-grid">
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">ASSIGNMENT</p><h2>My Unit</h2></div><div id="assignment-card"></div></article>
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">CHAIN OF COMMAND</p><h2>Organization</h2></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article>
+          <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">ASSIGNMENT</p><h2>My Unit</h2></div><div id="assignment-card"></div></article>
+          <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">CHAIN OF COMMAND</p><h2>Organization</h2></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article>
         </section>
 
-        <section class="panel selected-unit-panel">
-          <div class="panel-head"><div><p class="section-kicker">SELECTED UNIT</p><h2>Unit Roster</h2><p id="squad-meta" class="muted">Loading…</p></div><div class="browse-actions"><button id="return-my-unit" type="button" class="secondary compact-button">Return to My Unit</button><button id="view-selected-personnel" type="button" class="compact-button">View in Personnel</button></div></div>
+        <section class="panel selected-unit-panel command-panel">
+          <div class="panel-head"><div><p class="section-kicker">TACTICAL PERSONNEL DISPLAY</p><h2>Selected Unit Roster</h2><p id="squad-meta" class="muted">Loading…</p></div><div class="browse-actions"><button id="return-my-unit" type="button" class="secondary compact-button">Return to My Unit</button><button id="view-selected-personnel" type="button" class="compact-button">View in Personnel</button></div></div>
           <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Role</th><th>Health</th><th>Morale</th><th>Weapon</th><th>Status</th></tr></thead><tbody id="squad-body"></tbody></table></div>
         </section>
 
@@ -95,18 +96,18 @@
       </section>
 
       <section class="game-view" data-view="personnel" hidden>
-        <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">PERSONNEL</p><h2>Personnel Files</h2><p id="unit-personnel-meta" class="muted"></p></div><button id="personnel-my-unit" type="button" class="secondary compact-button">My Unit</button></div><div id="unit-personnel" class="personnel-grid"></div></section>
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RELATIONSHIPS</p><h2>Squad Connections</h2><p class="muted">Trust and familiarity develop through shared activities and future events.</p></div><div id="relationships" class="relationship-grid"></div></section>
+        <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">UNIT PERSONNEL</p><h2>Roster & Service Files</h2><p id="unit-personnel-meta" class="muted"></p></div><button id="personnel-my-unit" type="button" class="secondary compact-button">My Unit</button></div><div id="unit-personnel" class="personnel-grid"></div></section>
+        <details class="panel disclosure-panel" data-persist-key="personnel-relationships" open><summary><span class="summary-kicker">RELATIONSHIPS</span><strong>Squad Connections</strong></summary><div class="disclosure-body"><p class="muted">Trust and familiarity develop through shared activities and future events.</p><div id="relationships" class="relationship-grid"></div></div></details>
       </section>
 
       <section class="game-view" data-view="orders" hidden>
-        <section id="orders-section" class="panel"><div class="section-heading compact-heading"><p class="section-kicker">OFFICIAL RECORD</p><h2>Orders</h2><p class="muted">Assignment, reenlistment, PCS, deployment, and future transfer actions share one canonical orders pipeline.</p></div><div id="orders-list"></div></section>
+        <section id="orders-section" class="panel orders-board"><div class="section-heading compact-heading"><p class="section-kicker">HEADQUARTERS</p><h2>Operations & Orders Board</h2><p class="muted">Assignment, reenlistment, PCS, deployment, and future transfer actions share one canonical orders pipeline.</p></div><div id="orders-list"></div></section>
       </section>
 
       <section class="game-view" data-view="more" hidden>
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER RECORD</p><h2>Service History</h2></div><div id="career-framework"></div></section>
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER FILES</p><h2>Save & Session</h2></div><div class="actions utility-actions"><button id="save-game" type="button">Save Career</button><button id="load-game" type="button" class="secondary">Load Career</button><button id="new-career" type="button" class="danger-button">New Career</button></div></section>
-        <details id="more-section" class="panel diagnostics-panel"><summary>Developer Diagnostics</summary><p class="muted">Technical state, schema, generation, registry, and index information.</p><pre id="diagnostics">Loading…</pre></details>
+        <section class="panel admin-terminal-panel"><div class="section-heading compact-heading"><p class="section-kicker">ADMINISTRATIVE TERMINAL</p><h2>Service History</h2></div><div id="career-framework"></div></section>
+        <section class="panel admin-terminal-panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER FILES</p><h2>Save & Session</h2></div><div class="actions utility-actions"><button id="save-game" type="button">Save Career</button><button id="load-game" type="button" class="secondary">Load Career</button><button id="new-career" type="button" class="danger-button">New Career</button></div></section>
+        <details id="more-section" class="panel diagnostics-panel disclosure-panel" data-persist-key="developer-diagnostics"><summary><span class="summary-kicker">SYSTEM</span><strong>Developer Diagnostics</strong></summary><p class="muted">Technical state, schema, generation, registry, and index information.</p><pre id="diagnostics">Loading…</pre></details>
       </section>
 
       <nav id="bottom-nav" class="bottom-nav" aria-label="Primary navigation">
@@ -122,9 +123,9 @@
 
   <dialog id="achievement-dialog" class="modal"><div class="modal-card"><p id="achievement-type" class="eyebrow"></p><h2 id="achievement-title"></h2><p id="achievement-message"></p><button id="achievement-ok" type="button">Continue</button></div></dialog>
   <dialog id="save-dialog" class="modal"><div class="modal-card save-manager"><div class="panel-head"><div><p id="save-mode-label" class="eyebrow"></p><h2 id="save-dialog-title">Save Manager</h2></div><button id="save-dialog-close" type="button" class="secondary compact-button">Close</button></div><div id="save-slots" class="save-slots"></div></div></dialog>
-  <dialog id="person-dialog" class="modal personnel-modal"><div class="modal-card personnel-file-card"><div class="panel-head"><div><p class="eyebrow">PERSONNEL FILE</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-dog-tag" class="dog-tag" aria-label="Military personnel identification plate"></div><div id="person-profile-body" class="personnel-profile-body"></div></div></dialog>
-  <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card"><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
+  <dialog id="person-dialog" class="modal personnel-modal"><div class="modal-card personnel-file-card"><div class="document-rail"><span id="person-profile-authority">SERVICE PERSONNEL COMMAND</span><span id="person-profile-ref">PERS</span></div><div class="panel-head"><div><p class="eyebrow">DIGITAL PERSONNEL RECORD</p><h2 id="person-profile-name"></h2></div><button id="person-profile-close" type="button" class="secondary compact-button">Close</button></div><div id="person-dog-tag" class="dog-tag" aria-label="Military personnel identification plate"></div><nav id="person-profile-breadcrumbs" class="profile-breadcrumbs" aria-label="Personnel assignment"></nav><div id="person-profile-body" class="personnel-profile-body"></div></div></dialog>
+  <dialog id="confirm-dialog" class="modal"><form method="dialog" class="modal-card confirmation-sheet"><div class="document-rail"><span>COMMAND AUTHORIZATION</span><span>CONFIRM</span></div><h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div class="actions"><button id="confirm-cancel" value="cancel" type="submit" class="secondary">Cancel</button><button id="confirm-ok" value="confirm" type="submit">Confirm</button></div></form></dialog>
   <script type="module" src="./src/app.js"></script>
-<dialog id="result-dialog" class="modal"><div class="modal-card result-card"><div class="panel-head"><div><p id="result-kicker" class="eyebrow">AFTER ACTION REPORT</p><h2 id="result-title">Activity Complete</h2></div><button id="result-close" type="button" class="secondary compact-button">Close</button></div><div id="result-body"></div></div></dialog>
+<dialog id="result-dialog" class="modal"><div class="modal-card result-card"><div class="document-rail"><span>WAR SIM TRAINING / OPERATIONS</span><span id="result-reference">AAR</span></div><div class="panel-head"><div><p id="result-kicker" class="eyebrow">AFTER ACTION REPORT</p><h2 id="result-title">Activity Complete</h2></div><button id="result-close" type="button" class="secondary compact-button">Close</button></div><div id="result-body"></div></div></dialog>
 </body>
 </html>

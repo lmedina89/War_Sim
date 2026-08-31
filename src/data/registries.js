@@ -19,7 +19,7 @@ import { careerStartScenarioDefinitions } from "./careerStartScenarios.js";
 import { skillDefinitions } from "./skills.js";
 import { activityDefinitions } from "./activities.js";
 import { gameplayEventDefinitions, eventTableDefinitions } from "./gameplayEvents.js";
-import { feedbackPresentationDefinitions, performanceRatingDefinitions, relationshipBandDefinitions } from "./presentation.js";
+import { feedbackPresentationDefinitions, performanceRatingDefinitions, relationshipBandDefinitions, statusPresentationDefinitions, documentPresentationDefinitions } from "./presentation.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -45,5 +45,7 @@ export const registries = Object.freeze({
   eventTables: createRegistry(eventTableDefinitions, "eventTables"),
   feedbackPresentations: createRegistry(feedbackPresentationDefinitions, "feedbackPresentations"),
   performanceRatings: createRegistry(performanceRatingDefinitions, "performanceRatings"),
-  relationshipBands: createRegistry(relationshipBandDefinitions, "relationshipBands")
+  relationshipBands: createRegistry(relationshipBandDefinitions, "relationshipBands"),
+  statusPresentations: createRegistry(statusPresentationDefinitions, "statusPresentations"),
+  documentPresentations: createRegistry(documentPresentationDefinitions, "documentPresentations")
 });

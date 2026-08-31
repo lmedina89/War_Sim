@@ -61,7 +61,7 @@ const sameA = createInitialWorldState({ seed: 123456789 });
 const sameB = createInitialWorldState({ seed: 123456789 });
 assert.deepEqual(sameA, sameB, "same seed must reproduce the same generated world");
 assert.equal(sameA.schemaVersion, 12);
-assert.equal(sameA.gameVersion, "0.4.0.2");
+assert.equal(sameA.gameVersion, "0.4.0.3");
 assert.equal(sameA.world.generation.generatorVersion, 2);
 assert.equal(Object.keys(sameA.entities.units).length, 13);
 assert.equal(Object.keys(sameA.entities.billets).length, 91);
@@ -134,7 +134,7 @@ assert.deepEqual(npcNamesA, npcNamesB);
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema10", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 12);
-  assert.equal(payload.worldState.gameVersion, "0.4.0.2");
+  assert.equal(payload.worldState.gameVersion, "0.4.0.3");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(payload.worldState.world.generation.legacyWorld, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -277,4 +277,4 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   assert.equal(low.getState().entities.billets[vacant.id].assignedPersonId, npc.id);
 }
 
-console.log("War Sim v0.4.0.2 interaction and visual polish smoke test passed");
+console.log("War Sim v0.4.0.3 military visual identity smoke test passed");

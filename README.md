@@ -1,90 +1,114 @@
-# War Sim v0.4.0.2 — Interaction & Visual Polish
+# War Sim v0.4.0.3 — Military Visual Identity Overhaul
 
-War Sim v0.4.0.2 is a focused presentation, feedback, and efficiency release built on the v0.4.0.1 gameplay foundation. It does not add deployment or tactical combat. Its job is to make the systems already present easier to understand, faster to query, and more satisfying to interact with on mobile.
+War Sim v0.4.0.3 is a presentation and interaction release built directly on the known-good v0.4.0.2 simulation foundation. It deliberately does **not** add deployment, combat, new branches, new MOS pipelines, or a save-schema migration. The goal is to make the systems that already work feel like one coherent military personnel and operations application instead of a generic management dashboard.
 
-## Player-facing improvements
+## What changed
 
-- Activity AARs now show **before → after values** and the exact delta for each changed stat/skill.
-- Performance grades use definition-driven presentation profiles: Exceptional, Strong, Satisfactory, and Poor.
-- Gameplay events use definition-driven presentation profiles so routine, attention, and future critical events can be styled consistently without one-off UI rules.
-- Time advancement now reports player-facing summaries such as service time accrued, new notifications/orders, status changes, and unit readiness/morale changes. Raw collection names such as `actionRecords` are no longer shown to the player.
-- Routine command/status feedback is now a **temporary toast** instead of permanent text left in page flow.
-- The Career navigation tab receives an attention badge for unread notifications and pending player decisions.
-- Inbox controls are context-aware: Mark All Read / Clear Read disable when there is nothing applicable.
-- Individual notification Mark Read / Clear actions now use the normal command/autosave/feedback pipeline.
-- Clearing notifications still **archives** canonical notification records; it does not destroy history.
-- Relationship presentation is redesigned from a raw bullet list into compact, tappable squad-connection cards with rank, duty position, relationship type, familiarity, trust, and a definition-driven relationship band.
-- Personnel cards are denser and use readiness/morale status chips.
-- Personnel profiles are reorganized into military ID, status, assignment, condition, and proficiency sections.
-- Subtle command-result highlighting, pressed states, focus states, and reduced-motion support improve responsiveness without heavy animation.
-- Empty states are styled intentionally rather than appearing as loose page text.
+### Persistent Current Situation display
+A compact, always-available situation strip now summarizes the player's real canonical state across the five primary views:
+- rank and name
+- MOS/specialty
+- assignment chain
+- world date
+- personnel status
+- assigned/authorized strength
+- unit readiness
+- unit morale
 
-## Data-driven presentation definitions
+The strip is derived from existing selectors/indexes; it does not maintain a second copy of gameplay state.
 
-New immutable registries:
+### Military service-record Career presentation
+- career identity uses a digital military service-record header
+- stable human-readable record references derive from canonical record/person IDs
+- existing rank/pay grade/MOS/unit information receives stronger visual hierarchy
+- contract, awards/education, and permanent service-record sections can collapse to reduce mobile scrolling
+- disclosure state is stored only as local UI preference and never enters canonical world/save state
 
-- `feedbackPresentations`
-- `performanceRatings`
-- `relationshipBands`
+### Tactical Unit / command presentation
+- selected organizations render as a compact command-status block
+- personnel fill, vacancies, readiness, and morale use shared military metric components
+- chain-of-command browsing remains independent from the Personnel filter
+- unit children retain explicit player-unit context
+- roster interaction still opens canonical personnel records
 
-Activities and gameplay events reference presentation definitions by stable ID. Relationship trust labels are resolved from definition ranges rather than hard-coded per person. No player-facing presentation string is authoritative simulation state.
+### Personnel roster and personnel files
+- Personnel view uses denser roster-file rows rather than large repeated cards
+- status/readiness/morale use shared generic renderers
+- the detailed personnel record includes a dog-tag-inspired identity plate using only real state values
+- personnel file shows assignment, condition, assigned primary equipment, proficiency, qualifications, and awards
+- assignment breadcrumbs and **Open Unit** provide explicit cross-navigation to the Unit view
+- no decorative fake blood type, religion, service number, nation, or other unsupported data is fabricated
 
-## Efficiency cleanup
+### Operations & Orders board
+- canonical orders render as military-document records with stable reference numbers
+- issue/effective dates and order status use shared presentation primitives
+- an order with a valid unit reference can explicitly open that unit in the Unit view
+- no deployment/mission details are invented when the simulation does not contain them
 
-Several scoped command paths now use existing derived indexes instead of global collection scans:
+### Message Center
+- Inbox is presented as a personnel dispatch/message center
+- each notification has a stable reference derived from its canonical ID
+- unread/read state is visually distinct
+- Acknowledge and Archive preserve the v0.4.0.2 notification semantics: clearing read messages archives them rather than deleting canonical history
 
-- notification bulk read/archive
-- school-completion duplicate qualification lookup
-- reenlistment-offer lookup/decline
-- new-career starting billet lookup
-- role-based vacant-billet assignment
+### AAR / SITREP presentation
+- After Action Reports include a stable AAR reference
+- time-advance summaries use a stable SITREP-style reference
+- performance grades, before/after changes, and significant events keep the existing v0.4.0.2 data-driven feedback system
 
-Time-advance feedback no longer counts every canonical collection before and after each advance. It uses player-scoped indexes and targeted unit snapshots to produce a semantic summary.
+### Unified presentation definitions
+New immutable registries define:
+- personnel/unit/order status presentation
+- military document presentation metadata
+
+Existing registries continue to define:
+- feedback priority/tone
+- performance ratings
+- relationship bands
+
+Runtime renderers resolve these definitions generically. Normal UI code does not contain Army/11B/rank/weapon content IDs or branch-specific HTML.
+
+### Mobile and accessibility
+- more compact personnel density
+- fixed navigation continues to respect iPhone safe areas
+- narrow screens reflow command metrics, status blocks, and record strips
+- long names/assignments are constrained safely
+- reduced-motion behavior remains supported
+- native buttons remain the primary interaction surface
+
+## Architecture rules preserved
+
+- definitions/registries describe content and presentation
+- canonical world entities remain authoritative
+- selectors/indexes supply view data
+- UI never owns simulation state
+- no `Math.random()` in runtime source
+- no `innerHTML =`, `eval`, `new Function`, or `document.write`
+- stable IDs, not display names, drive logic
+- derived indexes are not serialized
+- existing Unit and Personnel selection states remain independent
+- presentation preferences stay outside save-state schema
 
 ## Compatibility
 
 - Save format: **3**
-- World schema: **12** (unchanged)
-- Runtime version: **0.4.0.2**
-- v0.4.0 / v0.4.0.1 schema-12 saves load without a schema migration and normalize to the current runtime version.
-- v0.3.2.3 schema-11 saves still migrate through the existing schema-12 migration path.
+- World schema: **12**
+- Runtime version: **0.4.0.3**
+- v0.4.0.2 schema-12 saves normalize to 0.4.0.3 without a schema migration
+- older supported schema-11 careers still migrate through the existing 11 → 12 pipeline
 
-## Quality gates
+## Deliberately not included
 
-The final source tree is checked by both `tests/smoke.mjs` and `tests/quality.mjs`, including:
+This is a visual/interaction release. It does not add:
+- deployment simulation
+- tactical combat
+- national/world-map simulation
+- new playable MOS pipelines
+- new service branches
+- logistics/economy systems
 
-- syntax validation for every JS/MJS file
-- static import resolution
-- DOM/controller ID matching and duplicate-ID checks
-- definition/reference validation
-- deterministic RNG audit / no direct `Math.random()`
-- runtime concrete-content-ID audit
-- selector and scoped-command index-use guards
-- 300-seed formal generated-world validation
-- separate 1,000-seed generated-world sweep
-- deterministic activity simulation
-- exact squad/player organization integrity
-- personnel administration and replacement pipeline
-- exact-date ETS behavior
-- 30×1-day vs 1×30-day simulation consistency
-- semantic time-advance summary tests
-- relationship presentation metadata tests
-- notification archive/history preservation
-- same-schema hotfix version normalization
-- save/checksum round trip and corruption rejection
-- reduced-motion and safe-area CSS checks
-- 10,000-person index stress benchmark
-- render-error containment
+Those remain later gameplay milestones so this release can be validated independently from simulation expansion.
 
-See `SOFTWARE_QUALITY_REPORT.md` for the separate audit report.
+## Quality verification
 
-## Roadmap
-
-- **v0.4.0.2** — Interaction & Visual Polish (current)
-- **v0.4.1** — Training & Readiness Gameplay
-- **v0.4.2** — Career & Personnel Gameplay
-- **v0.4.3** — Unit Events & Decision Gameplay
-- **v0.4.4** — Deployment Preparation Foundation
-- **v0.5.x** — Actual Deployment Gameplay
-
-The architecture rule remains unchanged: definitions describe content and presentation; generic services execute rules; canonical records preserve history; derived indexes serve queries; UI code presents state and invokes commands rather than owning simulation truth.
+See `SOFTWARE_QUALITY_REPORT.md` for the independent quality audit and packaged-copy verification.

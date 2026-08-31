@@ -46,6 +46,10 @@ assert.match(html, /aria-current="page"/);
 assert.equal([...html.matchAll(/class="game-view" data-view=/g)].length, 5);
 assert.ok(ids.includes("return-my-unit") && ids.includes("view-selected-personnel") && ids.includes("personnel-my-unit"), "unit/personnel scope controls must exist");
 assert.ok(ids.includes("person-dog-tag"), "personnel identification plate must exist");
+assert.ok(ids.includes("situation-strip"), "persistent Current Situation display must exist");
+assert.ok(ids.includes("person-profile-ref") && ids.includes("person-profile-breadcrumbs"), "personnel file reference and cross-navigation breadcrumbs must exist");
+assert.ok(ids.includes("result-reference"), "AAR/SITREP reference display must exist");
+assert.ok([...html.matchAll(/data-persist-key=/g)].length >= 4, "major disclosures should support remembered UI state");
 assert.ok(ids.includes("nav-career-badge"), "Career navigation attention badge must exist");
 assert.match(html, /Squad Connections/, "relationship presentation heading must be present");
 assert.match(app, /selectedOrganizationUnitId/, "Unit view must own organization selection state");
@@ -57,6 +61,12 @@ assert.doesNotMatch(app, /action Records|actionRecords:\s*\+/, "player-facing ti
 assert.match(app, /statusTimer/, "transient status feedback must replace persistent page messages");
 assert.match(app, /relationshipBand/, "relationship presentation must use definition-driven bands");
 assert.match(app, /performanceProfile/, "AAR performance presentation must use definition-driven profiles");
+assert.match(app, /statusProfile/, "status presentation must resolve through definitions");
+assert.match(app, /documentProfile/, "document presentation must resolve through definitions");
+assert.match(app, /recordReference/, "human-readable military record references must derive from canonical IDs");
+assert.doesNotMatch(html + app + css, /DEPARTMENT OF THE ARMY|US ARMY/i, "visual shell must not hardcode a specific service branch");
+assert.match(app, /initializeDisclosureState/, "disclosure preferences must remain presentation-only local UI state");
+assert.match(app, /setActiveView\("unit"\)/, "personnel/order cross-navigation must be able to open Unit view explicitly");
 
 // Security / containment hygiene: no eval-style execution, document.write, or HTML injection in runtime UI.
 for (const file of jsFiles) {
@@ -107,6 +117,10 @@ assert.ok(registries.eventTables.size >= 3);
 assert.equal(registries.feedbackPresentations.size, 3);
 assert.equal(registries.performanceRatings.size, 4);
 assert.equal(registries.relationshipBands.size, 5);
+assert.ok(registries.statusPresentations.size >= 20, "standard military/personnel statuses need presentation definitions");
+assert.equal(registries.documentPresentations.size, 7, "military document types must be registry-driven");
+for (const requiredStatus of ["active","training","deployed","wounded","missing","pow","separated","retired","deceased","executed","pending"]) assert.ok(registries.statusPresentations.has(requiredStatus), `missing status presentation ${requiredStatus}`);
+for (const requiredDoc of ["personnel_file","order","aar","notification","service_record","unit_status","career_record"]) assert.ok(registries.documentPresentations.has(requiredDoc), `missing document presentation ${requiredDoc}`);
 for (const activity of registries.activities.values()) assert.ok(registries.feedbackPresentations.has(activity.presentationId), `${activity.id} missing feedback presentation`);
 for (const event of registries.gameplayEvents.values()) assert.ok(registries.feedbackPresentations.has(event.presentationId), `${event.id} missing feedback presentation`);
 {
@@ -131,13 +145,13 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 12);
-  assert.equal(payload.worldState.gameVersion, "0.4.0.2");
+  assert.equal(payload.worldState.gameVersion, "0.4.0.3");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
 }
 
-// v0.4.0.2 presentation-result integrity: human-readable time summary and indexed relationship metadata.
+// v0.4.0.3 presentation-result integrity: human-readable time summary and indexed relationship metadata.
 {
   const seed = 420042;
   const uiStore = createStateStore(createInitialWorldState({ seed }));
@@ -158,10 +172,10 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
 // Same-schema hotfix loads normalize the runtime game version without a schema bump.
 {
   const current = createInitialWorldState({ seed: 909090 });
-  current.gameVersion = "0.4.0.1";
-  const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.1", worldState:current });
+  current.gameVersion = "0.4.0.2";
+  const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.2", worldState:current });
   assert.equal(migrated.worldState.schemaVersion, 12);
-  assert.equal(migrated.worldState.gameVersion, "0.4.0.2");
+  assert.equal(migrated.worldState.gameVersion, "0.4.0.3");
 }
 
 // Notification clearing archives records, uses indexed scope, and keeps canonical history intact.
@@ -240,5 +254,11 @@ console.log(JSON.stringify({
   reducedMotionSupport:true,
   indexedScopedCommandLookups:true,
   archivedNotificationHistory:true,
-  sameSchemaHotfixVersionNormalization:true
+  sameSchemaHotfixVersionNormalization:true,
+  militaryStatusPresentationDefinitions:true,
+  militaryDocumentPresentationDefinitions:true,
+  stableRecordReferences:true,
+  currentSituationDisplay:true,
+  personnelUnitCrossNavigation:true,
+  rememberedDisclosureUiState:true
 }, null, 2));
