@@ -1,6 +1,16 @@
-# War Sim v0.4.1.2 — Career Continuity & Mobile Polish
+# War Sim v0.4.1.3 — Stability & Save Integrity Hotfix
 
-War Sim v0.4.1.2 is a focused hotfix/polish release built on the verified v0.4.1.1 living-unit foundation. It keeps world schema 14 and save format 3 while improving persistent time awareness, career-objective continuity, simulation-tier presentation, mobile readability, and bottom-navigation safety without adding deployment/combat or changing the core unit-training architecture.
+War Sim v0.4.1.3 is a narrowly scoped stability release built on the verified v0.4.1.2 checkpoint. It keeps world schema 14 and save format 3 while fixing two live-code integrity defects found during iPhone testing and hardening world generation, migration, fresh-career, save/load, and assignment validation. No new gameplay system is introduced.
+
+
+## v0.4.1.3 stability fixes
+
+- fixes the schema-13 → schema-14 migration path by importing the data-driven training-phase/schedule helpers it already calls
+- fixes the legacy organization seeding path so the Company Executive Officer is generated as `rank_army_o2` / 1LT, satisfying the XO billet's minimum rank
+- keeps the billet validator strict; invalid current worlds are not accepted by weakening validation
+- adds same-schema legacy normalization that raises an under-ranked occupied billet holder only to the lowest valid rank in the same branch and rank category
+- improves rank/billet validation messages with person, billet, required rank, and assigned rank context
+- adds a dedicated release-gate suite covering 1,000 generated worlds, rank/billet integrity, specialty mappings where the generation profile defines them, equipment ownership, schema-13 migration execution, same-schema repair idempotency, and new-career → advance → save → load → advance
 
 ## Release goal
 
@@ -200,13 +210,13 @@ The v0.4.0.3 military visual identity remains intact.
 
 - Save format: **3**
 - World schema: **14**
-- Runtime version: **0.4.1.2**
+- Runtime version: **0.4.1.3**
 - v0.4.0.3 schema-12 careers migrate through schema 13 to schema 14 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
 - older supported saves continue through the existing migration chain
 
 ## Deliberately not included
 
-v0.4.1.2 does **not** add:
+v0.4.1.3 does **not** add:
 - deployment simulation
 - combat
 - enemy forces
@@ -215,7 +225,7 @@ v0.4.1.2 does **not** add:
 - new playable branches
 - a broad MOS expansion
 
-Those remain later milestones. v0.4.1.2 preserves the living-unit and scheduler foundation while making the current career loop easier to understand and continue.
+Those remain later milestones. v0.4.1.3 preserves the v0.4.1.2 living-unit/career-continuity foundation while hardening the integrity paths underneath it.
 
 ## Architecture rules preserved
 

@@ -58,7 +58,13 @@ export function validateWorldState(state, registries) {
       const def = registries.billets.get(e.billets[person.affiliation.billetId].definitionId);
       const rank = registries.ranks.get(person.affiliation.rankId);
       if (def.branchId !== person.affiliation.branchId) errors.push(`${person.id}: billet branch does not match person branch.`);
-      if (rank.hierarchyLevel < def.minimumRankLevel) errors.push(`${person.id}: rank is below billet minimum rank level.`);
+      if (rank.hierarchyLevel < def.minimumRankLevel) {
+        const minimumRank = registries.ranks.values()
+          .filter(candidate => candidate.branchId === person.affiliation.branchId && candidate.category === rank.category && candidate.hierarchyLevel >= def.minimumRankLevel)
+          .sort((a, b) => a.hierarchyLevel - b.hierarchyLevel || a.id.localeCompare(b.id))[0];
+        const required = minimumRank ? `${minimumRank.abbreviation} (${minimumRank.id}) or higher` : `hierarchy level ${def.minimumRankLevel}+`;
+        errors.push(`${person.id}: ${def.name} (${e.billets[person.affiliation.billetId].id}) requires ${required}; assigned ${rank.abbreviation} (${rank.id}).`);
+      }
     }
     requireRef(errors, e.serviceRecords, person.serviceRecordId, `${person.id}.serviceRecordId`); requireRef(errors, e.loadouts, person.loadoutId, `${person.id}.loadoutId`);
   }

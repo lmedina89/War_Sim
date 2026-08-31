@@ -34,7 +34,7 @@ export function ensureInfantryCompanyStructure(state){
   const platoonIds=["unit_platoon_001","unit_platoon_002","unit_platoon_003"];
   state.entities.units.unit_company_001=unit("unit_company_001","Alpha Company","echelon_company",null,platoonIds);
   let n=1;
-  const companyBillets=[["billet_company_commander","rank_army_o3"],["billet_executive_officer","rank_army_o1"],["billet_first_sergeant","rank_army_e8"],["billet_company_clerk","rank_army_e3"]];
+  const companyBillets=[["billet_company_commander","rank_army_o3"],["billet_executive_officer","rank_army_o2"],["billet_first_sergeant","rank_army_e8"],["billet_company_clerk","rank_army_e3"]];
   for(const [def,rank] of companyBillets) addBillet(state,{id:`billet_hq_co_${n}`,unitId:"unit_company_001",definitionId:def,rankId:rank,index:n++});
   for(let p=1;p<=3;p++){
     const pid=`unit_platoon_00${p}`, squadIds=[];

@@ -1,10 +1,65 @@
 import { ensureInfantryCompanyStructure, npcIdentityForIndex } from "../services/organizationSeed.js";
 import { initializeUnitTrainingProfiles } from "../services/unitReadiness.js";
-import { seedCareerGameplayRecords, seedScheduleThrough } from "../services/careerGameplay.js";
+import { ensureScheduleCoverageInDraft, seedCareerGameplayRecords, seedScheduleThrough, setTrainingPhaseInDraft } from "../services/careerGameplay.js";
 import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
 import { registries } from "../data/registries.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
 export const CURRENT_WORLD_SCHEMA_VERSION = 14;
+
+function repairLegacyBilletRankViolations(worldState) {
+  const people = worldState.entities?.people ?? {};
+  const billets = worldState.entities?.billets ?? {};
+  for (const person of Object.values(people)) {
+    const billet = billets[person.affiliation?.billetId];
+    if (!billet || !registries.billets.has(billet.definitionId) || !registries.ranks.has(person.affiliation?.rankId)) continue;
+    const billetDef = registries.billets.get(billet.definitionId);
+    const currentRank = registries.ranks.get(person.affiliation.rankId);
+    if (currentRank.hierarchyLevel >= billetDef.minimumRankLevel) continue;
+
+    const replacementRank = registries.ranks.values()
+      .filter(rank => rank.branchId === person.affiliation.branchId && rank.category === currentRank.category && rank.hierarchyLevel >= billetDef.minimumRankLevel)
+      .sort((a, b) => a.hierarchyLevel - b.hierarchyLevel || a.id.localeCompare(b.id))[0];
+    if (!replacementRank) continue;
+
+    person.affiliation.rankId = replacementRank.id;
+  }
+  return worldState;
+}
+
+function repairLegacyAffiliationFields(worldState) {
+  const generation = worldState.world?.generation;
+  const profile = generation?.generationProfileId && registries.generationProfiles.has(generation.generationProfileId)
+    ? registries.generationProfiles.get(generation.generationProfileId)
+    : null;
+  const scenario = generation?.scenarioId && registries.careerStartScenarios.has(generation.scenarioId)
+    ? registries.careerStartScenarios.get(generation.scenarioId)
+    : null;
+
+  for (const person of Object.values(worldState.entities?.people ?? {})) {
+    person.affiliation ??= {};
+    const service = worldState.entities?.serviceRecords?.[person.serviceRecordId] ?? null;
+    const billet = worldState.entities?.billets?.[person.affiliation.billetId] ?? null;
+    const mappedSpecialtyId = billet ? profile?.billetSpecialtyIdsByDefinitionId?.[billet.definitionId] : null;
+
+    if (!registries.components.has(person.affiliation.componentId)) {
+      person.affiliation.componentId = registries.components.has(service?.componentId)
+        ? service.componentId
+        : (scenario?.componentId && registries.components.has(scenario.componentId) ? scenario.componentId : "component_active");
+    }
+    if (!registries.specialties.has(person.affiliation.specialtyId)) {
+      person.affiliation.specialtyId = mappedSpecialtyId && registries.specialties.has(mappedSpecialtyId)
+        ? mappedSpecialtyId
+        : (registries.specialties.has(service?.specialtyId) ? service.specialtyId : scenario?.specialtyId);
+    }
+
+    if (service) {
+      service.componentId = registries.components.has(service.componentId) ? service.componentId : person.affiliation.componentId;
+      service.specialtyId = registries.specialties.has(service.specialtyId) ? service.specialtyId : person.affiliation.specialtyId;
+      service.branchId = registries.branches.has(service.branchId) ? service.branchId : person.affiliation.branchId;
+    }
+  }
+  return worldState;
+}
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -335,7 +390,9 @@ export function migratePayload(payload) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.4.1.2";
-  next.worldState.gameVersion = "0.4.1.2";
+  repairLegacyAffiliationFields(next.worldState);
+  repairLegacyBilletRankViolations(next.worldState);
+  next.gameVersion = "0.4.1.3";
+  next.worldState.gameVersion = "0.4.1.3";
   return next;
 }

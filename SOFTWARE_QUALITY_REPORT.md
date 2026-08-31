@@ -1,137 +1,104 @@
-# War Sim v0.4.1.2 — Software Quality Report
-
-## Executive result
-
-**PASS — release candidate approved for live iPhone/Safari validation after exact packaged-copy verification.**
-
-v0.4.1.2 was built from the verified v0.4.1.1 checkpoint and treated as untrusted until syntax checks, regression suites, dedicated career-continuity/mobile checks, generated-world validation, migration checks, deterministic simulation checks, and packaged-copy re-extraction tests passed.
+# War Sim v0.4.1.3 — Software Quality Report
 
 ## Release identity
 
-- Runtime version: **0.4.1.2**
+- Runtime version: **0.4.1.3**
 - Save format: **3**
 - World schema: **14**
-- Generator version: **2**
-- Primary views: **5**
-- JavaScript source modules: **79**
-- JavaScript source lines: approximately **4,847**
+- Source modules: **79 JavaScript modules**
+- Source size: **4,910 JavaScript lines**
+- Automated suites: smoke, living-unit/training-tempo, career-continuity/mobile, stability-hotfix, full quality
 
-## v0.4.1.2 scope verified
+## Release purpose
 
-The hotfix adds only data-driven continuity/mobile polish on top of v0.4.1.1:
+v0.4.1.3 is a stability/save-integrity hotfix built from the verified v0.4.1.2 checkpoint. It intentionally adds no new gameplay system. The release fixes two defects confirmed in live code and adds release gates designed to prevent the same classes of failure from shipping again.
 
-- persistent world date + training/career phase context attached to primary navigation
-- military-formatted canonical date with no duplicate UI-owned clock state
-- data-driven short labels on all training-phase definitions
-- explicit high-contrast Recent Unit Training grade/score styling
-- onboarding objective group metadata and initial-career lifecycle
-- fresh careers seed only the four onboarding objectives
-- definition-driven continuity objectives generated only after onboarding completion
-- repeatable objective definitions with definition-driven cooldowns
-- continuity rules for personal readiness, unit readiness versus phase target, renewable service-rifle qualification, next-promotion preparation, and open career opportunities
-- completed objective records retained as history rather than deleted
-- no-active-objective fallback guidance
-- player-facing simulation-detail labels and descriptions sourced from simulation-tier definitions
-- objective-history narrow-screen layout and persistent-context mobile breakpoint
-- existing safe-area/bottom-navigation content clearance preserved
-- world schema remains 14; same-schema saves normalize runtime version to 0.4.1.2
+## Confirmed defects fixed
 
-## Automated test suites
+### Schema-13 → schema-14 migration reference failure
+`migrateWorldV13ToV14` called `setTrainingPhaseInDraft` and `ensureScheduleCoverageInDraft` without importing them. The migration now imports the existing data-driven helpers from `careerGameplay.js`. A dedicated regression test executes the schema-13 migration path and verifies Garrison phase/schedule initialization and final world validation.
 
-### `tests/smoke.mjs`
+### Legacy Company XO rank mismatch
+The legacy `ensureInfantryCompanyStructure` path created the Company Executive Officer as O1/2LT even though `billet_executive_officer` requires hierarchy level 8, whose lowest valid Army officer rank is O2/1LT. The legacy generator now creates the XO as `rank_army_o2`. The validator remains strict.
 
-PASS. Existing regression coverage remains green for deterministic world generation, personnel generation, assignments, save/migration behavior, exact ETS processing, time-step-independent lifecycle behavior, activities/AARs, decisions, opportunities/orders, readiness, conflicts, authority, and the stable military UI/controller architecture.
+## Save-integrity hardening
 
-### `tests/living-unit.mjs`
+- same-schema schema-14 saves are normalized before validation when an occupied billet holder is below the billet minimum
+- repair selects only the lowest valid rank in the **same branch and rank category**; it does not globally weaken billet rules
+- legacy personnel missing component/specialty fields are repaired from canonical service data, generation-profile billet mappings, or the career-start scenario where available
+- service-record affiliation fields are synchronized when legacy records omitted them
+- improved validator errors include person ID, billet name/ID, required rank, and assigned rank
+- migration normalization is regression-tested for idempotency
 
-PASS. Existing v0.4.1.1 living-unit coverage remains green for Garrison tempo, background PT visibility, spacing of significant events, weekday rules, NPC simulation tiers/progression, NPC unit-duty participation, renewable qualification results, readiness snapshots, training-phase changes, dense pre-deployment scheduling, and prevention of retroactive schedule generation.
+## Assignment/generation release gates
 
-### `tests/career-continuity.mjs`
+The dedicated v0.4.1.3 stability suite validates **1,000 deterministic fresh worlds** and checks every occupied billet for:
 
-PASS. Dedicated v0.4.1.2 coverage verifies:
+- assigned-person existence
+- one-person/one-billet occupancy
+- person↔billet back-reference consistency
+- unit consistency
+- billet minimum-rank compliance
+- generation-profile specialty mapping where defined
+- loadout existence
+- primary equipment existence/ownership
+- billet-defined primary equipment compatibility
 
-- only onboarding objectives are seeded for a fresh career
-- onboarding completion is detectable from canonical objective records
-- follow-on qualification and promotion-preparation goals generate from canonical state
-- completed onboarding objectives remain in objective history
-- renewed qualification resolves its continuity objective
-- repeatable objectives do not duplicate during cooldown
-- readiness objectives can reactivate after cooldown when the need returns
-- all training phases expose data-driven short labels
-- all simulation tiers expose player-facing labels
-- persistent world-context DOM exists
-- permanent date rendering uses the canonical world date
-- completed-objective archive and no-active fallback UI are present
-- Recent Unit Training result text has explicit readable contrast
-- bottom-navigation safe-area clearance remains present
-- resulting world state validates successfully
+The suite also explicitly verifies both the modern generation-profile Company XO and the legacy `pers_org_002` Company XO are O2/1LT.
 
-### `tests/quality.mjs`
+## Career/save release gate
 
-PASS. Full software-quality suite validates:
+The dedicated stability suite executes:
 
-- **300 generated worlds**
-- **10,000-person index stress fixture**
-- index construction well below the **2,000 ms** failure threshold
-- deterministic RNG audit
-- no concrete runtime-ID hacks
-- DOM integrity
-- import-graph integrity
-- render containment
-- independent Unit/Personnel browsing state
-- military presentation DOM
-- gameplay definition registries
-- soldier/unit gameplay integration
-- canonical scheduler
-- actionable opportunity/orders pipeline
-- readiness model integration
-- conflict/recovery rules
-- billet authority definitions
-- deterministic activities
-- selector/index audit
-- schema 13 migration
-- direct schema 12 migration
-- semantic time-advance summaries
-- transient status feedback
-- archived notification history
-- same-schema hotfix version normalization
-- military status/document presentation definitions
-- stable record references
-- Current Situation display
-- personnel↔unit cross-navigation
-- remembered disclosure UI state
+`fresh world → Begin Career → advance 1 day → advance 7 days → advance 30 days → validate → save → load → compare canonical state → advance another 30 days → validate`
 
-A representative pre-package full-quality run built the 10,000-person indexes in **29.44 ms**.
+Blocking decisions are resolved deterministically during the gate. Browser save/load uses the same in-memory `localStorage` stand-in used by the existing quality suite.
 
-## Additional stress and static checks
+## Migration coverage
 
-- **1,000-seed generated-world sweep:** PASS, 0 failures
-- all JS/MJS files checked with `node --check`: PASS
-- forbidden runtime pattern audit remains PASS for `Math.random`, `eval`, `new Function`, `document.write`, and runtime `.innerHTML =`
-- deterministic centralized RNG remains the simulation randomness source
-- canonical state remains authoritative; indexes remain derived and non-serialized
-- no schema bump was introduced because v0.4.1.2 adds optional definition/presentation metadata and new runtime records that fit the existing schema-14 entity stores
+Automated tests cover:
 
-## Issues caught and fixed during v0.4.1.2 QA
+- schema 12 → 13 → 14
+- schema 13 → 14 with the newly fixed training-phase helper path
+- schema 14 same-schema runtime normalization
+- legacy rank/billet repair
+- missing legacy affiliation-field repair
+- repeated migration/idempotency
+- save/checksum round-trip and corruption rejection
 
-1. Existing v0.4.1 tests assumed one runtime objective record per objective definition. That was incompatible with the new definition-driven continuity model. The tests now correctly verify that a fresh career seeds only onboarding objectives while continuity definitions remain dormant until canonical activation conditions are met.
-2. The definition validator initially rejected the new generic completion/activation rules. Validation was expanded to whitelist the new rule vocabulary and verify referenced qualifications, repeatability metadata, cooldowns, and objective ordering.
-3. Promotion continuity could have generated a meaningless goal at the top of a defined rank ladder. Activation now also verifies that a next rank actually exists.
-4. Accepting or declining an opportunity could leave its continuity objective active until the next time advance. Opportunity commands now synchronize career objectives in the same canonical mutation.
-5. Loading an existing schema-14 save could display completed onboarding with no follow-on goals until another action occurred. The load path now evaluates current promotion eligibility and synchronizes continuity objectives immediately after state replacement.
-6. The live iPhone screenshot exposed a real contrast defect in Recent Unit Training outcome text. The result grade/score now explicitly uses the primary text color rather than inheriting the dark button foreground.
+An additional compatibility audit migrated an actual **v0.3.1.1/schema-8 generated world** through the current migration chain. Its legacy `pers_org_002` XO changed from O1 to O2, missing legacy affiliation fields were normalized, and the resulting schema-14 world passed current validation with **0 errors**.
 
-## Compatibility
+## Regression suites
 
-- Schema-14 v0.4.1.1 saves load directly and normalize to runtime **0.4.1.2**.
-- Schema-13 v0.4.1 and schema-12 v0.4.0.3 saves continue through the existing migration chain to schema 14.
-- Player identity, assignment, contracts, personnel, schedule/history, qualification, activity, NPC, and living-unit records are preserved.
-- No destructive migration or world regeneration is required for this hotfix.
+Pre-package verification:
 
-## Packaging verification
+- JavaScript/MJS syntax checks: **PASS**
+- `tests/smoke.mjs`: **PASS**
+- `tests/living-unit.mjs`: **PASS**
+- `tests/career-continuity.mjs`: **PASS**
+- `tests/stability-hotfix.mjs`: **PASS**
+- `tests/quality.mjs`: **PASS**
+- full quality generated-world validation: **300 seeds PASS**
+- dedicated stability generated-world integrity: **1,000 seeds PASS**
+- 10,000-person index stress: **PASS**
+- pre-package index build: **12.99 ms**
 
-The release ZIP is created only after the worktree suites pass. The exact ZIP is then extracted into a clean verification directory, all JS/MJS syntax checks are repeated, and smoke, living-unit, career-continuity, and full quality suites are rerun against that extracted copy. Packaging is not considered complete unless that exact copy passes.
+The existing quality suite also continues to pass deterministic RNG, DOM integrity, import-graph integrity, render containment, independent Unit/Personnel navigation state, military presentation definitions, canonical scheduler behavior, opportunity/order flow, readiness integration, recovery/conflict rules, billet authority, selector/index audits, notification history, stable document references, current-situation display, personnel/unit cross-navigation, and remembered disclosure-state checks.
 
-## Remaining limitation
+## Static safety/integrity checks
 
-Automated/static QA cannot guarantee pixel-perfect Safari rendering, safe-area placement, text wrapping, or touch ergonomics. The packaged build still requires live GitHub Pages validation on the user's iPhone before becoming the long-term visual checkpoint.
+Production source remains free of:
+
+- direct `Math.random()` simulation use
+- `eval`
+- `new Function`
+- `document.write`
+- runtime `.innerHTML =` mutation
+
+The release does not replace the stable UI controller, does not alter deterministic RNG architecture, and does not bump the world schema.
+
+## Final packaged-copy verification
+
+The release candidate ZIP was extracted into a clean directory and all syntax/regression/stability/quality suites passed again. Packaged-copy quality runs observed the 10,000-person index build well below the 2,000 ms guardrail (pre-package/draft-package observations: 12.99–42.36 ms).
+
+The final release ZIP is re-extracted and retested once more after this report is embedded. Static/browser rendering QA cannot substitute for live iPhone Safari validation, so on-device testing remains the final presentation check.
