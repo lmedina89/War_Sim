@@ -15,6 +15,8 @@ import { selectCareerRecord } from "./selectors/selectCareerRecord.js";
 import { selectNotifications } from "./selectors/selectNotifications.js";
 import { selectOrganizationView } from "./selectors/selectOrganizationView.js";
 import { selectAssignmentView, selectUnitPersonnel } from "./selectors/selectAssignmentView.js";
+import { selectServiceCareer } from "./selectors/selectServiceCareer.js";
+import { generateReenlistmentOffers, acceptReenlistmentOffer } from "./commands/reenlistment.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
@@ -25,8 +27,8 @@ let achievementQueue = [], saveMode = "save", selectedUnitId = null;
 
 const $ = selector => document.querySelector(selector);
 const els = {
-  newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"),
-  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), ordersList: $("#orders-list"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), diagnostics: $("#diagnostics"), status: $("#status-message"),
+  newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"),
+  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), diagnostics: $("#diagnostics"), status: $("#status-message"),
   train: $("#train-player"), advanceTime: $("#advance-time"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
   achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
   saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
@@ -34,6 +36,9 @@ const els = {
 };
 
 for (const branch of registries.branches.values()) { const option = document.createElement("option"); option.value = branch.id; option.textContent = branch.name; els.branchSelect.appendChild(option); }
+for (const component of registries.components.values()) { const option = document.createElement("option"); option.value = component.id; option.textContent = component.careerAvailable ? component.name : `${component.name} — framework ready`; option.disabled = !component.careerAvailable; els.componentSelect.appendChild(option); }
+for (const specialty of registries.specialties.values()) { const option = document.createElement("option"); option.value = specialty.id; option.textContent = specialty.careerAvailable ? `${specialty.code} · ${specialty.name}` : `${specialty.code} · ${specialty.name} — unit pipeline pending`; option.disabled = !specialty.careerAvailable; els.specialtySelect.appendChild(option); }
+for (const contract of registries.contracts.values()) { const option = document.createElement("option"); option.value = contract.id; option.textContent = `${contract.name} · ${contract.termMonths / 12} years`; els.contractSelect.appendChild(option); }
 
 function setStatus(message, tone = "") { els.status.textContent = message; els.status.className = `status-message ${tone}`.trim(); }
 function statLine(label, value) { const wrapper = document.createElement("div"); wrapper.className = "statline"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = String(value); wrapper.append(key, val); return wrapper; }
@@ -89,6 +94,30 @@ function renderOrganization(state, indexes, personId) {
   const orderIds=indexes.ordersByPersonId?.get(personId)??[]; els.ordersList.replaceChildren(); if(!orderIds.length){const p=document.createElement("p");p.className="muted";p.textContent="No orders recorded yet.";els.ordersList.append(p);} else for(const id of orderIds.slice().reverse()){const o=state.entities.orderRecords[id], card=document.createElement("article");card.className="order-card";const h=document.createElement("h3");h.textContent=o.title;const p1=document.createElement("p");p1.textContent=o.summary;const p2=document.createElement("p");p2.className="muted";p2.textContent=`Issued ${o.issueDate} · Effective ${o.effectiveDate} · ${o.status}`;card.append(h,p1,p2);els.ordersList.append(card);}
 }
 
+
+function renderServiceCareer(state, indexes, personId) {
+  const view = selectServiceCareer(state, indexes, registries, personId);
+  const contract = view.contract;
+  els.serviceCareer.replaceChildren(
+    statLine("Component", view.component.name),
+    statLine("MOS", `${view.specialty.code} · ${view.specialty.name}`),
+    statLine("Career Field", view.specialty.careerField),
+    statLine("Contract", view.contractDef?.name ?? "—"),
+    statLine("Contract Start", contract?.startDate ?? "—"),
+    statLine("ETS / Contract End", contract?.endDate ?? "—"),
+    statLine("Days Remaining", view.daysRemaining == null ? "—" : view.daysRemaining),
+    statLine("Contract Bonus", contract ? `$${contract.bonus.toLocaleString()}` : "$0")
+  );
+  els.reviewReenlistment.disabled = !view.reenlistmentWindowOpen;
+  els.reviewReenlistment.textContent = view.reenlistmentWindowOpen ? "Review Reenlistment Options" : `Reenlistment Window ${view.daysRemaining > 180 ? `in ${view.daysRemaining - 180} days` : "Closed"}`;
+  els.reenlistmentOffers.replaceChildren();
+  const openOffers = view.offers.filter(x => x.status === "open");
+  if (!openOffers.length) { const p=document.createElement("p"); p.className="muted"; p.textContent=view.reenlistmentWindowOpen ? "No active offers yet. Review options to generate them." : "Reenlistment offers appear within 180 days of ETS."; els.reenlistmentOffers.appendChild(p); }
+  else for (const offer of openOffers) { const card=document.createElement("article"); card.className="offer-card"; const h=document.createElement("h3"); h.textContent=offer.contractName; const p=document.createElement("p"); p.textContent=`Retain ${view.specialty.code} ${view.specialty.name} · ${view.component.name}`; const b=document.createElement("p"); b.className="offer-bonus"; b.textContent=`$${offer.bonus.toLocaleString()} bonus`; const accept=document.createElement("button"); accept.type="button"; accept.textContent="Accept Offer"; accept.addEventListener("click",()=>runCommand(()=>acceptReenlistmentOffer(store,registries,offer.id))); card.append(h,p,b,accept); els.reenlistmentOffers.appendChild(card); }
+  const history = view.periods.map(x => `${x.startDate} → ${x.endDate ?? "Present"} · ${x.branchName} · ${x.componentName} · ${x.specialtyName}`);
+  renderList(els.careerFramework, history, "No service periods recorded.");
+}
+
 function render() {
   const state = store.getState(), indexes = store.getIndexes(), validation = validateWorldState(state, registries), hasPlayer = Boolean(state.playerPersonId);
   els.newCareerPanel.hidden = hasPlayer; els.careerContent.hidden = !hasPlayer;
@@ -96,7 +125,7 @@ function render() {
   const squad = selectCurrentSquad(state, indexes, registries, state.playerPersonId), career = selectCareerRecord(state, indexes, registries, state.playerPersonId);
   els.squadMeta.textContent = `${squad.unitName} · ${squad.members.length} personnel · Readiness ${squad.readiness}% · Morale ${squad.morale}% · ${state.world.date}`;
   els.squadBody.replaceChildren(...squad.members.map(member => { const tr = document.createElement("tr"); if (member.isPlayer) tr.className = "player-row"; for (const value of [member.rank, member.name, member.role, `${member.health}%`, `${member.morale}%`, member.weaponName, member.status]) { const td = document.createElement("td"); td.textContent = value; tr.appendChild(td); } return tr; }));
-  els.careerCard.replaceChildren(statLine("Name", career.name), statLine("Branch", career.branch), statLine("Rank", career.rank), statLine("Pay Grade", career.payGrade), statLine("Role", career.role), statLine("Experience", career.experience), statLine("Prestige", career.prestige), statLine("Simulation Tier", state.entities.people[state.playerPersonId].simulationTier), statLine("World Seed", state.world.seed));
+  els.careerCard.replaceChildren(statLine("Name", career.name), statLine("Branch", career.branch), statLine("Component", career.component), statLine("MOS", career.specialty), statLine("Rank", career.rank), statLine("Pay Grade", career.payGrade), statLine("Role", career.role), statLine("Experience", career.experience), statLine("Prestige", career.prestige), statLine("Simulation Tier", state.entities.people[state.playerPersonId].simulationTier), statLine("World Seed", state.world.seed));
   els.promotionCard.replaceChildren();
   if (!career.promotion.nextRank) { const p = document.createElement("p"); p.className = "muted"; p.textContent = "No higher rank is defined in this foundation build."; els.promotionCard.appendChild(p); els.promote.disabled = true; }
   else { els.promotionCard.append(statLine("Next Rank", `${career.promotion.nextRank.abbreviation} · ${career.promotion.nextRank.name}`), statLine("Eligible", career.promotion.eligible ? "Yes" : "No")); const reasonBox = document.createElement("div"); renderList(reasonBox, career.promotion.reasons, "All current requirements are satisfied."); els.promotionCard.appendChild(reasonBox); els.promote.disabled = !career.promotion.eligible; }
@@ -105,6 +134,7 @@ function render() {
   els.careerEvents.replaceChildren(...career.events.map(event => { const li = document.createElement("li"), time = document.createElement("time"); time.textContent = event.date; li.append(time, document.createTextNode(event.label)); return li; }));
   renderInbox(state, indexes, state.playerPersonId);
   renderOrganization(state, indexes, state.playerPersonId);
+  renderServiceCareer(state, indexes, state.playerPersonId);
   els.diagnostics.textContent = JSON.stringify({ valid: validation.ok, validationErrors: validation.errors, definitionValidation, worldSchemaVersion: state.schemaVersion, gameVersion: state.gameVersion, worldClock: state.world.clock, rngState: state.world.rngState, nextEntitySequence: state.world.nextEntitySequence, registryCounts: Object.fromEntries(Object.entries(registries).map(([k, r]) => [k, r.size])), runtimeCounts: Object.fromEntries(Object.entries(state.entities).map(([name, collection]) => [name, Object.keys(collection).length])), indexedSquadMembers: indexes.peopleByUnitId.get(squad.unitId)?.length ?? 0, playerRelationships: indexes.relationshipsByPersonId.get(state.playerPersonId)?.length ?? 0 }, null, 2);
 }
 
@@ -137,15 +167,16 @@ function renderSaveManager(mode) {
 }
 function openSaveManager(mode) { renderSaveManager(mode); els.saveDialog.showModal(); }
 
-els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value }), { autosaveAfter: true }); });
+els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value }), { autosaveAfter: true }); });
 els.train.addEventListener("click", () => runCommand(() => grantTrainingExperience(store, store.getState().playerPersonId, 250)));
 els.advanceTime.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
+els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
 els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
 els.airborne.addEventListener("click", () => runCommand(() => completeSchool(store, registries, store.getState().playerPersonId, "school_airborne")));
 els.leadership.addEventListener("click", () => runCommand(() => completeSchool(store, registries, store.getState().playerPersonId, "school_leadership")));
 els.save.addEventListener("click", () => openSaveManager("save")); els.load.addEventListener("click", () => openSaveManager("load")); els.loadFromStart.addEventListener("click", () => openSaveManager("load"));
 els.saveDialogClose.addEventListener("click", () => els.saveDialog.close());
 els.personProfileClose.addEventListener("click", () => els.personDialog.close());
-els.newCareer.addEventListener("click", async () => { if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return; store.replaceState(createInitialWorldState()); els.newCareerForm.reset(); els.branchSelect.value = registries.branches.values()[0]?.id ?? ""; setStatus("New career setup ready. Existing save slots were preserved.", "warn"); });
+els.newCareer.addEventListener("click", async () => { if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return; store.replaceState(createInitialWorldState()); els.newCareerForm.reset(); els.branchSelect.value = registries.branches.values()[0]?.id ?? ""; els.componentSelect.value = "component_active"; els.specialtySelect.value = "specialty_army_11b"; els.contractSelect.value = "contract_army_4y"; setStatus("New career setup ready. Existing save slots were preserved.", "warn"); });
 
 store.subscribe(render); eventBus.subscribe("command_completed", () => {}); render();

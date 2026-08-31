@@ -1,5 +1,5 @@
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 5;
+export const CURRENT_WORLD_SCHEMA_VERSION = 6;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -81,6 +81,52 @@ function migrateWorldV4ToV5(worldState) {
   return next;
 }
 
+
+function addMonthsIso(isoDate, months) {
+  const [year, month, day] = String(isoDate).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + months, day));
+  return date.toISOString().slice(0, 10);
+}
+
+function migrateWorldV5ToV6(worldState) {
+  const next = structuredClone(worldState);
+  next.schemaVersion = 6;
+  next.gameVersion = "0.3.0";
+  next.entities.contractRecords = next.entities.contractRecords ?? {};
+  next.entities.servicePeriodRecords = next.entities.servicePeriodRecords ?? {};
+  next.entities.reenlistmentOfferRecords = next.entities.reenlistmentOfferRecords ?? {};
+  next.entities.careerChangeRequestRecords = next.entities.careerChangeRequestRecords ?? {};
+  next.entities.interServiceTransferRecords = next.entities.interServiceTransferRecords ?? {};
+
+  for (const person of Object.values(next.entities.people ?? {})) {
+    person.schemaVersion = Math.max(person.schemaVersion ?? 1, 3);
+    person.affiliation.componentId = person.affiliation.componentId ?? "component_active";
+    person.affiliation.specialtyId = person.affiliation.specialtyId ?? "specialty_army_11b";
+    person.career.bonusEarnings = person.career.bonusEarnings ?? 0;
+    const service = next.entities.serviceRecords?.[person.serviceRecordId];
+    if (!service) continue;
+    service.schemaVersion = 2;
+    service.branchId = service.branchId ?? person.affiliation.branchId;
+    service.componentId = service.componentId ?? person.affiliation.componentId;
+    service.specialtyId = service.specialtyId ?? person.affiliation.specialtyId;
+    service.servicePeriodIds = service.servicePeriodIds ?? [];
+    if (!service.servicePeriodIds.length) {
+      const periodId = `period_migrated_${person.id}`;
+      next.entities.servicePeriodRecords[periodId] = { id: periodId, schemaVersion: 1, personId: person.id, branchId: service.branchId, componentId: service.componentId, specialtyId: service.specialtyId, startDate: service.entryDate ?? person.career.enlistmentDate, endDate: service.separationDate ?? null, status: service.serviceStatus === "active" ? "active" : "closed" };
+      service.servicePeriodIds.push(periodId);
+    }
+    if (person.id === next.playerPersonId && !service.currentContractId) {
+      const contractId = `contract_migrated_${person.id}`;
+      const startDate = service.entryDate ?? person.career.enlistmentDate ?? next.world.date;
+      next.entities.contractRecords[contractId] = { id: contractId, schemaVersion: 1, personId: person.id, contractDefinitionId: "contract_army_4y", branchId: service.branchId, componentId: service.componentId, specialtyId: service.specialtyId, startDate, endDate: addMonthsIso(startDate, 48), termMonths: 48, bonus: 0, type: "legacy_migration", status: "active" };
+      service.currentContractId = contractId;
+    } else {
+      service.currentContractId = service.currentContractId ?? null;
+    }
+  }
+  return next;
+}
+
 function migrateWorldV2ToV3(worldState) {
   const next = structuredClone(worldState);
   next.schemaVersion = 3;
@@ -115,12 +161,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 2) next.worldState = migrateWorldV2ToV3(next.worldState);
   if (next.worldState.schemaVersion === 3) next.worldState = migrateWorldV3ToV4(next.worldState);
   if (next.worldState.schemaVersion === 4) next.worldState = migrateWorldV4ToV5(next.worldState);
+  if (next.worldState.schemaVersion === 5) next.worldState = migrateWorldV5ToV6(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.2.1";
-  next.worldState.gameVersion = "0.2.1";
+  next.gameVersion = "0.3.0";
+  next.worldState.gameVersion = "0.3.0";
   return next;
 }

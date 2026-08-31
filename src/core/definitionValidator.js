@@ -23,6 +23,22 @@ export function validateDefinitions(registries) {
     if (!registries.roles.has(billet.roleId)) errors.push(`${billet.id}: invalid roleId ${billet.roleId}.`);
   }
 
+  for (const component of registries.components.values()) {
+    if (!registries.branches.has(component.branchId)) errors.push(`${component.id}: invalid branchId ${component.branchId}.`);
+    if (!registries.contracts.has(component.defaultContractDefinitionId)) errors.push(`${component.id}: invalid default contract ${component.defaultContractDefinitionId}.`);
+  }
+
+  for (const specialty of registries.specialties.values()) {
+    if (!registries.branches.has(specialty.branchId)) errors.push(`${specialty.id}: invalid branchId ${specialty.branchId}.`);
+    if (specialty.startingRoleId && !registries.roles.has(specialty.startingRoleId)) errors.push(`${specialty.id}: invalid startingRoleId ${specialty.startingRoleId}.`);
+    for (const id of specialty.eligibleBilletDefinitionIds ?? []) if (!registries.billets.has(id)) errors.push(`${specialty.id}: invalid eligible billet ${id}.`);
+  }
+
+  for (const contract of registries.contracts.values()) {
+    if (!registries.branches.has(contract.branchId)) errors.push(`${contract.id}: invalid branchId ${contract.branchId}.`);
+    if (!Number.isInteger(contract.termMonths) || contract.termMonths <= 0) errors.push(`${contract.id}: invalid termMonths.`);
+  }
+
   for (const org of registries.organizations.values()) {
     if (!registries.echelons.has(org.echelonId)) errors.push(`${org.id}: invalid echelonId ${org.echelonId}.`);
     if (!registries.branches.has(org.branchId)) errors.push(`${org.id}: invalid branchId ${org.branchId}.`);

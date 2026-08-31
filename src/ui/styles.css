@@ -93,3 +93,9 @@ details.panel[open] summary { margin-bottom: 14px; }
 .order-card { border-left:3px solid var(--accent); background:var(--panel-2); border-radius:10px; padding:12px; margin-top:10px; }
 .order-card h3,.order-card p { margin:3px 0; }
 @media (max-width:760px){ .unit-summary { grid-template-columns:1fr; } }
+.contract-actions { margin-top: 14px; }
+.offer-card { border:1px solid var(--border); background:var(--panel-2); border-radius:12px; padding:12px; margin-top:10px; }
+.offer-card h3 { margin:0 0 6px; }
+.offer-card p { margin:4px 0; color:var(--muted); }
+.offer-card .offer-bonus { color:var(--good); font-weight:900; font-size:1.15rem; margin:8px 0; }
+@media (min-width:761px){ .career-form { grid-template-columns:repeat(4,minmax(0,1fr)); } }

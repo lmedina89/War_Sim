@@ -39,11 +39,16 @@ function makeNpc([id, firstName, lastName, rankId, billetDefinitionId, health, m
     },
     serviceRecord: {
       id: `service_${id}`,
-      schemaVersion: 1,
+      schemaVersion: 2,
       personId: id,
       serviceStatus: "active",
       entryDate: "2042-01-15",
-      separationDate: null
+      separationDate: null,
+      branchId: "branch_army",
+      componentId: "component_active",
+      specialtyId: "specialty_army_11b",
+      currentContractId: null,
+      servicePeriodIds: []
     },
     equipment: {
       id: `eq_${id}_primary`,
@@ -88,8 +93,8 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
   });
 
   return {
-    schemaVersion: 5,
-    gameVersion: "0.2.1",
+    schemaVersion: 6,
+    gameVersion: "0.3.0",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
@@ -137,7 +142,12 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
       relationshipRecords: {},
       notificationRecords: {},
       actionRecords: {},
-      orderRecords: {}
+      orderRecords: {},
+      contractRecords: {},
+      servicePeriodRecords: {},
+      reenlistmentOfferRecords: {},
+      careerChangeRequestRecords: {},
+      interServiceTransferRecords: {}
     }
   };
 }

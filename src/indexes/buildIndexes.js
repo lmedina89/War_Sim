@@ -81,6 +81,15 @@ function ordersGroup(state) {
   return { ordersByPersonId };
 }
 
+
+function careerGroup(state) {
+  const contractsByPersonId = new Map(), servicePeriodsByPersonId = new Map(), reenlistmentOffersByPersonId = new Map();
+  for (const record of Object.values(state.entities.contractRecords ?? {})) addToIndex(contractsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.servicePeriodRecords ?? {})) addToIndex(servicePeriodsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.reenlistmentOfferRecords ?? {})) addToIndex(reenlistmentOffersByPersonId, record.personId, record.id);
+  return { contractsByPersonId, servicePeriodsByPersonId, reenlistmentOffersByPersonId };
+}
+
 function actionGroup(state) {
   const actionsByActorPersonId = new Map();
   for (const record of Object.values(state.entities.actionRecords)) addToIndex(actionsByActorPersonId, record.actorPersonId, record.id);
@@ -96,7 +105,8 @@ const GROUP_BUILDERS = Object.freeze({
   memorial: memorialGroup,
   notifications: notificationGroup,
   actions: actionGroup,
-  orders: ordersGroup
+  orders: ordersGroup,
+  career: careerGroup
 });
 
 export const ALL_INDEX_GROUPS = Object.freeze(Object.keys(GROUP_BUILDERS));

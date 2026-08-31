@@ -55,6 +55,8 @@ export function selectCareerRecord(state, indexes, registries, personId) {
     rank: `${rank.abbreviation} · ${rank.name}`,
     payGrade: rank.payGrade,
     role: billetDef?.name ?? "Unassigned",
+    component: registries.components.get(person.affiliation.componentId ?? "component_active").name,
+    specialty: `${registries.specialties.get(person.affiliation.specialtyId ?? "specialty_army_11b").code} · ${registries.specialties.get(person.affiliation.specialtyId ?? "specialty_army_11b").name}`,
     experience: person.career.experience,
     prestige: person.career.prestige,
     qualifications,
@@ -76,6 +78,8 @@ function formatCareerEvent(event, registries) {
       return `Completed ${registries.schools.get(event.references.schoolId).name}`;
     case "assignment":
       return "New assignment";
+    case "reenlistment":
+      return "Reenlisted";
     default:
       return event.type.replaceAll("_", " ");
   }
