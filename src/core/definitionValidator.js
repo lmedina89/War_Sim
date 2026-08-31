@@ -24,6 +24,17 @@ export function validateDefinitions(registries) {
     }
   }
 
+  for (const qualification of registries.qualifications.values()) {
+    if (qualification.weaponDefinitionId && !registries.equipment.has(qualification.weaponDefinitionId)) errors.push(`${qualification.id}: invalid weaponDefinitionId ${qualification.weaponDefinitionId}.`);
+    if (qualification.renewable && (!Number.isInteger(qualification.validityDays) || qualification.validityDays <= 0)) errors.push(`${qualification.id}: renewable qualification requires positive validityDays.`);
+    if (qualification.scoring) {
+      if (!Number.isInteger(qualification.scoring.maxScore) || qualification.scoring.maxScore <= 0) errors.push(`${qualification.id}: invalid scoring.maxScore.`);
+      const bands = qualification.scoring.resultBands ?? [];
+      if (!Array.isArray(bands) || !bands.length) errors.push(`${qualification.id}: scoring requires resultBands.`);
+      for (const band of bands) if (!Number.isFinite(band.minimumScore) || !band.result || !band.label) errors.push(`${qualification.id}: invalid qualification result band.`);
+    }
+  }
+
   for (const school of registries.schools.values()) {
     for (const id of school.grantsQualificationIds ?? []) {
       if (!registries.qualifications.has(id)) errors.push(`${school.id}: invalid qualification ${id}.`);

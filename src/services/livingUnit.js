@@ -43,29 +43,46 @@ function ensureRelationship(draft, personAId, personBId) {
 }
 
 
-function qualificationBand(duty, score) {
-  return [...(duty.resultBands ?? [])].sort((a,b)=>(b.minimumScore??0)-(a.minimumScore??0)).find(band => score >= (band.minimumScore ?? 0)) ?? { result:"qualified", label:"QUALIFIED" };
+function qualificationBand(qualification, rawScore) {
+  return [...(qualification?.scoring?.resultBands ?? [])].sort((a,b)=>(b.minimumScore??0)-(a.minimumScore??0)).find(band => rawScore >= (band.minimumScore ?? 0)) ?? { result:"qualified", label:"QUALIFIED" };
 }
 
-export function recordDutyQualification(draft, registries, personId, duty, score) {
+function qualificationRawScore(qualification, performanceScore) {
+  const maxScore = Math.max(1, Number(qualification?.scoring?.maxScore) || 100);
+  return Math.max(0, Math.min(maxScore, Math.round((Math.max(0, Math.min(100, Number(performanceScore) || 0)) / 100) * maxScore)));
+}
+
+export function recordDutyQualification(draft, registries, personId, duty, performanceScore, { sourceType="scheduled_duty", sourceId=null }={}) {
   if (!duty?.qualificationId) return null;
-  const band=qualificationBand(duty,score);
-  if (band.result === "unqualified") return { qualificationRecordId:null, result:band.result, label:band.label };
+  const qualification=registries.qualifications.get(duty.qualificationId);
+  if (!qualification) return null;
+  const rawScore=qualificationRawScore(qualification,performanceScore);
+  const maxScore=Math.max(1, Number(qualification.scoring?.maxScore) || 100);
+  const band=qualificationBand(qualification,rawScore);
+  if (band.result === "unqualified") return { qualificationRecordId:null, result:band.result, label:band.label, score:rawScore, maxScore, qualified:false };
   let record=null;
   for (const candidate of Object.values(draft.entities.qualificationRecords ?? {})) {
     if (candidate.personId === personId && candidate.qualificationId === duty.qualificationId) { record=candidate; break; }
   }
   if (!record) {
     const id=createEntityId(draft,"qual");
-    record={ id, schemaVersion:2, personId, schoolId:null, qualificationId:duty.qualificationId, completedDate:draft.world.date, result:band.result };
+    record={ id, schemaVersion:3, personId, schoolId:null, qualificationId:duty.qualificationId, completedDate:draft.world.date, result:band.result };
     draft.entities.qualificationRecords[id]=record;
   } else {
-    record.schemaVersion=Math.max(2,record.schemaVersion??1); record.completedDate=draft.world.date; record.result=band.result;
+    record.schemaVersion=Math.max(3,record.schemaVersion??1); record.completedDate=draft.world.date; record.result=band.result;
   }
-  record.expiresElapsedDay=draft.world.clock.elapsedDays + (duty.qualificationValidityDays ?? 180);
-  record.expiresDate=new Date(new Date(`${draft.world.date}T00:00:00Z`).getTime()+(duty.qualificationValidityDays??180)*86400000).toISOString().slice(0,10);
-  record.sourceType="scheduled_duty"; record.sourceId=duty.id;
-  return { qualificationRecordId:record.id, result:band.result, label:band.label };
+  record.score=rawScore; record.maxScore=maxScore;
+  record.weaponDefinitionId=qualification.weaponDefinitionId ?? null;
+  record.badgeClasp=qualification.badgeClasp ?? null;
+  if (qualification.renewable) {
+    const validityDays=qualification.validityDays ?? 365;
+    record.expiresElapsedDay=draft.world.clock.elapsedDays + validityDays;
+    record.expiresDate=new Date(new Date(`${draft.world.date}T00:00:00Z`).getTime()+validityDays*86400000).toISOString().slice(0,10);
+  } else {
+    record.expiresElapsedDay=null; record.expiresDate=null;
+  }
+  record.sourceType=sourceType; record.sourceId=sourceId ?? duty.id;
+  return { qualificationRecordId:record.id, result:band.result, label:band.label, score:rawScore, maxScore, qualified:true };
 }
 export function applyNpcParticipationForDuty(draft, registries, { unitId, duty, playerPersonId, performanceScore, participantPersonIds = null }) {
   if (!unitId || !duty) return { participantIds:[], performanceRecordIds:[], relationshipIds:[] };

@@ -6,6 +6,21 @@ import { registries } from "../data/registries.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
 export const CURRENT_WORLD_SCHEMA_VERSION = 14;
 
+function repairLegacyScheduleTemplateIds(worldState) {
+  const scheduler = worldState.world?.scheduler ?? null;
+  const fallbackPhaseId = registries.trainingPhases.has(scheduler?.trainingPhaseId) ? scheduler.trainingPhaseId : "training_phase_garrison";
+  const fallbackPhase = registries.trainingPhases.has(fallbackPhaseId) ? registries.trainingPhases.get(fallbackPhaseId) : null;
+  const fallbackTemplateId = fallbackPhase?.scheduleTemplateId ?? "schedule_garrison_cycle";
+  for (const record of Object.values(worldState.entities?.scheduleRecords ?? {})) {
+    if (registries.scheduleTemplates.has(record.sourceTemplateId)) continue;
+    const recordPhase = record.trainingPhaseId && registries.trainingPhases.has(record.trainingPhaseId) ? registries.trainingPhases.get(record.trainingPhaseId) : fallbackPhase;
+    record.legacySourceTemplateId ??= record.sourceTemplateId ?? null;
+    record.sourceTemplateId = recordPhase?.scheduleTemplateId ?? fallbackTemplateId;
+    record.schemaVersion = Math.max(2, record.schemaVersion ?? 1);
+  }
+  return worldState;
+}
+
 function repairLegacyBilletRankViolations(worldState) {
   const people = worldState.entities?.people ?? {};
   const billets = worldState.entities?.billets ?? {};
@@ -250,6 +265,7 @@ function migrateWorldV12ToV13(worldState) {
 
 function migrateWorldV13ToV14(worldState) {
   const next=structuredClone(worldState);
+  repairLegacyScheduleTemplateIds(next);
   next.entities.unitEventRecords ??= {};
   next.entities.unitReadinessSnapshots ??= {};
   next.world ??= {}; next.world.scheduler ??= {};
@@ -392,7 +408,8 @@ export function migratePayload(payload) {
 
   repairLegacyAffiliationFields(next.worldState);
   repairLegacyBilletRankViolations(next.worldState);
-  next.gameVersion = "0.4.1.3";
-  next.worldState.gameVersion = "0.4.1.3";
+  repairLegacyScheduleTemplateIds(next.worldState);
+  next.gameVersion = "0.4.1.4";
+  next.worldState.gameVersion = "0.4.1.4";
   return next;
 }

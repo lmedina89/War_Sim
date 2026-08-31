@@ -1,16 +1,16 @@
-# War Sim v0.4.1.3 — Stability & Save Integrity Hotfix
+# War Sim v0.4.1.4 — Migration, Qualification & Collective Training Hotfix
 
-War Sim v0.4.1.3 is a narrowly scoped stability release built on the verified v0.4.1.2 checkpoint. It keeps world schema 14 and save format 3 while fixing two live-code integrity defects found during iPhone testing and hardening world generation, migration, fresh-career, save/load, and assignment validation. No new gameplay system is introduced.
+War Sim v0.4.1.4 is a narrowly scoped integrity release built on the verified v0.4.1.3 checkpoint. It keeps world schema 14 and save format 3 while fixing a schema-13 schedule-template migration failure, making weapons qualification use an Army-style 40-target record, and routing player-initiated Squad Drills through the same NPC participation engine used by scheduled unit training.
 
+## v0.4.1.4 fixes
 
-## v0.4.1.3 stability fixes
-
-- fixes the schema-13 → schema-14 migration path by importing the data-driven training-phase/schedule helpers it already calls
-- fixes the legacy organization seeding path so the Company Executive Officer is generated as `rank_army_o2` / 1LT, satisfying the XO billet's minimum rank
-- keeps the billet validator strict; invalid current worlds are not accepted by weakening validation
-- adds same-schema legacy normalization that raises an under-ranked occupied billet holder only to the lowest valid rank in the same branch and rank category
-- improves rank/billet validation messages with person, billet, required rank, and assigned rank context
-- adds a dedicated release-gate suite covering 1,000 generated worlds, rank/billet integrity, specialty mappings where the generation profile defines them, equipment ownership, schema-13 migration execution, same-schema repair idempotency, and new-career → advance → save → load → advance
+- Normalizes retired/invalid legacy schedule template IDs during migration while preserving the legacy source ID for audit history. Completed historical schedule rows no longer block schema-13 saves from loading.
+- Service-rifle/carbine qualification is now weapon-specific, renewable for 365 days, and scored separately from the generic activity performance grade using a 40-target record: 23–29 Marksman, 30–35 Sharpshooter, 36–40 Expert; below 23 remains unqualified.
+- Player-initiated Weapons Qualification Range now creates or renews the same canonical qualification record used by scheduled range duty when the Soldier actually qualifies.
+- Player-initiated Squad Drills now include eligible same-squad NPCs and create durable NPC participation/performance history through the existing living-unit engine.
+- Qualification records now retain score, maximum score, weapon definition, marksmanship clasp, rating, source, completion date, and expiration date so the model can later support multiple weapon qualifications and a richer Army service record.
+- Career/personnel presentation now shows qualification rating, score, and expiration instead of only a generic completion date.
+- Added dedicated migration/qualification/collective-activity regression QA in addition to the existing smoke, living-unit, career-continuity, stability, and quality suites.
 
 ## Release goal
 
@@ -210,13 +210,13 @@ The v0.4.0.3 military visual identity remains intact.
 
 - Save format: **3**
 - World schema: **14**
-- Runtime version: **0.4.1.3**
+- Runtime version: **0.4.1.4**
 - v0.4.0.3 schema-12 careers migrate through schema 13 to schema 14 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
 - older supported saves continue through the existing migration chain
 
 ## Deliberately not included
 
-v0.4.1.3 does **not** add:
+v0.4.1.4 does **not** add:
 - deployment simulation
 - combat
 - enemy forces
@@ -225,7 +225,7 @@ v0.4.1.3 does **not** add:
 - new playable branches
 - a broad MOS expansion
 
-Those remain later milestones. v0.4.1.3 preserves the v0.4.1.2 living-unit/career-continuity foundation while hardening the integrity paths underneath it.
+Those remain later milestones. v0.4.1.4 preserves the v0.4.1.2 living-unit/career-continuity foundation while hardening the integrity paths underneath it.
 
 ## Architecture rules preserved
 

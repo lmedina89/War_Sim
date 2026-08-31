@@ -13,7 +13,7 @@ export const dutyDefinitions = [
   {
     id: "duty_range", schemaVersion: 2, name: "Weapons Qualification", shortName: "Range", category: "training", durationDays: 2,
     statusWhileActive: "training", mandatory: true, eventTableId: "event_table_training_range", defaultVisibility: "significant", priority: 60,
-    qualificationId: "qualification_service_rifle", qualificationValidityDays: 180, resultBands: [{ minimumScore: 88, result: "expert", label: "EXPERT" }, { minimumScore: 72, result: "sharpshooter", label: "SHARPSHOOTER" }, { minimumScore: 50, result: "marksman", label: "MARKSMAN" }, { minimumScore: 0, result: "unqualified", label: "UNQUALIFIED" }],
+    qualificationId: "qualification_service_rifle",
     description: "Periodic live-fire qualification validates weapons proficiency and renews an expiring service-rifle qualification.",
     playerEffects: [
       { target: "skill", skillId: "skill_marksmanship", operation: "add", value: 2 },

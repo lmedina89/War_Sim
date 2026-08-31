@@ -11,6 +11,7 @@ import { updateCareerObjectivesInDraft, ensureScheduleCoverageInDraft, evaluateC
 import { calculateIndividualPerformanceScore, resolvePerformanceRating } from "../services/performance.js";
 import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEvents.js";
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
+import { applyNpcParticipationForDuty, recordDutyQualification, recordUnitEvent } from "../services/livingUnit.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
 function clamp(value, min=0, max=100) { return Math.max(min, Math.min(max, Math.round(value))); }
@@ -64,6 +65,8 @@ export function performActivity(store, registries, personId, activityId) {
   const billetIds = unitId ? [...(indexes.billetsByUnitId?.get(unitId) ?? [])] : [];
   const unitPersonIds = unitId ? [...(indexes.peopleByUnitId?.get(unitId) ?? [])] : [];
   let activityRecordId;
+  let participantPersonIds = [personId];
+  let qualificationResult = null;
 
   store.mutate(draft => {
     const person = draft.entities.people[personId];
@@ -91,17 +94,30 @@ export function performActivity(store, registries, personId, activityId) {
 
     const event = resolveActivityEvent(draft, registries, { personId, unitId: person.affiliation.unitId, relationshipIds, activityId: activity.id, eventTableId: activity.eventTableId });
     if (event?.notificationId) notifications.push(event.notificationId);
-    if (unit) { const currentPersonIds = billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean); syncUnitReadiness(draft, registries, unit.id, { billetIds, personIds: currentPersonIds.length ? currentPersonIds : unitPersonIds }); }
+
+    const currentPersonIds = unit ? billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean) : [];
+    if (activity.qualificationDutyDefinitionId) {
+      const qualificationDuty = registries.duties.get(activity.qualificationDutyDefinitionId);
+      qualificationResult = recordDutyQualification(draft, registries, personId, qualificationDuty, score, { sourceType:"player_activity", sourceId:activity.id });
+    }
+    if (unit && activity.collectiveDutyDefinitionId) {
+      const collectiveDuty = registries.duties.get(activity.collectiveDutyDefinitionId);
+      const npcResult = applyNpcParticipationForDuty(draft, registries, { unitId:unit.id, duty:collectiveDuty, playerPersonId:personId, performanceScore:score, participantPersonIds:currentPersonIds.length ? currentPersonIds : unitPersonIds });
+      participantPersonIds = [personId, ...npcResult.participantIds];
+      recordUnitEvent(draft, { unitId:unit.id, type:"training_completed", title:`${activity.name} completed`, summary:`${participantPersonIds.length} personnel participated · ${ratingDef.label} ${score}/100.`, personId, sourceType:"player_activity", sourceId:activity.id, importance:"routine" });
+    }
+    if (unit) syncUnitReadiness(draft, registries, unit.id, { billetIds, personIds: currentPersonIds.length ? currentPersonIds : unitPersonIds });
     const afterSnapshot = snapshot();
     const deltas = {};
     for (const key of ["experience","prestige","health","morale","readiness","fatigue","unitReadiness","unitCohesion"]) if (beforeSnapshot[key] != null && afterSnapshot[key] !== beforeSnapshot[key]) deltas[key] = afterSnapshot[key] - beforeSnapshot[key];
     deltas.skills = Object.fromEntries(Object.keys(afterSnapshot.skills).filter(key => afterSnapshot.skills[key] !== beforeSnapshot.skills[key]).map(key => [key, afterSnapshot.skills[key] - beforeSnapshot.skills[key]]));
 
     activityRecordId = createEntityId(draft, "activity");
-    draft.entities.activityRecords[activityRecordId] = { id: activityRecordId, schemaVersion: 2, activityDefinitionId: activity.id, personId, unitId: person.affiliation.unitId, startDate, endDate: draft.world.date, durationDays: activity.durationDays, endElapsedDay: draft.world.clock.elapsedDays, repetitionMultiplier, performanceScore: score, status: "completed", eventRecordId: event?.eventRecordId ?? null, performanceRating: ratingDef.id, before: beforeSnapshot, after: afterSnapshot, deltas };
+    draft.entities.activityRecords[activityRecordId] = { id: activityRecordId, schemaVersion: 3, activityDefinitionId: activity.id, personId, unitId: person.affiliation.unitId, startDate, endDate: draft.world.date, durationDays: activity.durationDays, endElapsedDay: draft.world.clock.elapsedDays, repetitionMultiplier, performanceScore: score, status: "completed", eventRecordId: event?.eventRecordId ?? null, performanceRating: ratingDef.id, participantPersonIds, qualificationResult: qualificationResult ? { ...qualificationResult } : null, before: beforeSnapshot, after: afterSnapshot, deltas };
     const perfId = createEntityId(draft, "perf");
     draft.entities.performanceRecords[perfId] = { id: perfId, schemaVersion: 2, personId, sourceType: "activity", sourceId: activityRecordId, gameDate: draft.world.date, rating: ratingDef.id, score, notes: `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance.`, deltas };
-    const completionNoticeId = recordNotification(draft, { personId, type: "activity_completed", title: `${activity.name} Complete`, message: `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance after ${activity.durationDays} day${activity.durationDays === 1 ? "" : "s"}.`, priority: "normal", references: { activityRecordId } });
+    const qualificationText = qualificationResult ? ` Qualification: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}.` : "";
+    const completionNoticeId = recordNotification(draft, { personId, type: "activity_completed", title: `${activity.name} Complete`, message: `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance after ${activity.durationDays} day${activity.durationDays === 1 ? "" : "s"}.${qualificationText}`, priority: "normal", references: { activityRecordId } });
     notifications.unshift(completionNoticeId);
     const newOpportunities = evaluateCareerOpportunitiesInDraft(draft, registries, personId);
     notifications.push(...newOpportunities.map(item => item.notificationId));

@@ -14,7 +14,8 @@ export const activityDefinitions = [
     eventTableId: "event_table_training_light"
   },
   {
-    id: "activity_range", schemaVersion: 1, name: "Weapons Qualification Range", shortName: "Range", category: "individual", durationDays: 2,
+    id: "activity_range", schemaVersion: 2, name: "Weapons Qualification Range", shortName: "Range", category: "individual", durationDays: 2,
+    qualificationDutyDefinitionId: "duty_range",
     description: "Live-fire range time improves marksmanship and weapons proficiency.",
     cooldownDays: 3, repetitionWindowDays: 10, performanceSkillIds: ["skill_marksmanship","skill_fieldcraft"], unitTrainingEffects: { weapons: 3, equipmentReadiness: -1 },
     presentationId: "feedback_routine",
@@ -41,7 +42,8 @@ export const activityDefinitions = [
     eventTableId: "event_table_training_light"
   },
   {
-    id: "activity_squad_drills", schemaVersion: 1, name: "Squad Drills", shortName: "Squad Drills", category: "unit", durationDays: 3,
+    id: "activity_squad_drills", schemaVersion: 2, name: "Squad Drills", shortName: "Squad Drills", category: "unit", durationDays: 3,
+    collectiveDutyDefinitionId: "duty_squad_drills", participantScope: "squad",
     description: "Collective drills improve fieldcraft, cohesion, relationships, and squad readiness.",
     cooldownDays: 4, repetitionWindowDays: 12, performanceSkillIds: ["skill_fieldcraft","skill_leadership"], unitTrainingEffects: { tactical: 3, cohesion: 2 },
     presentationId: "feedback_routine",

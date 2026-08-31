@@ -12,10 +12,18 @@ export function selectCareerRecord(state, indexes, registries, personId) {
   const qualificationIds = indexes.qualificationsByPersonId.get(personId) ?? [];
   const qualifications = qualificationIds.map(id => {
     const record = state.entities.qualificationRecords[id];
+    const definition = registries.qualifications.get(record.qualificationId);
     return {
       id,
-      name: registries.qualifications.get(record.qualificationId).name,
-      completedDate: record.completedDate
+      name: definition.name,
+      category: definition.category,
+      completedDate: record.completedDate,
+      result: record.result ?? null,
+      score: record.score ?? null,
+      maxScore: record.maxScore ?? null,
+      expiresDate: record.expiresDate ?? null,
+      weaponDefinitionId: record.weaponDefinitionId ?? definition.weaponDefinitionId ?? null,
+      badgeClasp: record.badgeClasp ?? definition.badgeClasp ?? null
     };
   });
 
