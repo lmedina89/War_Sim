@@ -164,7 +164,12 @@ export function validateDefinitions(registries) {
     for (const key of ["minimumServiceDays","minimumRankLevel","minimumHealth","expiresAfterDays","reportDelayDays"]) if (opportunity[key] != null && (!Number.isFinite(opportunity[key]) || opportunity[key] < 0)) errors.push(`${opportunity.id}: invalid ${key}.`);
   }
   for (const objective of registries.careerObjectives.values()) {
-    if (!["has_assignment","has_activity","minimum_readiness","promotion_eligible"].includes(objective.completionRule)) errors.push(`${objective.id}: invalid completionRule ${objective.completionRule}.`);
+    if (!["has_assignment","has_activity","minimum_readiness","promotion_eligible","unit_readiness_at_phase_target","qualification_current","no_open_opportunity"].includes(objective.completionRule)) errors.push(`${objective.id}: invalid completionRule ${objective.completionRule}.`);
+    if (objective.activationRule && !["readiness_below","unit_readiness_below_phase_target","qualification_missing_or_due","promotion_not_eligible","open_opportunity"].includes(objective.activationRule)) errors.push(`${objective.id}: invalid activationRule ${objective.activationRule}.`);
+    if (objective.qualificationId && !registries.qualifications.has(objective.qualificationId)) errors.push(`${objective.id}: invalid qualificationId ${objective.qualificationId}.`);
+    if (objective.repeatable != null && typeof objective.repeatable !== "boolean") errors.push(`${objective.id}: repeatable must be boolean.`);
+    if (objective.cooldownDays != null && (!Number.isInteger(objective.cooldownDays) || objective.cooldownDays < 0)) errors.push(`${objective.id}: invalid cooldownDays.`);
+    if (objective.order != null && !Number.isFinite(objective.order)) errors.push(`${objective.id}: invalid order.`);
   }
 
   const relationshipBands = registries.relationshipBands.values().slice().sort((a,b) => a.minimumTrust - b.minimumTrust);

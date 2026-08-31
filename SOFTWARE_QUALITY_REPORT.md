@@ -1,74 +1,77 @@
-# War Sim v0.4.1.1 — Software Quality Report
+# War Sim v0.4.1.2 — Software Quality Report
 
 ## Executive result
 
-**PASS — release candidate approved for live iPhone/Safari validation.**
+**PASS — release candidate approved for live iPhone/Safari validation after exact packaged-copy verification.**
 
-This update was rebuilt from the verified v0.4.1 codebase and treated as untrusted until source checks, deterministic simulation tests, migration tests, living-unit tests, packaging checks, and exact-ZIP re-extraction tests passed.
+v0.4.1.2 was built from the verified v0.4.1.1 checkpoint and treated as untrusted until syntax checks, regression suites, dedicated career-continuity/mobile checks, generated-world validation, migration checks, deterministic simulation checks, and packaged-copy re-extraction tests passed.
 
 ## Release identity
 
-- Runtime version: **0.4.1.1**
+- Runtime version: **0.4.1.2**
 - Save format: **3**
 - World schema: **14**
 - Generator version: **2**
 - Primary views: **5**
 - JavaScript source modules: **79**
-- JavaScript source lines: approximately **4,647**
+- JavaScript source lines: approximately **4,847**
 
-## v0.4.1.1 scope verified
+## v0.4.1.2 scope verified
 
-The release includes the data-driven living-unit and training-tempo changes requested for the hotfix:
+The hotfix adds only data-driven continuity/mobile polish on top of v0.4.1.1:
 
-- five immutable training phases: Garrison / Normal, Elevated Readiness, Pre-Deployment Train-Up, Post-Deployment / Reset, and Operational
-- Garrison as the default new-career phase
-- separate schedule templates and planning horizons per phase
-- routine PT retained as canonical background duty while being removed from the major-event calendar
-- more widely spaced normal-garrison significant events; dense training remains available in pre-deployment/elevated templates
-- need-aware schedule entries for readiness deficiencies and qualification timing
-- weekday/weekend-aware placement, priority metadata, conflict avoidance, and firm/tentative planning status
-- prevention of retroactive creation of skipped need-aware duties in the past
-- renewable service-rifle qualification records with completion date, result band, expiry date, and expiry elapsed-day
-- detailed immediate-unit NPC participation in scheduled training, including persistent performance records and selected skill/readiness/fatigue/equipment/relationship effects
-- explicit player-proximity simulation tiers with squad/platoon personnel simulated at higher detail than less-immediate personnel
-- durable significant unit-event history
-- durable unit-readiness snapshots and readiness trend calculation
-- NPC promotion, separation, replacement, and training activity surfaced through durable records where applicable
-- non-destructive 30/90/365-day NPC progression audit controls in Developer Diagnostics
-- current replacement personnel are picked up by future unit duties through stable billet indexes rather than stale player-start personnel lists
-- schema 13 → 14 migration plus preserved schema 12 → 13 → 14 migration path
+- persistent world date + training/career phase context attached to primary navigation
+- military-formatted canonical date with no duplicate UI-owned clock state
+- data-driven short labels on all training-phase definitions
+- explicit high-contrast Recent Unit Training grade/score styling
+- onboarding objective group metadata and initial-career lifecycle
+- fresh careers seed only the four onboarding objectives
+- definition-driven continuity objectives generated only after onboarding completion
+- repeatable objective definitions with definition-driven cooldowns
+- continuity rules for personal readiness, unit readiness versus phase target, renewable service-rifle qualification, next-promotion preparation, and open career opportunities
+- completed objective records retained as history rather than deleted
+- no-active-objective fallback guidance
+- player-facing simulation-detail labels and descriptions sourced from simulation-tier definitions
+- objective-history narrow-screen layout and persistent-context mobile breakpoint
+- existing safe-area/bottom-navigation content clearance preserved
+- world schema remains 14; same-schema saves normalize runtime version to 0.4.1.2
 
 ## Automated test suites
 
 ### `tests/smoke.mjs`
 
-PASS. Regression coverage includes deterministic world generation, schema migration, personnel generation, exact ETS handling, time-step-independent NPC lifecycle behavior, activities/AARs, decisions, opportunities/orders, readiness, schedule conflicts, billet authority, and the existing military UI/controller integration.
+PASS. Existing regression coverage remains green for deterministic world generation, personnel generation, assignments, save/migration behavior, exact ETS processing, time-step-independent lifecycle behavior, activities/AARs, decisions, opportunities/orders, readiness, conflicts, authority, and the stable military UI/controller architecture.
 
 ### `tests/living-unit.mjs`
 
-PASS. Dedicated v0.4.1.1 coverage verifies:
+PASS. Existing v0.4.1.1 living-unit coverage remains green for Garrison tempo, background PT visibility, spacing of significant events, weekday rules, NPC simulation tiers/progression, NPC unit-duty participation, renewable qualification results, readiness snapshots, training-phase changes, dense pre-deployment scheduling, and prevention of retroactive schedule generation.
 
-- default Garrison phase
-- background PT is simulated but excluded from the visible major-event schedule
-- normal-garrison significant events are not back-to-back
-- weekday-only entries begin on weekdays
-- squad NPCs use detailed simulation tier 1 while less-immediate company personnel can remain tier 2
-- NPC experience continues as world time advances
-- NPC unit-duty performance records are durable
-- weapons qualification includes eligible squad NPC participants
-- player weapon qualification receives a durable renewable result and future expiry
-- significant training creates unit history
-- readiness snapshots persist
-- training-phase changes preserve cancelled schedule history rather than deleting it
-- Pre-Deployment Train-Up produces a denser significant-event schedule
-- need-aware schedule generation does not create new duties retroactively in the past
+### `tests/career-continuity.mjs`
+
+PASS. Dedicated v0.4.1.2 coverage verifies:
+
+- only onboarding objectives are seeded for a fresh career
+- onboarding completion is detectable from canonical objective records
+- follow-on qualification and promotion-preparation goals generate from canonical state
+- completed onboarding objectives remain in objective history
+- renewed qualification resolves its continuity objective
+- repeatable objectives do not duplicate during cooldown
+- readiness objectives can reactivate after cooldown when the need returns
+- all training phases expose data-driven short labels
+- all simulation tiers expose player-facing labels
+- persistent world-context DOM exists
+- permanent date rendering uses the canonical world date
+- completed-objective archive and no-active fallback UI are present
+- Recent Unit Training result text has explicit readable contrast
+- bottom-navigation safe-area clearance remains present
+- resulting world state validates successfully
 
 ### `tests/quality.mjs`
 
 PASS. Full software-quality suite validates:
 
-- **300** generated worlds
-- **10,000-person** index stress fixture
+- **300 generated worlds**
+- **10,000-person index stress fixture**
 - index construction well below the **2,000 ms** failure threshold
 - deterministic RNG audit
 - no concrete runtime-ID hacks
@@ -89,10 +92,7 @@ PASS. Full software-quality suite validates:
 - schema 13 migration
 - direct schema 12 migration
 - semantic time-advance summaries
-- transient UI feedback
-- relationship/performance presentation definitions
-- reduced-motion support
-- indexed scoped command lookups
+- transient status feedback
 - archived notification history
 - same-schema hotfix version normalization
 - military status/document presentation definitions
@@ -101,35 +101,37 @@ PASS. Full software-quality suite validates:
 - personnel↔unit cross-navigation
 - remembered disclosure UI state
 
+A representative pre-package full-quality run built the 10,000-person indexes in **29.44 ms**.
+
 ## Additional stress and static checks
 
-- **1,000-seed generated-world validation sweep:** PASS, 0 failures
-- syntax check over all JS/MJS files: PASS
-- forbidden runtime pattern audit: PASS for `Math.random`, `eval`, `new Function`, `document.write`, and runtime `.innerHTML =`
-- deterministic centralized RNG remains the only simulation randomness source
-- canonical records remain authoritative; indexes remain derived/rebuilt rather than serialized
+- **1,000-seed generated-world sweep:** PASS, 0 failures
+- all JS/MJS files checked with `node --check`: PASS
+- forbidden runtime pattern audit remains PASS for `Math.random`, `eval`, `new Function`, `document.write`, and runtime `.innerHTML =`
+- deterministic centralized RNG remains the simulation randomness source
+- canonical state remains authoritative; indexes remain derived and non-serialized
+- no schema bump was introduced because v0.4.1.2 adds optional definition/presentation metadata and new runtime records that fit the existing schema-14 entity stores
 
-## Issues caught and fixed during QA
+## Issues caught and fixed during v0.4.1.2 QA
 
-QA found several issues before packaging:
-
-1. The partially produced UI referenced new v0.4.1.1 elements that were missing from `index.html`. The Training Phase summary, Unit Activity history, and NPC audit controls were restored and DOM-integrity tested.
-2. Background PT records used `calendarVisibility`, while the selector initially checked an obsolete `visibility` field. This would have kept routine PT on the visible calendar. The selector now uses the canonical field.
-3. A need-aware entry skipped earlier in the planning horizon could be reconsidered later and accidentally scheduled into the past. Schedule generation now rejects nominal occurrences at or before the current elapsed day.
-4. Qualification-due evaluation initially compared expiry to the current day rather than the nominal future occurrence. It now evaluates against the occurrence being planned.
-5. Conflict displacement could move a weekday-only event onto a weekend. The conflict finder now re-validates the entry's calendar constraint while searching for an open slot.
-6. Unit-duty participant lists could become stale during long advances after replacements. Current assigned personnel are now resolved through the already-indexed stable billet set when each duty is processed.
-7. School opportunities could fail to appear on the exact eligibility day if the soldier happened to be in ordinary training status. Opportunity definitions now allow both active and training status.
-8. The old v0.4.1 smoke assertion expected at least six *visible* schedule rows, conflicting with the new requirement that routine duties remain background simulation. The regression now separately verifies a meaningful visible schedule and a richer canonical schedule.
+1. Existing v0.4.1 tests assumed one runtime objective record per objective definition. That was incompatible with the new definition-driven continuity model. The tests now correctly verify that a fresh career seeds only onboarding objectives while continuity definitions remain dormant until canonical activation conditions are met.
+2. The definition validator initially rejected the new generic completion/activation rules. Validation was expanded to whitelist the new rule vocabulary and verify referenced qualifications, repeatability metadata, cooldowns, and objective ordering.
+3. Promotion continuity could have generated a meaningless goal at the top of a defined rank ladder. Activation now also verifies that a next rank actually exists.
+4. Accepting or declining an opportunity could leave its continuity objective active until the next time advance. Opportunity commands now synchronize career objectives in the same canonical mutation.
+5. Loading an existing schema-14 save could display completed onboarding with no follow-on goals until another action occurred. The load path now evaluates current promotion eligibility and synchronizes continuity objectives immediately after state replacement.
+6. The live iPhone screenshot exposed a real contrast defect in Recent Unit Training outcome text. The result grade/score now explicitly uses the primary text color rather than inheriting the dark button foreground.
 
 ## Compatibility
 
-Schema-12 v0.4.0.3 saves and schema-13 v0.4.1 saves are migrated to schema 14. Migration preserves player identity, assignment, contracts, existing history, generated personnel, and prior canonical records while layering in the v0.4.1.1 stores and scheduler metadata.
+- Schema-14 v0.4.1.1 saves load directly and normalize to runtime **0.4.1.2**.
+- Schema-13 v0.4.1 and schema-12 v0.4.0.3 saves continue through the existing migration chain to schema 14.
+- Player identity, assignment, contracts, personnel, schedule/history, qualification, activity, NPC, and living-unit records are preserved.
+- No destructive migration or world regeneration is required for this hotfix.
 
 ## Packaging verification
 
-The final release ZIP is re-extracted into a clean directory and syntax, smoke, living-unit, and full quality suites are rerun against that extracted copy. Packaging is not considered complete until those tests pass.
+The release ZIP is created only after the worktree suites pass. The exact ZIP is then extracted into a clean verification directory, all JS/MJS syntax checks are repeated, and smoke, living-unit, career-continuity, and full quality suites are rerun against that extracted copy. Packaging is not considered complete unless that exact copy passes.
 
 ## Remaining limitation
 
-Automated/static QA cannot prove pixel-perfect iPhone Safari rendering, safe-area behavior, text wrapping, or touch ergonomics. The exact packaged build still requires live GitHub Pages validation on the user's iPhone before it becomes the long-term visual/gameplay checkpoint.
+Automated/static QA cannot guarantee pixel-perfect Safari rendering, safe-area placement, text wrapping, or touch ergonomics. The packaged build still requires live GitHub Pages validation on the user's iPhone before becoming the long-term visual checkpoint.

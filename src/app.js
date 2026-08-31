@@ -25,6 +25,8 @@ import { acceptCareerOpportunity, declineCareerOpportunity } from "./commands/ca
 import { scheduleUnitDuty } from "./commands/scheduleUnitDuty.js";
 import { calculateUnitReadiness } from "./services/unitReadiness.js";
 import { simulatePersonnelLifecycle } from "./services/personnelLifecycle.js";
+import { evaluatePromotionEligibility } from "./services/careerRules.js";
+import { updateCareerObjectivesInDraft } from "./services/careerGameplay.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
@@ -35,7 +37,7 @@ let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null,
 
 const $ = selector => document.querySelector(selector);
 const els = {
-  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), situationStrip: $("#situation-strip"), navCareerBadge: $("#nav-career-badge"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"), careerObjectives: $("#career-objectives"), currentDuty: $("#current-duty"), dutySchedule: $("#duty-schedule"), careerOpportunities: $("#career-opportunities"), readinessBreakdown: $("#readiness-breakdown"), commandAuthority: $("#command-authority"), trainingPhaseSummary: $("#training-phase-summary"), unitHistory: $("#unit-history"),
+  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), situationStrip: $("#situation-strip"), persistentWorldContext: $("#persistent-world-context"), navCareerBadge: $("#nav-career-badge"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"), careerObjectives: $("#career-objectives"), currentDuty: $("#current-duty"), dutySchedule: $("#duty-schedule"), careerOpportunities: $("#career-opportunities"), readinessBreakdown: $("#readiness-breakdown"), commandAuthority: $("#command-authority"), trainingPhaseSummary: $("#training-phase-summary"), unitHistory: $("#unit-history"),
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
   squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), markAllRead: $("#mark-all-read"), clearRead: $("#clear-read"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), returnMyUnit: $("#return-my-unit"), viewSelectedPersonnel: $("#view-selected-personnel"), personnelMyUnit: $("#personnel-my-unit"), personDogTag: $("#person-dog-tag"), personProfileAuthority: $("#person-profile-authority"), personProfileRef: $("#person-profile-ref"), personProfileBreadcrumbs: $("#person-profile-breadcrumbs"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), auditNpc30: $("#audit-npc-30"), auditNpc90: $("#audit-npc-90"), auditNpc365: $("#audit-npc-365"), status: $("#status-message"), resultDialog: $("#result-dialog"), resultReference: $("#result-reference"), resultKicker: $("#result-kicker"), resultTitle: $("#result-title"), resultBody: $("#result-body"), resultClose: $("#result-close"),
   advance1: $("#advance-1"), advance7: $("#advance-7"), advance30: $("#advance-30"), promote: $("#promote-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
@@ -177,6 +179,24 @@ function collectUnitPersonnel(state, indexes, unitId) {
 function playerAssignmentUnitId(state, indexes, personId = state.playerPersonId) {
   return selectAssignmentView(state, indexes, registries, personId).chain.at(-1)?.unitId ?? null;
 }
+
+function formatMilitaryDate(isoDate) {
+  const date=new Date(`${isoDate}T00:00:00Z`);
+  if(Number.isNaN(date.getTime())) return String(isoDate ?? "—");
+  const day=String(date.getUTCDate()).padStart(2,"0"), month=date.toLocaleString("en-US",{month:"short",timeZone:"UTC"}).toUpperCase(), year=date.getUTCFullYear();
+  return `${day} ${month} ${year}`;
+}
+function renderPersistentWorldContext(state) {
+  if(!els.persistentWorldContext) return;
+  if(!state.playerPersonId){els.persistentWorldContext.textContent="";return;}
+  const phaseId=state.world.scheduler?.trainingPhaseId ?? "training_phase_garrison";
+  const phase=registries.trainingPhases.has(phaseId)?registries.trainingPhases.get(phaseId):null;
+  const date=document.createElement("time"); date.dateTime=state.world.date; date.textContent=formatMilitaryDate(state.world.date);
+  const sep=document.createElement("span"); sep.textContent="·";
+  const phaseLabel=document.createElement("span"); phaseLabel.textContent=phase?.shortLabel ?? phase?.name ?? "CAREER";
+  els.persistentWorldContext.replaceChildren(date,sep,phaseLabel);
+}
+
 function renderSituation(state, indexes, personId) {
   const person=state.entities.people[personId]; if(!person){els.situationStrip.replaceChildren(); return;}
   const rank=registries.ranks.get(person.affiliation.rankId), specialty=registries.specialties.get(person.affiliation.specialtyId);
@@ -215,7 +235,8 @@ function showPersonProfile(personId) {
   if(!career.qualifications.length&&!career.awards.length){const empty=document.createElement("p");empty.className="empty-state military-empty";empty.textContent="NO QUALIFICATIONS OR AWARDS RECORDED";recordSection.appendChild(empty);} else {for(const q of career.qualifications)recordSection.appendChild(statLine(q.name,q.completedDate));for(const a of career.awards)recordSection.appendChild(statLine(a.name,a.earnedDate));}
   const activitySection=document.createElement("section");activitySection.className="profile-section service-file-section";const activityTitle=document.createElement("h3");activityTitle.textContent="Recent Career Activity";activitySection.appendChild(activityTitle);
   if(!(gameplay?.recentCareerActivity?.length)){const empty=document.createElement("p");empty.className="empty-state compact-empty";empty.textContent="NO RECENT CAREER ACTIVITY";activitySection.appendChild(empty);} else for(const item of gameplay.recentCareerActivity) activitySection.appendChild(statLine(item.date,item.title));
-  activitySection.appendChild(statLine("Simulation Detail",`Tier ${gameplay?.simulationTier ?? person.simulationTier ?? 2}`));
+  activitySection.appendChild(statLine("Simulation Detail",gameplay?.simulationTierLabel ?? "Background Simulation"));
+  if(gameplay?.simulationTierDescription){const simNote=document.createElement("p");simNote.className="simulation-detail-note";simNote.textContent=gameplay.simulationTierDescription;activitySection.appendChild(simNote);}
   els.personProfileBody.replaceChildren(status,assignmentSection,conditionSection,equipmentSection,skillsSection,recordSection,activitySection);
   els.personDialog.showModal();
 }
@@ -315,11 +336,33 @@ function renderGameplay(state, indexes, personId) {
   if (!view) return;
 
   els.careerObjectives.replaceChildren();
-  if (!view.objectives.length) { const p=document.createElement("p"); p.className="empty-state military-empty"; p.textContent="NO ACTIVE CAREER OBJECTIVES"; els.careerObjectives.appendChild(p); }
-  else for (const objective of view.objectives) {
+  const activeObjectives=view.activeObjectives ?? view.objectives.filter(item=>item.status === "active");
+  if (view.onboardingComplete) {
+    const phase=document.createElement("div"); phase.className="career-phase-banner";
+    const kicker=document.createElement("span"); kicker.textContent="CAREER PHASE";
+    const strong=document.createElement("strong"); strong.textContent=view.trainingPhase?.name ?? "Garrison / Development";
+    phase.append(kicker,strong); els.careerObjectives.appendChild(phase);
+  }
+  if (!activeObjectives.length) {
+    const p=document.createElement("p"); p.className="empty-state military-empty objective-fallback";
+    p.textContent=view.onboardingComplete ? "NO IMMEDIATE CAREER ACTIONS REQUIRED — CONTINUE NORMAL DUTY OR ADVANCE TIME" : "NO ACTIVE CAREER OBJECTIVES";
+    els.careerObjectives.appendChild(p);
+  } else for (const objective of activeObjectives) {
     const row=document.createElement("article"); row.className=`objective-row ${objective.status}`;
     const top=document.createElement("div"); top.className="objective-head"; const name=document.createElement("strong"); name.textContent=objective.name; top.append(name,statusStamp(objective.status));
     const desc=document.createElement("p"); desc.textContent=objective.description; row.append(top,desc); els.careerObjectives.appendChild(row);
+  }
+  if ((view.objectiveHistory?.length ?? 0) > 0) {
+    const archive=document.createElement("details"); archive.className="objective-archive";
+    const summary=document.createElement("summary"); summary.textContent=`Completed Objective History (${view.objectiveHistory.length})`; archive.appendChild(summary);
+    const body=document.createElement("div"); body.className="objective-history-list";
+    for(const objective of view.objectiveHistory){
+      const row=document.createElement("div"); row.className="objective-history-row";
+      const label=document.createElement("strong");label.textContent=objective.name;
+      const date=document.createElement("time");date.dateTime=objective.completedDate ?? objective.startedDate ?? "";date.textContent=objective.completedDate ?? objective.startedDate ?? "—";
+      row.append(label,date);body.appendChild(row);
+    }
+    archive.appendChild(body); els.careerObjectives.appendChild(archive);
   }
 
   els.currentDuty.replaceChildren();
@@ -421,10 +464,11 @@ function renderAdministration(state, indexes) {
 function render() {
   const state = store.getState(), indexes = store.getIndexes(), validation = validateWorldState(state, registries), hasPlayer = Boolean(state.playerPersonId);
   els.newCareerPanel.hidden = hasPlayer; els.careerContent.hidden = !hasPlayer;
-  if (!hasPlayer) { els.diagnostics.textContent = ""; return; }
+  if (!hasPlayer) { els.diagnostics.textContent = ""; if(els.persistentWorldContext) els.persistentWorldContext.textContent=""; return; }
   const squad = selectCurrentSquad(state, indexes, registries, state.playerPersonId), career = selectCareerRecord(state, indexes, registries, state.playerPersonId);
   const assignment = selectAssignmentView(state, indexes, registries, state.playerPersonId);
   renderSituation(state,indexes,state.playerPersonId);
+  renderPersistentWorldContext(state);
   els.careerSummary.replaceChildren();
   const identity = document.createElement("div"); identity.className = "career-identity military-career-header";
   const rail=document.createElement("div");rail.className="document-rail career-document-rail";const railLabel=document.createElement("span");railLabel.textContent=documentProfile("career_record").label;const railRef=document.createElement("span");railRef.textContent=recordReference("career_record",state.playerPersonId);rail.append(railLabel,railRef);
@@ -494,7 +538,10 @@ function renderSaveManager(mode) {
     }
     const actions = document.createElement("div"); actions.className = "actions";
     if (mode === "save" && meta.slotId !== AUTOSAVE_SLOT) { const button = document.createElement("button"); button.type = "button"; button.textContent = meta.empty ? "Save Here" : "Overwrite"; button.addEventListener("click", async () => { if (!meta.empty && !(await confirmAction("Overwrite Save?", `Replace ${meta.characterName} in this slot?`))) return; const validation = validateWorldState(store.getState(), registries); if (!validation.ok) { setStatus(`Save blocked: ${validation.errors.join(" | ")}`, "bad"); return; } const saved = saveToSlot(store.getState(), meta.slotId); setStatus(`Saved ${saved.characterName} to ${meta.slotId}.`, "good"); renderSaveManager("save"); }); actions.appendChild(button); }
-    if (mode === "load" && !meta.empty) { const button = document.createElement("button"); button.type = "button"; button.textContent = "Load"; button.addEventListener("click", async () => { if (store.getState().playerPersonId && !(await confirmAction("Load Career?", "Unsaved progress in the current session will be replaced."))) return; try { const loaded = loadFromSlot(meta.slotId); if (!loaded) throw new Error("Save slot is empty."); const validation = validateWorldState(loaded.worldState, registries); if (!validation.ok) throw new Error(`Load blocked: ${validation.errors.join(" | ")}`); store.replaceState(loaded.worldState); els.saveDialog.close(); setStatus(`Loaded ${loaded.metadata?.characterName ?? "career"}.`, "good"); } catch (error) { setStatus(error.message, "bad"); } }); actions.appendChild(button); }
+    if (mode === "load" && !meta.empty) { const button = document.createElement("button"); button.type = "button"; button.textContent = "Load"; button.addEventListener("click", async () => { if (store.getState().playerPersonId && !(await confirmAction("Load Career?", "Unsaved progress in the current session will be replaced."))) return; try { const loaded = loadFromSlot(meta.slotId); if (!loaded) throw new Error("Save slot is empty."); const validation = validateWorldState(loaded.worldState, registries); if (!validation.ok) throw new Error(`Load blocked: ${validation.errors.join(" | ")}`); store.replaceState(loaded.worldState);
+        const loadedPersonId=store.getState().playerPersonId;
+        if(loadedPersonId){const eligibility=evaluatePromotionEligibility(store.getState(),store.getIndexes(),registries,loadedPersonId);store.mutate(draft=>updateCareerObjectivesInDraft(draft,registries,loadedPersonId,{promotionEligible:eligibility.eligible}),["careerGameplay"]);}
+        els.saveDialog.close(); setStatus(`Loaded ${loaded.metadata?.characterName ?? "career"}.`, "good"); } catch (error) { setStatus(error.message, "bad"); } }); actions.appendChild(button); }
     if (!meta.empty && meta.slotId !== AUTOSAVE_SLOT) { const del = document.createElement("button"); del.type = "button"; del.className = "secondary"; del.textContent = "Delete"; del.addEventListener("click", async () => { if (!(await confirmAction("Delete Save?", `Permanently delete ${meta.characterName}?`))) return; deleteSaveSlot(meta.slotId); renderSaveManager(mode); }); actions.appendChild(del); }
     card.appendChild(actions); els.saveSlots.appendChild(card);
   }

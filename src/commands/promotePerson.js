@@ -2,6 +2,7 @@ import { createEntityId } from "../core/ids.js";
 import { commandResult } from "../core/commandResult.js";
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { updateCareerObjectivesInDraft } from "../services/careerGameplay.js";
 
 export function promotePerson(store, registries, personId) {
   const state = store.getState();
@@ -18,5 +19,7 @@ export function promotePerson(store, registries, personId) {
     noticeId = recordNotification(draft, { personId, type: "promotion", title: "Promotion", message: `Promoted to ${eligibility.nextRank.name} (${eligibility.nextRank.abbreviation}).`, priority: "high", references: { rankId: eligibility.nextRank.id, promotionRecordId: promotionId } });
     recordAction(draft, { actorPersonId: personId, commandType: "request_promotion", payload: { previousRankId, rankId: eligibility.nextRank.id }, resultCode: "promoted" });
   }, ["history", "notifications", "actions"]);
+  const nextEligibility=evaluatePromotionEligibility(store.getState(),store.getIndexes(),registries,personId);
+  store.mutate(draft=>updateCareerObjectivesInDraft(draft,registries,personId,{promotionEligible:nextEligibility.eligible}),["careerGameplay"]);
   return commandResult({ code: "promoted", message: `Promoted to ${eligibility.nextRank.name}.`, data: { rankId: eligibility.nextRank.id }, notifications: [noticeId] });
 }

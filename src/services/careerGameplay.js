@@ -82,7 +82,12 @@ export function seedCareerGameplayRecords(draft,registries,personId,unitId){
   const phase=activeTrainingPhase(draft,registries); const template=registries.scheduleTemplates.get(phase.scheduleTemplateId);
   draft.world.scheduler={...(draft.world.scheduler??{}),trainingPhaseId:phase.id,scheduleTemplateId:template.id,scheduleOriginElapsedDay:draft.world.clock.elapsedDays,generatedThroughElapsedDay:draft.world.clock.elapsedDays,planningHorizonDays:phase.planningHorizonDays};
   seedScheduleThrough(draft,registries,personId,unitId,template.id,draft.world.clock.elapsedDays+phase.planningHorizonDays);
-  if(!Object.values(draft.entities.objectiveRecords).some(r=>r.personId===personId)) for(const objective of registries.careerObjectives.values()){const id=createEntityId(draft,"objective");draft.entities.objectiveRecords[id]={id,schemaVersion:1,definitionId:objective.id,personId,status:"active",startedDate:draft.world.date,completedDate:null};}
+  if(!Object.values(draft.entities.objectiveRecords).some(r=>r.personId===personId)) {
+    for(const objective of registries.careerObjectives.values().filter(def=>def.phase === "onboarding")) {
+      const id=createEntityId(draft,"objective");
+      draft.entities.objectiveRecords[id]={id,schemaVersion:2,definitionId:objective.id,personId,status:"active",startedDate:draft.world.date,completedDate:null,groupId:objective.groupId ?? null};
+    }
+  }
   updateCareerObjectivesInDraft(draft,registries,personId);
 }
 
@@ -243,26 +248,112 @@ export function processOpportunityLifecycleForDay(draft, registries, personId) {
   return notificationIds;
 }
 
-export function updateCareerObjectivesInDraft(draft, registries, personId, { promotionEligible = false } = {}) {
+function objectiveRecordDefinition(registries, record) {
+  return record?.definitionId && registries.careerObjectives.has(record.definitionId) ? registries.careerObjectives.get(record.definitionId) : null;
+}
+
+function latestObjectiveRecord(draft, personId, definitionId) {
+  return Object.values(draft.entities.objectiveRecords ?? {})
+    .filter(record => record.personId === personId && record.definitionId === definitionId)
+    .sort((a,b) => String(b.completedDate ?? b.startedDate ?? "").localeCompare(String(a.completedDate ?? a.startedDate ?? "")) || b.id.localeCompare(a.id))[0] ?? null;
+}
+
+function onboardingComplete(draft, registries, personId) {
+  const onboardingDefs = registries.careerObjectives.values().filter(def => def.phase === "onboarding");
+  if (!onboardingDefs.length) return true;
+  return onboardingDefs.every(def => Object.values(draft.entities.objectiveRecords ?? {}).some(record => record.personId === personId && record.definitionId === def.id && record.status === "completed"));
+}
+
+function qualificationState(draft, personId, qualificationId) {
+  return Object.values(draft.entities.qualificationRecords ?? {})
+    .filter(record => record.personId === personId && record.qualificationId === qualificationId)
+    .sort((a,b) => (b.expiresElapsedDay ?? -1) - (a.expiresElapsedDay ?? -1) || String(b.completedDate ?? "").localeCompare(String(a.completedDate ?? "")))[0] ?? null;
+}
+
+function openOpportunityExists(draft, personId) {
+  return Object.values(draft.entities.opportunityRecords ?? {}).some(record => record.personId === personId && record.status === "open");
+}
+
+function objectiveActivationSatisfied(draft, registries, personId, def, { promotionEligible = null } = {}) {
+  const person=draft.entities.people[personId]; if(!person) return false;
+  if(def.activationRule === "readiness_below") return person.condition.readiness < (def.activationThreshold ?? 0);
+  if(def.activationRule === "unit_readiness_below_phase_target") {
+    const unit=person.affiliation?.unitId ? draft.entities.units[person.affiliation.unitId] : null;
+    const phase=activeTrainingPhase(draft,registries);
+    return Boolean(unit && Number(unit.condition?.readiness ?? 0) < Number(phase?.readinessTarget ?? 0));
+  }
+  if(def.activationRule === "qualification_missing_or_due") {
+    const record=qualificationState(draft,personId,def.qualificationId);
+    return !record || !Number.isInteger(record.expiresElapsedDay) || record.expiresElapsedDay - draft.world.clock.elapsedDays <= (def.dueWithinDays ?? 0);
+  }
+  if(def.activationRule === "promotion_not_eligible") {
+    if (promotionEligible !== false) return false;
+    const currentRank=registries.ranks.get(person.affiliation.rankId);
+    const hasNextRank=registries.ranks.values().some(rank=>rank.branchId===currentRank.branchId&&rank.category===currentRank.category&&rank.hierarchyLevel===currentRank.hierarchyLevel+1);
+    return hasNextRank;
+  }
+  if(def.activationRule === "open_opportunity") return openOpportunityExists(draft,personId);
+  return false;
+}
+
+function objectiveCompletionSatisfied(draft, registries, personId, def, { promotionEligible = null } = {}) {
+  const person=draft.entities.people[personId]; if(!person) return false;
+  const hasAssignment=Boolean(person.affiliation.unitId && person.affiliation.billetId);
+  const hasActivity=Object.values(draft.entities.activityRecords ?? {}).some(r=>r.personId===personId) || Object.values(draft.entities.scheduleRecords ?? {}).some(r=>r.personId===personId && r.status === "completed");
+  if(def.completionRule === "has_assignment") return hasAssignment;
+  if(def.completionRule === "has_activity") return hasActivity;
+  if(def.completionRule === "minimum_readiness") return person.condition.readiness >= (def.threshold ?? 0);
+  if(def.completionRule === "promotion_eligible") return promotionEligible === true;
+  if(def.completionRule === "unit_readiness_at_phase_target") {
+    const unit=person.affiliation?.unitId ? draft.entities.units[person.affiliation.unitId] : null;
+    const phase=activeTrainingPhase(draft,registries);
+    return Boolean(unit && Number(unit.condition?.readiness ?? 0) >= Number(phase?.readinessTarget ?? 0));
+  }
+  if(def.completionRule === "qualification_current") {
+    const record=qualificationState(draft,personId,def.qualificationId);
+    return Boolean(record && Number.isInteger(record.expiresElapsedDay) && record.expiresElapsedDay - draft.world.clock.elapsedDays > (def.dueWithinDays ?? 0));
+  }
+  if(def.completionRule === "no_open_opportunity") return !openOpportunityExists(draft,personId);
+  return false;
+}
+
+function canReactivateObjective(draft, personId, def) {
+  if (!def.repeatable) return !latestObjectiveRecord(draft,personId,def.id);
+  const latest=latestObjectiveRecord(draft,personId,def.id);
+  if (!latest || latest.status === "failed") return true;
+  if (latest.status === "active") return false;
+  if (!latest.completedDate || !Number.isFinite(def.cooldownDays) || def.cooldownDays <= 0) return true;
+  return daysBetweenIso(latest.completedDate,draft.world.date) >= def.cooldownDays;
+}
+
+function generateContinuityObjectivesInDraft(draft, registries, personId, context) {
+  if (!onboardingComplete(draft,registries,personId)) return [];
+  const created=[];
+  for(const def of registries.careerObjectives.values().filter(item=>item.phase === "continuity").sort((a,b)=>(a.order??0)-(b.order??0)||a.id.localeCompare(b.id))) {
+    if (!canReactivateObjective(draft,personId,def)) continue;
+    if (!objectiveActivationSatisfied(draft,registries,personId,def,context)) continue;
+    const id=createEntityId(draft,"objective");
+    draft.entities.objectiveRecords[id]={id,schemaVersion:2,definitionId:def.id,personId,status:"active",startedDate:draft.world.date,completedDate:null,groupId:def.groupId ?? null};
+    created.push(id);
+  }
+  return created;
+}
+
+export function updateCareerObjectivesInDraft(draft, registries, personId, { promotionEligible = null } = {}) {
   const person = draft.entities.people[personId];
   if (!person) return [];
-  const completed = [];
-  const hasAssignment = Boolean(person.affiliation.unitId && person.affiliation.billetId);
-  const hasActivity = Object.values(draft.entities.activityRecords ?? {}).some(r => r.personId === personId) || Object.values(draft.entities.scheduleRecords ?? {}).some(r => r.personId === personId && r.status === "completed");
-  for (const record of Object.values(draft.entities.objectiveRecords ?? {})) {
+  draft.entities.objectiveRecords ??= {};
+  const completed=[];
+  const context={promotionEligible};
+  for (const record of Object.values(draft.entities.objectiveRecords)) {
     if (record.personId !== personId || record.status !== "active") continue;
-    const def = registries.careerObjectives.get(record.definitionId);
-    let done = false;
-    if (def.completionRule === "has_assignment") done = hasAssignment;
-    else if (def.completionRule === "has_activity") done = hasActivity;
-    else if (def.completionRule === "minimum_readiness") done = person.condition.readiness >= (def.threshold ?? 0);
-    else if (def.completionRule === "promotion_eligible") done = promotionEligible;
-    if (!done) continue;
-    record.status = "completed";
-    record.completedDate = draft.world.date;
+    const def=objectiveRecordDefinition(registries,record); if(!def) continue;
+    if (!objectiveCompletionSatisfied(draft,registries,personId,def,context)) continue;
+    record.status="completed"; record.completedDate=draft.world.date; record.schemaVersion=Math.max(2,record.schemaVersion??1); record.groupId??=def.groupId??null;
     completed.push(record.id);
   }
-  return completed;
+  const created=generateContinuityObjectivesInDraft(draft,registries,personId,context);
+  return [...completed,...created];
 }
 
 export function processScheduledDutyForDay(draft, registries, scheduleIds, { personId, relationshipIds = [], billetIds = [], personIds = [] } = {}) {

@@ -72,11 +72,11 @@ export const dutyDefinitions = [
 ];
 
 export const trainingPhaseDefinitions = [
-  { id: "training_phase_garrison", schemaVersion: 1, name: "Garrison / Normal Cycle", scheduleTemplateId: "schedule_garrison_cycle", planningHorizonDays: 70, readinessTarget: 82, description: "Normal home-station rhythm with routine duties in the background and major events spaced across the calendar." },
-  { id: "training_phase_elevated", schemaVersion: 1, name: "Elevated Readiness", scheduleTemplateId: "schedule_elevated_cycle", planningHorizonDays: 56, readinessTarget: 88, description: "Higher training tempo used when readiness requirements increase." },
-  { id: "training_phase_predeployment", schemaVersion: 1, name: "Pre-Deployment Train-Up", scheduleTemplateId: "schedule_predeployment_cycle", planningHorizonDays: 42, readinessTarget: 94, description: "Dense qualification, collective training, maintenance, and recovery rhythm reserved for deployment preparation." },
-  { id: "training_phase_reset", schemaVersion: 1, name: "Post-Deployment / Reset", scheduleTemplateId: "schedule_reset_cycle", planningHorizonDays: 56, readinessTarget: 80, description: "Reduced tempo emphasizing recovery, equipment reset, and rebuilding proficiency." },
-  { id: "training_phase_operational", schemaVersion: 1, name: "Deployment / Operational", scheduleTemplateId: "schedule_operational_cycle", planningHorizonDays: 28, readinessTarget: 90, description: "Normal garrison scheduling is suspended; duties are expected to come from operational orders." }
+  { id: "training_phase_garrison", schemaVersion: 2, name: "Garrison / Normal Cycle", shortLabel: "GARRISON", scheduleTemplateId: "schedule_garrison_cycle", planningHorizonDays: 70, readinessTarget: 82, description: "Normal home-station rhythm with routine duties in the background and major events spaced across the calendar." },
+  { id: "training_phase_elevated", schemaVersion: 2, name: "Elevated Readiness", shortLabel: "ELEVATED", scheduleTemplateId: "schedule_elevated_cycle", planningHorizonDays: 56, readinessTarget: 88, description: "Higher training tempo used when readiness requirements increase." },
+  { id: "training_phase_predeployment", schemaVersion: 2, name: "Pre-Deployment Train-Up", shortLabel: "PRE-DEPLOY", scheduleTemplateId: "schedule_predeployment_cycle", planningHorizonDays: 42, readinessTarget: 94, description: "Dense qualification, collective training, maintenance, and recovery rhythm reserved for deployment preparation." },
+  { id: "training_phase_reset", schemaVersion: 2, name: "Post-Deployment / Reset", shortLabel: "RESET", scheduleTemplateId: "schedule_reset_cycle", planningHorizonDays: 56, readinessTarget: 80, description: "Reduced tempo emphasizing recovery, equipment reset, and rebuilding proficiency." },
+  { id: "training_phase_operational", schemaVersion: 2, name: "Deployment / Operational", shortLabel: "OPERATIONAL", scheduleTemplateId: "schedule_operational_cycle", planningHorizonDays: 28, readinessTarget: 90, description: "Normal garrison scheduling is suspended; duties are expected to come from operational orders." }
 ];
 
 export const scheduleTemplateDefinitions = [

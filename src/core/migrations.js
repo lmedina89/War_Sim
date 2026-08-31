@@ -206,7 +206,7 @@ function migrateWorldV13ToV14(worldState) {
     ensureScheduleCoverageInDraft(next,registries,next.playerPersonId,person.affiliation.unitId);
   }
   for (const profile of Object.values(next.entities.unitTrainingProfiles ?? {})) profile.readinessHistory ??= [];
-  next.schemaVersion=14; next.gameVersion="0.4.1.1";
+  next.schemaVersion=14; next.gameVersion="0.4.1.2";
   return next;
 }
 
@@ -335,7 +335,7 @@ export function migratePayload(payload) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.4.1.1";
-  next.worldState.gameVersion = "0.4.1.1";
+  next.gameVersion = "0.4.1.2";
+  next.worldState.gameVersion = "0.4.1.2";
   return next;
 }

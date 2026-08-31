@@ -1,27 +1,44 @@
-# War Sim v0.4.1.1 — Living Unit & Training Tempo Polish
+# War Sim v0.4.1.2 — Career Continuity & Mobile Polish
 
-War Sim v0.4.1.1 is a focused living-unit and training-tempo update built on v0.4.1. It preserves the soldier/unit gameplay foundation while making normal garrison life less compressed, NPC participation more visible, qualifications durable, readiness trends inspectable, and the training scheduler explicitly phase-driven.
+War Sim v0.4.1.2 is a focused hotfix/polish release built on the verified v0.4.1.1 living-unit foundation. It keeps world schema 14 and save format 3 while improving persistent time awareness, career-objective continuity, simulation-tier presentation, mobile readability, and bottom-navigation safety without adding deployment/combat or changing the core unit-training architecture.
 
 ## Release goal
 
-v0.4.1.1 answers two follow-up questions: **is the training rhythm believable, and can the player see that NPC careers continue around them?**
+v0.4.1.2 closes the remaining continuity and mobile issues discovered during live iPhone testing:
 
-The release deliberately stops before deployment/combat. Instead it builds the reusable systems that deployment and future operations will consume.
+- the canonical world date and current training/career phase remain visible while navigating and scrolling
+- the dark Recent Unit Training grade/score text is explicitly readable on iPhone
+- the initial four career objectives become a completed onboarding chapter rather than permanent clutter
+- follow-on objectives are generated from canonical career state only when there is an actual need
+- completed objectives remain available as durable objective history
+- personnel files use player-facing simulation-detail labels instead of exposing unexplained internal tier numbers
+- no-active-objective states explain that normal duty/time advancement is valid rather than showing an empty panel
+- existing safe-area/bottom-navigation clearance is preserved and regression-tested
 
-## v0.4.1.1 living-unit additions
+## v0.4.1.2 additions
 
-- data-driven training phases: Garrison, Elevated Readiness, Pre-Deployment Train-Up, Post-Deployment / Reset, and Operational
-- Garrison is the default phase; dense recurring training is reserved for higher-tempo phases
-- routine PT is processed as background duty rather than filling the visible major-event calendar
-- need-aware scheduling can react to equipment/tactical readiness and expiring qualifications
-- finite planning horizons with firm/tentative schedule status
-- weekday/weekend-aware schedule placement and priority-based conflict resolution
-- renewable service-rifle qualification records with qualification date, expiry date, and performance result
-- detailed NPC participation for immediate-unit personnel, including performance, fatigue, skills, readiness, equipment wear/repair, and selected relationship effects
-- durable significant unit-event history and readiness snapshots/trends
-- explicit player-proximity simulation tiers, refreshed when the player's unit context is established
-- non-destructive 30/90/365-day NPC progression audit controls in Developer Diagnostics
+### Persistent world context
+A compact fixed context strip is attached to the primary navigation and reads directly from the canonical world clock and data-driven training-phase definition. It shows a military-formatted world date plus the phase short label, for example `14 MAR 2046 · GARRISON`.
 
+### Career objective lifecycle
+Career objectives are now explicitly definition-driven by phase/group metadata:
+
+- the original four objectives are the `initial career` onboarding group
+- only onboarding objectives are seeded on a fresh career
+- once onboarding is complete, continuity objectives can be generated from current canonical state
+- continuity objectives are repeatable only where the definition says they are, with definition-driven cooldowns
+- currently supported follow-on needs include personal readiness, unit readiness versus the active phase target, service-rifle qualification renewal, next-promotion preparation, and responding to open career opportunities
+- completed objectives are retained as history instead of deleted
+- when no follow-on action is currently required, the UI explicitly tells the player to continue normal duty or advance time
+
+### Simulation-detail presentation
+Simulation tiers remain unchanged internally. Personnel files now translate them through immutable tier definitions into player-facing labels such as `Detailed Simulation` and `Background Simulation`, with explanatory text describing what that fidelity means.
+
+### Mobile readability/safety
+- Recent Unit Training result grades/scores now have explicit high-contrast text styling
+- the persistent date/phase context has a narrow-screen breakpoint
+- objective-history rows collapse cleanly on narrow displays
+- the existing app-shell safe-area/bottom-navigation clearance remains intact
 
 ## Major gameplay systems
 
@@ -183,13 +200,13 @@ The v0.4.0.3 military visual identity remains intact.
 
 - Save format: **3**
 - World schema: **14**
-- Runtime version: **0.4.1.1**
+- Runtime version: **0.4.1.2**
 - v0.4.0.3 schema-12 careers migrate through schema 13 to schema 14 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
 - older supported saves continue through the existing migration chain
 
 ## Deliberately not included
 
-v0.4.1.1 does **not** add:
+v0.4.1.2 does **not** add:
 - deployment simulation
 - combat
 - enemy forces
@@ -198,7 +215,7 @@ v0.4.1.1 does **not** add:
 - new playable branches
 - a broad MOS expansion
 
-Those remain later milestones. v0.4.1.1 strengthens the living-unit and scheduler foundation they will use.
+Those remain later milestones. v0.4.1.2 preserves the living-unit and scheduler foundation while making the current career loop easier to understand and continue.
 
 ## Architecture rules preserved
 

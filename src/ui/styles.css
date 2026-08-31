@@ -570,3 +570,42 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .unit-history-row:last-child{border-bottom:0}.unit-history-row time{font-family:var(--doc-font);color:var(--text-muted)}.unit-history-row div{display:grid;gap:.2rem}.unit-history-row span{color:var(--text-muted)}
 .diagnostic-actions{margin:.75rem 0;flex-wrap:wrap}.schedule-row .mil-status-stamp{align-self:center}
 @media(max-width:520px){.unit-history-row{grid-template-columns:1fr;gap:.25rem}}
+
+/* v0.4.1.2 career continuity and mobile polish */
+.persistent-world-context {
+  position: absolute;
+  right: 8px;
+  top: -24px;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 20px;
+  padding: .2rem .45rem;
+  border: 1px solid var(--mil-line);
+  border-radius: 4px 4px 0 0;
+  background: rgb(13 20 24 / .97);
+  color: var(--mil-tan);
+  font: 800 .58rem/1 var(--doc-font);
+  letter-spacing: .055em;
+  white-space: nowrap;
+  box-shadow: 0 -3px 10px rgb(0 0 0 / .12);
+}
+.persistent-world-context span:last-child { color: var(--mil-field-strong); }
+.career-phase-banner { display:grid; gap:.2rem; margin-bottom:.65rem; padding:.65rem .75rem; border:1px solid var(--mil-line); border-left:3px solid var(--accent); background:#111b21; }
+.career-phase-banner span { color:var(--muted); font:800 .58rem/1 var(--doc-font); letter-spacing:.12em; }
+.career-phase-banner strong { font-size:.88rem; }
+.objective-fallback { margin-bottom:.65rem; }
+.objective-archive { margin-top:.75rem; border-top:1px dashed var(--mil-line); padding-top:.65rem; }
+.objective-archive > summary { cursor:pointer; color:var(--muted); font:800 .68rem/1.2 var(--doc-font); letter-spacing:.06em; text-transform:uppercase; }
+.objective-history-list { display:grid; gap:.35rem; margin-top:.6rem; }
+.objective-history-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem; align-items:center; padding:.5rem .6rem; border:1px solid var(--border); background:rgba(255,255,255,.018); }
+.objective-history-row strong { font-size:.76rem; }
+.objective-history-row time { color:var(--muted); font:700 .62rem/1 var(--doc-font); white-space:nowrap; }
+.simulation-detail-note { margin:.55rem 0 0; color:var(--muted); font-size:.76rem; line-height:1.35; }
+/* iPhone contrast fix: result grade must remain readable on dark duty-history cards. */
+.duty-history-row strong { color: var(--text); opacity: 1; }
+.duty-history-row:disabled strong, .duty-history-row[aria-disabled="true"] strong { color: var(--text); opacity: 1; }
+@media (max-width: 520px) {
+  .persistent-world-context { right: 6px; top:-23px; font-size:.54rem; max-width:calc(100vw - 28px); overflow:hidden; text-overflow:ellipsis; }
+  .objective-history-row { grid-template-columns:1fr; gap:.25rem; }
+}

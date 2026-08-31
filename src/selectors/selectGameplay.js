@@ -73,7 +73,14 @@ export function selectGameplay(state, indexes, registries, personId) {
   });
 
   const objectiveRecords = (indexes.objectiveRecordsByPersonId?.get(personId) ?? []).map(id => state.entities.objectiveRecords[id]).filter(Boolean);
-  const objectives = objectiveRecords.map(record => { const def = registries.careerObjectives.get(record.definitionId); return { ...record, name: def.name, description: def.description }; });
+  const objectives = objectiveRecords.map(record => {
+    const def = registries.careerObjectives.get(record.definitionId);
+    return { ...record, name: def.name, description: def.description, phase:def.phase ?? "continuity", order:def.order ?? 0, groupId:record.groupId ?? def.groupId ?? null };
+  }).sort((a,b)=>(a.order??0)-(b.order??0)||String(a.startedDate??"").localeCompare(String(b.startedDate??""))||a.id.localeCompare(b.id));
+  const onboardingObjectives=objectives.filter(item=>item.phase === "onboarding");
+  const onboardingComplete=onboardingObjectives.length>0 && onboardingObjectives.every(item=>item.status === "completed");
+  const activeObjectives=objectives.filter(item=>item.status === "active");
+  const objectiveHistory=objectives.filter(item=>item.status !== "active").sort((a,b)=>String(b.completedDate??b.startedDate??"").localeCompare(String(a.completedDate??a.startedDate??""))||b.id.localeCompare(a.id)).slice(0,12);
 
   const performanceIds = indexes.performanceRecordsByPersonId?.get(personId) ?? [];
   const recentPerformance = performanceIds.slice(-5).map(id => state.entities.performanceRecords[id]).filter(record => Number.isFinite(record?.score));
@@ -98,5 +105,7 @@ export function selectGameplay(state, indexes, registries, personId) {
     ...(indexes.assignmentsByPersonId?.get(personId) ?? []).map(id=>{const r=state.entities.assignmentRecords[id]; return r?{id,type:"assignment",date:r.startDate,title:`Assigned to ${state.entities.units[r.unitId]?.name??"unit"}`}:null;})
   ].filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date)) || b.id.localeCompare(a.id)).slice(0,8);
 
-  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, currentDuty, opportunities, objectives, authorityIds, commandDuties, readiness, readinessTrend, performanceIndex, trainingPhase, unitHistory, recentCareerActivity, simulationTier:person.simulationTier ?? 2 };
+  const simulationTier=person.simulationTier ?? 2;
+  const simulationTierDefinition=registries.simulationTiers.values().find(def=>def.tier===simulationTier) ?? null;
+  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, currentDuty, opportunities, objectives, activeObjectives, objectiveHistory, onboardingComplete, authorityIds, commandDuties, readiness, readinessTrend, performanceIndex, trainingPhase, unitHistory, recentCareerActivity, simulationTier, simulationTierLabel:simulationTierDefinition?.playerLabel ?? simulationTierDefinition?.name ?? `Simulation Tier ${simulationTier}`, simulationTierDescription:simulationTierDefinition?.description ?? "" };
 }
