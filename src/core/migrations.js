@@ -6,6 +6,7 @@ import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
 import { registries } from "../data/registries.js";
 import { seedPriorServiceHistories } from "../services/priorServiceHistory.js";
 import { seedPersonalityProfiles } from "../services/livingCareer.js";
+import { ensureNamedInfantryFormation } from "../services/formationIdentity.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
 export const CURRENT_WORLD_SCHEMA_VERSION = 16;
 
@@ -505,7 +506,9 @@ export function migratePayload(payload) {
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
   backfillArmyServiceRibbon(next.worldState);
-  next.gameVersion = "0.4.3.2";
-  next.worldState.gameVersion = "0.4.3.2";
+  ensureNamedInfantryFormation(next.worldState);
+  initializeUnitTrainingProfiles(next.worldState);
+  next.gameVersion = "0.4.3.2.1";
+  next.worldState.gameVersion = "0.4.3.2.1";
   return next;
 }

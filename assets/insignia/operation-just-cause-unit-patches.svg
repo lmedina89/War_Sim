@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 760" width="1080" height="760">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20241f"/>
+      <stop offset="1" stop-color="#101310"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-opacity=".45"/>
+    </filter>
+    <style>
+      .title{font:700 30px system-ui,sans-serif;fill:#eee;letter-spacing:2px}
+      .subtitle{font:14px system-ui,sans-serif;fill:#aab0a6}
+      .card{fill:#171a17;stroke:#465046;stroke-width:2}
+      .label{font:700 17px system-ui,sans-serif;fill:#f0f0e8;letter-spacing:.8px}
+      .small{font:12px system-ui,sans-serif;fill:#aab0a6}
+      .tiny{font:11px system-ui,sans-serif;fill:#8e968d}
+    </style>
+  </defs>
+
+  <rect width="1080" height="760" rx="30" fill="url(#bg)"/>
+  <text x="48" y="52" class="title">OPERATION JUST CAUSE — REAL UNIT PATCH SVG TEST</text>
+  <text x="48" y="79" class="subtitle">Vector recreations based on official U.S. Army heraldic descriptions • Panama, 1989</text>
+
+  <!-- CARD 1: 82d Airborne Division -->
+  <g transform="translate(48 112)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(81 24)">
+      <path d="M28 0 H110 Q118 0 118 8 V30 H20 V8 Q20 0 28 0Z" fill="#263e78"/>
+      <text x="69" y="21" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#fff">AIRBORNE</text>
+      <rect x="18" y="39" width="102" height="102" rx="7" fill="#c72b34" stroke="#101010" stroke-width="3"/>
+      <circle cx="69" cy="90" r="38" fill="#243f83"/>
+      <text x="69" y="105" text-anchor="middle" font-family="Arial,sans-serif" font-size="50" font-weight="900" fill="#fff">AA</text>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">82D AIRBORNE DIVISION</text>
+    <text x="150" y="228" text-anchor="middle" class="small">1st Brigade deployed from Fort Bragg</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">“All American” SSI + Airborne tab</text>
+  </g>
+
+  <!-- CARD 2: 7th Infantry Division -->
+  <g transform="translate(390 112)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(83 31)">
+      <circle cx="67" cy="67" r="60" fill="#506040"/>
+      <circle cx="67" cy="67" r="54" fill="#c83332"/>
+      <path d="M37 30 L97 30 L67 67 Z M37 104 L97 104 L67 67 Z" fill="#111"/>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">7TH INFANTRY DIVISION</text>
+    <text x="150" y="228" text-anchor="middle" class="small">Brigade + battalion elements in Panama</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">Red disc • black double-7 hourglass</text>
+  </g>
+
+  <!-- CARD 3: 5th Infantry Division -->
+  <g transform="translate(732 112)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(96 24)">
+      <path d="M54 8 L104 78 L54 148 L4 78 Z" fill="#c7222f" stroke="#7e1018" stroke-width="3"/>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">5TH INFANTRY DIVISION</text>
+    <text x="150" y="228" text-anchor="middle" class="small">Battalion deployed from Fort Polk</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">Historic “Red Diamond” SSI</text>
+  </g>
+
+  <!-- CARD 4: 193d Infantry Brigade -->
+  <g transform="translate(48 410)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(91 18)">
+      <path d="M31 8 H89 Q103 8 103 22 V141 Q103 156 89 156 H31 Q17 156 17 141 V22 Q17 8 31 8Z"
+            fill="#fff" stroke="#fff" stroke-width="8"/>
+      <path d="M31 8 H89 Q103 8 103 22 V141 Q103 156 89 156 H31 Q17 156 17 141 V22 Q17 8 31 8Z"
+            fill="#1f57a6" stroke="#1f57a6" stroke-width="5"/>
+      <rect x="48" y="8" width="24" height="148" fill="#fff"/>
+      <!-- bayonet -->
+      <path d="M60 24 L66 42 L64 119 L70 130 L64 134 L60 127 L56 134 L50 130 L56 119 L54 42 Z"
+            fill="#cf2e36"/>
+      <path d="M56 119 H64" stroke="#7d1017" stroke-width="3"/>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">193D INFANTRY BRIGADE</text>
+    <text x="150" y="228" text-anchor="middle" class="small">Army brigade already based in Panama</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">Blue field • white band • red bayonet</text>
+  </g>
+
+  <!-- CARD 5: 75th Ranger Regiment -->
+  <g transform="translate(390 410)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(45 44)">
+      <path d="M21 14 Q105 -2 189 14 L180 46 Q105 31 30 46 Z"
+            fill="#080808" stroke="#b6262d" stroke-width="5"/>
+      <text x="105" y="29" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="800" fill="#fff">75 RANGER RGT</text>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">75TH RANGER REGIMENT</text>
+    <text x="150" y="228" text-anchor="middle" class="small">Ranger elements assaulted key objectives</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">Black scroll • red edging • white title</text>
+  </g>
+
+  <!-- CARD 6: 7th Special Forces Group -->
+  <g transform="translate(732 410)" filter="url(#shadow)">
+    <rect class="card" width="300" height="260" rx="18"/>
+    <g transform="translate(90 15)">
+      <path d="M24 0 H96 Q104 0 104 8 V30 H16 V8 Q16 0 24 0Z" fill="#090909"/>
+      <text x="60" y="21" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#e3c24d">AIRBORNE</text>
+      <path d="M60 37 L111 89 L60 159 L9 89 Z" fill="#2e7478" stroke="#123c3f" stroke-width="3"/>
+      <!-- dagger -->
+      <path d="M56 58 L64 58 L64 118 L73 129 L60 151 L47 129 L56 118 Z" fill="#e6c247"/>
+      <!-- three lightning flashes -->
+      <path d="M28 78 L52 65 L45 80 L58 77 L37 97 L43 82 Z" fill="#e6c247"/>
+      <path d="M39 99 L65 82 L56 100 L71 95 L47 119 L53 102 Z" fill="#e6c247"/>
+      <path d="M53 115 L82 96 L70 117 L88 110 L59 136 L66 117 Z" fill="#e6c247"/>
+    </g>
+    <text x="150" y="206" text-anchor="middle" class="label">7TH SPECIAL FORCES GROUP</text>
+    <text x="150" y="228" text-anchor="middle" class="small">Company C, 3d Battalion was in Panama</text>
+    <text x="150" y="246" text-anchor="middle" class="tiny">SF arrowhead • dagger • lightning flashes</text>
+  </g>
+
+  <text x="48" y="722" class="tiny">
+    Historical note: this sheet represents six Army formations/elements documented as participating in JUST CAUSE; SVGs are clean recreations from heraldic blazons, not scans of official artwork.
+  </text>
+</svg>

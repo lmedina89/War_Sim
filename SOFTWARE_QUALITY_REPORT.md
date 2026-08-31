@@ -1,140 +1,118 @@
-# War Sim v0.4.3.2 — Software Quality Report
+# War Sim v0.4.3.2.1 — Software Quality Report
 
-## Release scope
+## Scope
 
-v0.4.3.2 is a narrow mobile-polish and legacy-award compatibility hotfix built from the packaged v0.4.3.1 baseline. The intended code changes are limited to version normalization, Soldier Identity tab sizing, Situation Feed compaction/disclosure behavior, and Army Service Ribbon legacy-save normalization.
+v0.4.3.2.1 was built from the exact packaged v0.4.3.2 baseline as a narrow formation-identity, insignia, and uniform-alignment patch. It does not implement the deferred save-recovery work or introduce new combat/gameplay systems.
 
-- Runtime: **0.4.3.2**
+- Runtime: **0.4.3.2.1**
 - World schema: **16**
 - Save format: **3**
-- Generator: **v3**
+- World generator: **v3**
 
-## Result
+## Implemented changes reviewed
 
-**PASS for packaged automated/static QA.**
+- Added canonical formation metadata for six Operation Just Cause-associated Army formations.
+- Added six original campaign-emblem definitions for future campaign/deployment use.
+- Added runtime SVG builders for all twelve insignia designs.
+- Added deterministic higher-formation seeding above the existing infantry company/platoon/squad organization.
+- Added same-schema legacy normalization so existing generic v0.4.3.2 careers receive named formation context without replacing their existing squad/roster.
+- Added formation patch/name presentation to Unit Assignment and Command Display.
+- Added higher-formation context to personnel records and service-record preview.
+- Updated initial assignment order summaries to use the full named assignment chain.
+- Centered badge and ribbon groups beneath their corresponding uniform tapes.
 
-One environment limitation remains: an attempted Chromium headless smoke at 390×844 timed out with container DBus/environment errors, so no browser smoke pass is claimed.
+## Formation-start rules
 
-## Automated regression suite
+Default conventional 11B starts are limited to:
+- 82d Airborne Division
+- 7th Infantry Division
+- 5th Infantry Division
+- 193d Infantry Brigade
 
-**17/17 test scripts pass.**
+75th Ranger Regiment and 7th Special Forces Group are present in canonical formation metadata and the SVG renderer, but `careerStartEligible` is false. This prevents the current generic 11B entry pipeline from incorrectly bypassing future Ranger/Special Forces selection requirements.
 
-Passing suites:
+Formation selection is derived from the world seed with a non-RNG-consuming hash. Tests confirm the same seed selects the same formation and that all four eligible conventional formations occur across a seed sweep.
 
-1. `availability-qualification-history.mjs`
-2. `awards-soldier-identity.mjs`
-3. `capability-foundation.mjs`
-4. `career-continuity.mjs`
-5. `living-career-polish.mjs`
-6. `living-unit.mjs`
-7. `migration-qualification-hotfix.mjs`
-8. `mobile-app-navigation.mjs`
-9. `mobile-polish-compatibility.mjs`
-10. `mobile-ux-consolidation.mjs`
-11. `quality.mjs`
-12. `save-storage.mjs`
-13. `service-record-foundation.mjs`
-14. `smoke.mjs`
-15. `stability-hotfix.mjs`
-16. `training-consolidation.mjs`
-17. `unit-interaction-integrity.mjs`
+## Automated test results
 
-## Core quality/stress results
+**18/18 test scripts PASS**:
 
-`tests/quality.mjs` result: **PASS**.
+- availability-qualification-history.mjs
+- awards-soldier-identity.mjs
+- capability-foundation.mjs
+- career-continuity.mjs
+- formation-identity.mjs
+- living-career-polish.mjs
+- living-unit.mjs
+- migration-qualification-hotfix.mjs
+- mobile-app-navigation.mjs
+- mobile-polish-compatibility.mjs
+- mobile-ux-consolidation.mjs
+- quality.mjs
+- save-storage.mjs
+- service-record-foundation.mjs
+- smoke.mjs
+- stability-hotfix.mjs
+- training-consolidation.mjs
+- unit-interaction-integrity.mjs
 
-- Source modules audited by quality suite: **91**
-- Generated-world seeds validated: **300**
-- Stress population: **10,000 people**
-- Primary views: **5**
-- Deterministic RNG audit: PASS
-- Runtime/concrete ID audit: PASS
-- DOM integrity: PASS
-- Import graph integrity: PASS
-- Render containment: PASS
-- Selector/index audit: PASS
-- Schema-13 migration: PASS
-- Direct schema-12 migration: PASS
-- Same-schema hotfix normalization: PASS
-- Remembered disclosure UI state: PASS
-- Reduced-motion support: PASS
-- Current-situation presentation: PASS
-- Personnel/unit cross-navigation: PASS
+### Dedicated formation/SVG verification
 
-The measured 10,000-person index-build run completed in approximately **10.93 ms** in this QA environment. This is a local benchmark, not a device performance guarantee.
+`formation-identity.mjs` verifies:
+- six historical formation definitions are registered;
+- six custom campaign emblems are registered;
+- all twelve SVG renderer IDs exist;
+- fresh career-start worlds always resolve a named formation patch;
+- formation selection is deterministic and seed-stable;
+- all four conventional start formations appear across a 128-seed sweep;
+- Ranger and Special Forces formations are not used by the default 11B start pipeline;
+- initial assignment orders contain named higher-formation and company context;
+- a simulated same-schema v0.4.3.2 legacy world with generic company-only parentage is backfilled on load.
 
-## Syntax/static checks
+## World generation / stress validation
 
-All **108 JS/MJS files** under `src/` and `tests/` pass `node --check`.
+Existing `quality.mjs` PASS results:
+- **300 generated-world seeds validated**
+- **10,000 stress personnel**
+- deterministic RNG audit PASS
+- runtime ID audit PASS
+- DOM/import/render containment audits PASS
+- canonical scheduler and readiness integration PASS
+- selector/index audit PASS
+- same-schema hotfix normalization PASS
 
-The existing static-quality suite continues to enforce DOM/import integrity and unsafe rendering constraints. No new dynamic-code or HTML-injection mechanism was introduced by this patch.
+Index build during the final run: approximately **13.56 ms** for the 10,000-person stress fixture in this container run.
 
-## v0.4.3.2 targeted verification
+## Syntax and static-source checks
 
-### Soldier Identity tab sizing
+- **111** JS/MJS files passed `node --check`.
+- Static production-source sweep found no:
+  - `eval(...)`
+  - `new Function(...)`
+  - `.innerHTML = ...`
+  - `document.write(...)`
 
-PASS.
+## Save-system containment
 
-The identity sub-navigation now uses:
+`src/core/saveSystem.js` was verified byte-identical to the exact packaged v0.4.3.2 baseline.
 
-- five explicit equal-width grid columns;
-- `minmax(0,1fr)` so labels can shrink with the card;
-- no horizontal overflow requirement for the normal five-tab set;
-- tighter <=420px spacing/font sizing while preserving the existing active-tab visual treatment.
-
-This specifically addresses the narrower nested Soldier card seen on iPhone, where the earlier `minmax(70px/72px,1fr)` auto-columns could exceed the available inner width.
-
-### Situation Feed compaction
-
-PASS.
-
-The Home Situation Feed now:
-
-- lives in a native `<details>` disclosure using the project's persisted disclosure system;
-- shows a three-record preview by default while expanded;
-- shows the total feed count in the summary;
-- exposes `Show All (N)` and `Show Recent` controls when more than three records exist;
-- preserves all feed records instead of discarding or archiving them.
-
-### Legacy Army Service Ribbon backfill
-
-PASS.
-
-Regression cases verify that:
-
-- a qualifying legacy Army player career with canonical enlistment + initial-assignment evidence and no ASR receives exactly one ASR record;
-- the backfilled award date is historical, based on the original career-start evidence rather than the load date;
-- the current ASR prestige value is applied once when no historical award existed;
-- running migration again creates no duplicate;
-- a retired `award_basic_training` record is upgraded in place to the current ASR ID;
-- upgrading the legacy record does not add prestige a second time;
-- the resulting world passes `validateWorldState`.
-
-The migration is intentionally quiet: it does not create a present-day award notification for an award that was historically earned before the feature existed.
-
-## Scope-control verification
-
-`src/core/saveSystem.js` SHA-256 in v0.4.3.2:
+SHA-256 in both builds:
 
 `b67d3d64caecbe2cd32f2e8d683fd28174326439485f629be0f7fad2a4eb0c43`
 
-The packaged v0.4.3.1 baseline has the identical hash. Therefore the previously deferred save-recovery behavior was not modified in this patch.
+Therefore the previously deferred save-recovery implementation has not been mixed into this patch.
 
-## Known deferred issues
+## Browser-render smoke
 
-The earlier v0.4.2.2 full audit findings remain applicable where not superseded:
+A Chromium headless 390×844 launch was attempted against a local HTTP server. Chromium timed out with DBus/headless container-environment errors and did not produce a reliable screenshot. This check is explicitly recorded as **NOT PASSED / environment-limited**, not silently counted as successful QA.
 
-- corrupted save-index reconstruction is still unresolved;
-- manual-save backups are still written without automatic fallback/restore behavior;
-- validator completeness for some canonical stores still warrants future hardening;
-- broader state-store transaction/error resilience remains future stability work.
+## Risk notes
 
-These items were intentionally outside v0.4.3.2 scope.
+- Historical patch artwork is a clean SVG recreation based on the previously approved test designs, not scanned official raster artwork.
+- The game world date is fictional/future-facing; inclusion of historical formation identities should not be interpreted as a claim about real-world 2046 Army force structure.
+- Higher HQ nodes currently provide organizational identity/context around the detailed company-level simulation. Deeper higher-HQ staffing and command simulation remain future work.
+- The six fictional campaign emblems are registered but are not attached to fabricated campaign records. They are reserved for the future canonical campaign/deployment system.
 
-## Browser smoke limitation
+## Result
 
-A local HTTP server plus headless Chromium was attempted at **390×844**. Chromium did not complete within the timeout and emitted DBus/environment errors from the container. Because the attempt did not produce a reliable rendered result, browser smoke is recorded as **NOT VERIFIED**, not PASS.
-
-## Release assessment
-
-Within the requested hotfix scope, v0.4.3.2 is suitable for packaging. The changes are small, backward-compatible at schema level, regression-covered, and preserve the v0.4.3.1 UI/gameplay architecture.
+Within the requested v0.4.3.2.1 scope, automated regression, generation, stress, syntax, static-source, compatibility, and save-system-containment checks pass. On-device visual verification remains recommended before replacing the currently deployed v0.4.3.2 GitHub Pages build.

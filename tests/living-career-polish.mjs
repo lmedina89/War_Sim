@@ -18,7 +18,7 @@ function make(seed=42202){
 
 {
   const store=make(); const state=store.getState(), playerId=state.playerPersonId;
-  assert.equal(state.schemaVersion,16); assert.equal(state.gameVersion,"0.4.3.2");
+  assert.equal(state.schemaVersion,16); assert.equal(state.gameVersion,"0.4.3.2.1");
   assert.equal(Object.keys(state.entities.personalityProfiles).length,Object.keys(state.entities.people).length,"every generated person should have deterministic personality data");
   assert.ok(Object.values(state.entities.relationshipRecords).every(r=>Number.isFinite(r.rapport)),"relationship records need canonical rapport");
   const career=selectCareerRecord(state,store.getIndexes(),registries,playerId);
@@ -61,7 +61,7 @@ function make(seed=42202){
   legacy.schemaVersion=15; legacy.gameVersion="0.4.2.1"; delete legacy.entities.personalityProfiles; delete legacy.entities.relationshipMemoryRecords; delete legacy.world.livingCareer;
   for(const r of Object.values(legacy.entities.relationshipRecords)) delete r.rapport;
   const migrated=migratePayload({saveFormatVersion:3,saveId:"living-migrate",createdAt:new Date().toISOString(),savedAt:new Date().toISOString(),gameVersion:"0.4.2.1",worldState:legacy});
-  assert.equal(migrated.worldState.schemaVersion,16); assert.equal(migrated.worldState.gameVersion,"0.4.3.2");
+  assert.equal(migrated.worldState.schemaVersion,16); assert.equal(migrated.worldState.gameVersion,"0.4.3.2.1");
   assert.equal(migrated.worldState.entities.people[playerId].identity.displayName,name);
   assert.equal(Object.keys(migrated.worldState.entities.personalityProfiles).length,Object.keys(migrated.worldState.entities.people).length);
   assert.ok(Object.values(migrated.worldState.entities.relationshipRecords).every(r=>Number.isFinite(r.rapport)));

@@ -1,3 +1,4 @@
+import { formationIdentityForUnit } from "../services/formationIdentity.js";
 export function selectOrganizationView(state, indexes, registries, unitId) {
   const unit = state.entities.units[unitId];
   if (!unit) throw new Error(`Unknown unit: ${unitId}`);
@@ -10,6 +11,8 @@ export function selectOrganizationView(state, indexes, registries, unitId) {
     .filter(billet => billet.assignedPersonId)
     .length;
 
+  const formationIdentity = formationIdentityForUnit(state, unit.id);
+
   return {
     unitId: unit.id,
     name: unit.name,
@@ -21,6 +24,10 @@ export function selectOrganizationView(state, indexes, registries, unitId) {
     assignedStrength: assigned,
     vacancies: billetIds.length - assigned,
     readiness: unit.condition.readiness,
-    morale: unit.condition.morale
+    morale: unit.condition.morale,
+    formationId: formationIdentity?.formationId ?? null,
+    formationName: formationIdentity?.name ?? null,
+    formationUnitId: formationIdentity?.unitId ?? null,
+    formationInsigniaId: formationIdentity?.insigniaId ?? null
   };
 }

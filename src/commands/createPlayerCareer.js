@@ -15,6 +15,13 @@ function normalizeName(value, label) {
   return normalized;
 }
 
+function assignmentChainLabel(state, unitId) {
+  const names=[];
+  let cursor=state.entities.units?.[unitId] ?? null;
+  while(cursor){names.unshift(cursor.name);cursor=cursor.parentUnitId?state.entities.units[cursor.parentUnitId]:null;}
+  return names.join(" › ");
+}
+
 export function createPlayerCareer(store, registries, input) {
   if (store.getState().playerPersonId) throw new Error("A player career already exists. Start a new career first.");
 
@@ -59,7 +66,7 @@ export function createPlayerCareer(store, registries, input) {
     draft.entities.skillProfiles[`skills_${personId}`] = { id: `skills_${personId}`, schemaVersion: 1, personId, values: Object.fromEntries(registries.skills.values().map(skill => [skill.id, scenario.startingSkillValues?.[skill.id] ?? scenario.defaultStartingSkillValue ?? skill.minimum])) };
     draft.entities.billets[billet.id].assignedPersonId = personId; draft.entities.billets[billet.id].status = "filled";
     draft.entities.assignmentRecords[assignmentId] = { id: assignmentId, schemaVersion: 2, personId, unitId, billetId: billet.id, startDate: draft.world.date, endDate: null, reason: "initial_assignment" };
-    draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: "initial_assignment", status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId, billetId: billet.id, title: "Initial Assignment Orders", summary: `Assigned to ${unit.name} as ${registries.billets.get(billet.definitionId).name}.` };
+    draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: "initial_assignment", status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId, billetId: billet.id, title: "Initial Assignment Orders", summary: `Assigned to ${assignmentChainLabel(draft, unitId)} as ${registries.billets.get(billet.definitionId).name}.` };
     draft.entities.careerEvents[enlistmentEventId] = { id: enlistmentEventId, schemaVersion: 1, personId, type: "enlistment", date: draft.world.date, references: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractId, rankId: rank.id, unitId, billetId: billet.id } };
     const initialAward = grantAwardInDraft(draft, registries, { personId, awardId: "award_army_service_ribbon", sourceType: "initial_entry_training_completion", sourceId: enlistmentEventId, reason: "Initial entry training completed before assignment to the operational unit." });
     initialAwardNoticeId = initialAward?.notificationId ?? null;

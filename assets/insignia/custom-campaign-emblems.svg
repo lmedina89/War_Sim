@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" width="900" height="620">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20251f"/>
+      <stop offset="1" stop-color="#111411"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef1ea"/>
+      <stop offset=".45" stop-color="#9ca69c"/>
+      <stop offset="1" stop-color="#505950"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1dc86"/>
+      <stop offset=".5" stop-color="#b99a3f"/>
+      <stop offset="1" stop-color="#6f5920"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-opacity=".45"/>
+    </filter>
+    <style>
+      .title { font: 700 28px system-ui, sans-serif; fill:#e7e8df; letter-spacing:2px }
+      .label { font: 700 17px system-ui, sans-serif; fill:#e7e8df; letter-spacing:1px }
+      .sub { font: 13px system-ui, sans-serif; fill:#aab0a7 }
+      .panel { fill:#191d19; stroke:#485047; stroke-width:2 }
+    </style>
+  </defs>
+
+  <rect width="900" height="620" rx="28" fill="url(#bg)"/>
+  <text x="45" y="52" class="title">WAR SIM — SVG INSIGNIA TEST SHEET</text>
+  <text x="45" y="78" class="sub">Original vector concepts for fictional campaigns and units</text>
+
+  <!-- 1: Northern Shield -->
+  <g transform="translate(55 120)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(63 18)">
+      <path d="M55 5 L103 22 V70 C103 101 84 124 55 139 C26 124 7 101 7 70 V22 Z"
+            fill="#303a2b" stroke="#d2bd68" stroke-width="5"/>
+      <path d="M18 87 L42 54 L55 69 L70 44 L94 87 Z" fill="#87947b"/>
+      <path d="M59 31 L77 61 H66 L82 91 L58 77 L38 91 L52 61 H42 Z" fill="#d2bd68"/>
+      <circle cx="55" cy="31" r="6" fill="#e7e8df"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">NORTHERN SHIELD</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Campaign emblem</text>
+  </g>
+
+  <!-- 2: Iron Viper -->
+  <g transform="translate(332 120)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(62 18)">
+      <path d="M55 4 L104 29 L96 105 L55 140 L14 105 L6 29 Z"
+            fill="#242b26" stroke="#8e9b88" stroke-width="5"/>
+      <path d="M28 48 C44 26 75 25 86 43 C95 59 82 73 66 74
+               C51 75 43 85 48 99 C53 111 70 111 78 101"
+            fill="none" stroke="#b7c2b1" stroke-width="10" stroke-linecap="round"/>
+      <path d="M76 38 L93 31 L87 48 Z" fill="#d0b85e"/>
+      <circle cx="82" cy="42" r="3.5" fill="#161916"/>
+      <path d="M28 108 L83 108" stroke="#d0b85e" stroke-width="5"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">IRON VIPER</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Mechanized task force</text>
+  </g>
+
+  <!-- 3: Falcon Spear -->
+  <g transform="translate(609 120)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(60 18)">
+      <path d="M57 5 L108 38 L91 112 L57 140 L23 112 L6 38 Z"
+            fill="#31352f" stroke="#c6a74b" stroke-width="5"/>
+      <path d="M55 46 C37 30 22 33 13 41 C28 45 37 56 43 67
+               C29 63 19 66 11 74 C30 75 43 83 55 94 Z"
+            fill="url(#steel)"/>
+      <path d="M59 46 C77 30 92 33 101 41 C86 45 77 56 71 67
+               C85 63 95 66 103 74 C84 75 71 83 59 94 Z"
+            fill="url(#steel)"/>
+      <path d="M57 27 L64 97 L57 116 L50 97 Z" fill="url(#gold)"/>
+      <path d="M47 97 L67 97" stroke="#d7c46f" stroke-width="5"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">FALCON SPEAR</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Air assault operation</text>
+  </g>
+
+  <!-- 4: Ember Watch -->
+  <g transform="translate(55 355)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(62 18)">
+      <circle cx="55" cy="71" r="55" fill="#282d28" stroke="#9ca79a" stroke-width="5"/>
+      <path d="M55 19 C69 42 78 54 73 70 C70 80 64 85 55 92
+               C59 78 51 73 48 65 C44 55 48 43 55 19 Z" fill="#bd6d3c"/>
+      <path d="M55 49 C64 63 65 71 55 82 C48 74 48 65 55 49 Z" fill="#dfb95d"/>
+      <path d="M23 101 L87 101" stroke="#b9c2b6" stroke-width="6"/>
+      <path d="M32 113 L78 113" stroke="#7e897d" stroke-width="4"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">EMBER WATCH</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Defensive campaign</text>
+  </g>
+
+  <!-- 5: Night Anvil -->
+  <g transform="translate(332 355)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(62 18)">
+      <path d="M55 6 L101 31 L101 90 L55 137 L9 90 L9 31 Z"
+            fill="#222522" stroke="#a68c45" stroke-width="5"/>
+      <path d="M27 49 H82 L73 62 H64 V80 H81 L91 93 H19 L29 80 H47 V62 H36 Z"
+            fill="url(#steel)"/>
+      <path d="M55 21 L60 36 L76 36 L63 45 L68 60 L55 51 L42 60 L47 45 L34 36 L50 36 Z"
+            fill="#c7ad57"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">NIGHT ANVIL</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Heavy operations</text>
+  </g>
+
+  <!-- 6: Red Horizon -->
+  <g transform="translate(609 355)" filter="url(#shadow)">
+    <rect class="panel" width="235" height="200" rx="18"/>
+    <g transform="translate(62 18)">
+      <path d="M55 5 L103 24 V80 C103 108 83 128 55 141 C27 128 7 108 7 80 V24 Z"
+            fill="#302927" stroke="#a8aa9f" stroke-width="5"/>
+      <circle cx="55" cy="62" r="25" fill="#9f493a"/>
+      <path d="M18 86 C35 72 75 72 92 86" fill="none" stroke="#d0b65d" stroke-width="6"/>
+      <path d="M18 98 H92" stroke="#727d70" stroke-width="5"/>
+      <path d="M55 27 L60 42 L76 42 L63 51 L68 66 L55 57 L42 66 L47 51 L34 42 L50 42 Z"
+            fill="#dedfd7"/>
+    </g>
+    <text x="117.5" y="172" text-anchor="middle" class="label">RED HORIZON</text>
+    <text x="117.5" y="191" text-anchor="middle" class="sub">Expeditionary campaign</text>
+  </g>
+</svg>

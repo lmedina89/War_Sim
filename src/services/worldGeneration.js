@@ -2,6 +2,7 @@ import { randomInt } from "../core/rng.js";
 import { personnelGenerationDefinition as personnelData } from "../data/personnelGeneration.js";
 import { initializeUnitTrainingProfiles } from "./unitReadiness.js";
 import { seedPriorServiceHistories } from "./priorServiceHistory.js";
+import { ensureNamedInfantryFormation } from "./formationIdentity.js";
 
 export const CURRENT_WORLD_GENERATOR_VERSION = 3;
 
@@ -114,6 +115,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
     billet.status = "filled";
   }
 
+  ensureNamedInfantryFormation(state);
   initializeUnitTrainingProfiles(state, profile.readinessModelId);
   seedPriorServiceHistories(state, registries);
 

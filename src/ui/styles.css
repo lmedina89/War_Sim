@@ -767,3 +767,29 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .situation-feed-controls{display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--line)}
 .summary-count{color:var(--muted);font-size:.72em;font-weight:800}
 @media(max-width:420px){.identity-screen-tabs{gap:3px;padding:5px}.identity-screen-tabs button{font-size:.59rem;letter-spacing:0;padding-inline:.18rem}}
+
+/* v0.4.3.2.1 formation identity + uniform alignment polish */
+.uniform-name-tape,.uniform-army-tape{width:min(34%,128px);min-width:0;transform:translateX(-50%)}
+.uniform-name-tape{left:25%}
+.uniform-army-tape{left:75%;right:auto}
+.uniform-badge-rack{left:0;top:94px;width:50%;max-width:none;padding:0 10px;justify-content:center;align-items:flex-start;box-sizing:border-box}
+.uniform-ribbon-rack{left:50%;right:auto;top:94px;width:50%;justify-content:center;box-sizing:border-box}
+.uniform-tab-rack{left:0;top:138px;width:50%;justify-items:center;padding:0 10px;box-sizing:border-box}
+.named-insignia{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:64px;height:72px;color:#d8d8d0}
+.named-insignia .insignia-svg{width:100%;height:100%;display:block;overflow:visible}
+.assignment-formation{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px;border:1px solid var(--mil-line);border-radius:6px;background:#111a20;min-width:0}
+.assignment-formation:empty{display:none}
+.assignment-formation .named-insignia{width:52px;height:58px}
+.assignment-formation .mil-metric{flex:1;min-width:0}
+.unit-command-identity{display:flex;align-items:center;gap:12px;min-width:0}
+.unit-command-identity>div{display:grid;min-width:0}
+.unit-command-identity .named-insignia{width:68px;height:76px}
+.unit-command-identity strong{overflow-wrap:anywhere}
+@media(max-width:430px){
+  .uniform-name-tape,.uniform-army-tape{width:36%;min-width:0;font-size:.56rem}
+  .uniform-ribbon-rack{left:50%;right:auto;width:50%;grid-template-columns:repeat(3,42px)}
+  .uniform-ribbon-slot,.uniform-ribbon-slot .insignia{width:42px}
+  .uniform-badge-rack{left:0;width:50%;padding-inline:6px}
+  .uniform-tab-rack{left:0;width:50%;padding-inline:6px}
+  .unit-command-identity .named-insignia{width:58px;height:66px}
+}

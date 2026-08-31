@@ -1,41 +1,65 @@
-# War Sim v0.4.3.2 — Mobile Polish & Legacy Award Compatibility
+# War Sim v0.4.3.2.1 — Formation Identity & Insignia Integration
 
-War Sim v0.4.3.2 is a narrowly scoped hotfix built directly from the packaged v0.4.3.1 Mobile App UX Overhaul. It preserves the established military visual identity and app-style navigation while correcting the Soldier Identity tab sizing, reducing Situation Feed scrolling, and repairing Army Service Ribbon compatibility for qualifying older careers.
+War Sim v0.4.3.2.1 is a narrow follow-up built directly from the packaged v0.4.3.2 Mobile Polish & Legacy Award Compatibility release. It keeps world schema 16, save format 3, generator v3, and preserves the deferred save-recovery scope while adding named higher formations, unit-patch SVG integration, and a small uniform alignment polish.
 
-Runtime **0.4.3.2**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.2.1**, world schema **16**, save format **3**, generator **v3**.
 
-## v0.4.3.2 changes
+## v0.4.3.2.1 changes
 
-- **Soldier Identity mobile tabs:** `Uniform / Loadout / Awards / Catalog / Record` now use five equal-width columns inside their own card instead of minimum-width columns that could visually over-size/overflow on narrow phones. A tighter <=420px rule keeps all five labels usable without changing the established active-tab design.
-- **Situation Feed mobile compaction:** the Home Situation Feed is now a persisted disclosure panel. When open it shows only the three newest events by default, displays the total event count, and offers `Show All` / `Show Recent` controls. This keeps normal Home usage short while preserving intentional access to full history.
-- **Legacy Army Service Ribbon compatibility:** qualifying older Army player careers that entered the operational unit after initial entry training but predate the v0.4.3 ASR grant now receive exactly one historical Army Service Ribbon record during same-schema load normalization.
-- If an older save already contains the retired `award_basic_training` representation, that record is upgraded in place rather than duplicated. Existing prestige is preserved in that path.
-- Historical ASR backfill uses the original enlistment/operational-entry evidence date and is idempotent across repeated loads. It does not create a current-time "Award Earned" notification for a historical migration.
-- No world-schema or save-format bump was required.
+- Army 11B careers no longer exist only inside generic `Alpha Company / Platoon / Squad` context. Every compatible career now receives a deterministic, seed-stable named higher formation.
+- Default conventional starting formation pool: 82d Airborne Division, 7th Infantry Division, 5th Infantry Division, or 193d Infantry Brigade.
+- 75th Ranger Regiment and 7th Special Forces Group are registered as historical formation identities but are deliberately excluded from the default 11B start pool until future selection/qualification pipelines exist.
+- Higher formation lineage is inserted above the existing company/platoon/squad structure without replacing the existing roster, billets, relationships, schedule, readiness, or player assignment.
+- Same-schema v0.4.3.2 saves are normalized on load: if the old career has only generic company/platoon/squad parents, the higher named formation is added deterministically from the existing world seed.
+- Initial assignment orders now identify the complete named chain rather than only the squad.
+- Unit Assignment and Command Display surfaces show the current formation patch and name.
+- Personnel records now include Formation as distinct assignment context, and personnel/unit metadata includes higher-formation context.
+- DD214-style record preview uses the complete assignment chain instead of only the squad label.
+- Uniform badges are centered beneath the soldier name tape; ribbons are centered beneath the `U.S. ARMY` tape.
 
-## Preserved systems
+## SVG asset integration
 
-The v0.4.3/v0.4.3.1 architecture remains intact: canonical `awardRecords`, qualification-derived marksmanship insignia, SVG ribbons/badges/tabs, uniform rendering, loadout-derived combat profile, award catalog, DD214-style preview, Career/Unit/Personnel app screens, bottom navigation, living career/unit simulation, schools, qualifications, service record, relationships, and all canonical gameplay state.
+Twelve SVG designs are now represented in the runtime insignia renderer:
 
-The architectural rule remains **earn once → record once → display everywhere**.
+Historical unit-patch identities:
+- 82d Airborne Division
+- 7th Infantry Division
+- 5th Infantry Division
+- 193d Infantry Brigade
+- 75th Ranger Regiment
+- 7th Special Forces Group
 
-## Compatibility and deferred work
+Original fictional campaign emblems:
+- Northern Shield
+- Iron Viper
+- Falcon Spear
+- Ember Watch
+- Night Anvil
+- Red Horizon
 
-Same-schema saves are normalized to runtime version 0.4.3.2 through the existing migration path. The ASR repair is deliberately evidence-based and duplicate-safe.
+The six campaign emblems are registered now but intentionally remain future-facing until the campaign/deployment system has a canonical campaign record to attach them to. Source SVG sheets are preserved under `assets/insignia/`.
 
-The previously audited save-recovery defects remain deferred by design. `src/core/saveSystem.js` is byte-identical to the packaged v0.4.3.1 baseline; automatic manual-backup restoration and corrupted save-index reconstruction are not changed in this hotfix.
+## Compatibility and architecture
 
-## QA
+- Save format remains **3**.
+- World schema remains **16**.
+- Generator remains **v3**.
+- Formation choice is derived from the existing world seed without consuming or shifting runtime RNG state.
+- No `src/core/saveSystem.js` changes were made.
+- Existing v0.4.3.2 award/ribbon compatibility logic remains intact.
+- Unit patch art is a presentation reference attached to canonical formation identity; it is not duplicated per soldier.
 
-The packaged release passes **17/17 test scripts**, including the new `mobile-polish-compatibility.mjs` regression suite. The core quality suite validates **300 deterministic generated worlds** and a **10,000-person** stress/index case. All **108 JS/MJS files** under `src/` and `tests/` pass `node --check`.
+## QA summary
 
-The dedicated hotfix regression coverage verifies:
+- **18/18** test scripts pass.
+- Dedicated formation/SVG compatibility test passes.
+- **300** deterministic generated-world seeds validated.
+- **10,000-person** stress/index audit passes.
+- **111** JS/MJS files pass `node --check`.
+- Static unsafe-code sweep passes: no `eval`, `new Function`, `innerHTML =`, or `document.write` in production source.
+- `src/core/saveSystem.js` remains byte-identical to v0.4.3.2.
+- Headless Chromium 390×844 smoke attempt was made but timed out in the container with DBus/headless-environment errors; it is **not** claimed as a successful browser-render test.
 
-- qualifying legacy careers receive exactly one ASR backfill;
-- repeated migration does not duplicate the ribbon;
-- legacy ASR records upgrade in place without double-counting prestige;
-- migrated worlds remain validator-clean;
-- Situation Feed is a persisted disclosure with a three-event default preview and explicit expansion control;
-- Soldier Identity uses five equal-width mobile tab columns.
+## Deferred work
 
-A Chromium headless smoke attempt was made at a 390×844 mobile viewport, but Chromium timed out in the container with environment/DBus errors. It is therefore explicitly **not** claimed as a passing browser-render test. Device screenshots supplied during development remain the primary real-browser visual evidence for the v0.4.3.1 design baseline.
+The previously audited save-recovery defects remain deferred for the planned v0.4.3.3 Save Recovery & Save Integrity release. Generated campaign emblems are intentionally not assigned to fake campaign records; they will plug into the future interactive campaign/deployment architecture when that canonical data exists.

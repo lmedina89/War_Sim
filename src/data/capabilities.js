@@ -26,5 +26,5 @@ export const platformClassDefinitions = [
 ];
 
 export const unitDoctrineDefinitions = [
-  { id:"doctrine_light_infantry", schemaVersion:1, name:"Light Infantry", organizationDefinitionIds:["orgdef_infantry_squad","orgdef_infantry_platoon","orgdef_infantry_company"], baselineMissionTags:["close_combat","security","defense","patrolling"], capabilityPriorities:["capability_small_arms","capability_automatic_fire","capability_reconnaissance","capability_communications","capability_medical","capability_sustainment"] }
+  { id:"doctrine_light_infantry", schemaVersion:1, name:"Light Infantry", organizationDefinitionIds:["orgdef_infantry_squad","orgdef_infantry_platoon","orgdef_infantry_company","orgdef_infantry_battalion","orgdef_infantry_brigade","orgdef_infantry_division"], baselineMissionTags:["close_combat","security","defense","patrolling"], capabilityPriorities:["capability_small_arms","capability_automatic_fire","capability_reconnaissance","capability_communications","capability_medical","capability_sustainment"] }
 ];
