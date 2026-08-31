@@ -94,8 +94,8 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
   });
 
   const state = {
-    schemaVersion: 9,
-    gameVersion: "0.3.1.2",
+    schemaVersion: 10,
+    gameVersion: "0.3.2",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
@@ -148,7 +148,9 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
       servicePeriodRecords: {},
       reenlistmentOfferRecords: {},
       careerChangeRequestRecords: {},
-      interServiceTransferRecords: {}
+      interServiceTransferRecords: {},
+      personnelActionRecords: {},
+      replacementRequestRecords: {}
     }
   };
   return ensureInfantryCompanyStructure(state);

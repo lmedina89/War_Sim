@@ -2,14 +2,16 @@ import { commandResult } from "../core/commandResult.js";
 import { advanceClock } from "../services/simulationClock.js";
 import { recordAction } from "../services/recordServices.js";
 import { simulatePersonnelLifecycle } from "../services/personnelLifecycle.js";
+import { processPersonnelAdministration } from "../services/personnelAdministration.js";
 
 export function advanceWorldDays(store, days) {
   const actorPersonId = store.getState().playerPersonId;
   store.mutate(draft => {
     advanceClock(draft, days);
     simulatePersonnelLifecycle(draft, days, { excludePersonId: actorPersonId });
+    processPersonnelAdministration(draft);
     recordAction(draft, { actorPersonId, commandType: "advance_time", payload: { days }, resultCode: "time_advanced" });
-  }, ["actions", "people", "history"]);
+  }, ["actions", "people", "billets", "history", "orders", "notifications", "career", "admin"]);
   return commandResult({ code: "time_advanced", message: `Advanced ${days} days.`, data: { days } });
 }
 

@@ -15,7 +15,7 @@ export function assignPersonToBillet(store, registries, personId, billetId) {
     return { ok: false, code: "RANK_TOO_LOW", details: { minimumRankLevel: billetDef.minimumRankLevel } };
   }
 
-  store.transact(draft => {
+  store.mutate(draft => {
     const draftPerson = draft.entities.people[personId];
 
     if (draftPerson.affiliation.billetId) {
@@ -31,7 +31,7 @@ export function assignPersonToBillet(store, registries, personId, billetId) {
 
     draftPerson.affiliation.billetId = billetId;
     draftPerson.affiliation.unitId = billet.unitId;
-  });
+  }, ["people", "billets"]);
 
   return { ok: true, code: "ASSIGNED", personId, billetId };
 }

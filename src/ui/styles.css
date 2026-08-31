@@ -132,3 +132,7 @@ details.panel[open] summary { margin-bottom: 14px; }
   .personnel-grid { grid-template-columns: 1fr; }
   .bottom-nav button { font-size: .72rem; }
 }
+
+.admin-summary { margin: 0 0 1rem; }
+.admin-grid article { min-width: 0; }
+.admin-grid h3 { margin-top: 0; }

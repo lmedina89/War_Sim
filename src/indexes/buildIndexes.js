@@ -8,7 +8,7 @@ function addToIndex(map, key, value) {
 function peopleGroup(state) {
   const peopleByUnitId = new Map(), peopleByNationId = new Map(), peopleByStatus = new Map();
   for (const person of Object.values(state.entities.people)) {
-    addToIndex(peopleByUnitId, person.affiliation.unitId, person.id);
+    if (person.affiliation.unitId && person.affiliation.billetId) addToIndex(peopleByUnitId, person.affiliation.unitId, person.id);
     addToIndex(peopleByNationId, person.affiliation.nationId, person.id);
     addToIndex(peopleByStatus, person.condition.status, person.id);
   }
@@ -90,6 +90,14 @@ function careerGroup(state) {
   return { contractsByPersonId, servicePeriodsByPersonId, reenlistmentOffersByPersonId };
 }
 
+
+function adminGroup(state) {
+  const personnelActionsByPersonId = new Map(), replacementRequestsByUnitId = new Map();
+  for (const record of Object.values(state.entities.personnelActionRecords ?? {})) addToIndex(personnelActionsByPersonId, record.personId, record.id);
+  for (const record of Object.values(state.entities.replacementRequestRecords ?? {})) addToIndex(replacementRequestsByUnitId, record.unitId, record.id);
+  return { personnelActionsByPersonId, replacementRequestsByUnitId };
+}
+
 function actionGroup(state) {
   const actionsByActorPersonId = new Map();
   for (const record of Object.values(state.entities.actionRecords)) addToIndex(actionsByActorPersonId, record.actorPersonId, record.id);
@@ -106,7 +114,8 @@ const GROUP_BUILDERS = Object.freeze({
   notifications: notificationGroup,
   actions: actionGroup,
   orders: ordersGroup,
-  career: careerGroup
+  career: careerGroup,
+  admin: adminGroup
 });
 
 export const ALL_INDEX_GROUPS = Object.freeze(Object.keys(GROUP_BUILDERS));

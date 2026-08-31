@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Sim v0.3.1.2</title>
+  <title>War Sim v0.3.2</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <section class="hero">
-      <p class="eyebrow">WAR SIM · v0.3.1.2</p>
+      <p class="eyebrow">WAR SIM · v0.3.2</p>
       <h1>Military Career</h1>
       <p class="lede">Build a career inside a living military organization.</p>
     </section>
@@ -55,13 +55,14 @@
       <section class="grid"><article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article><article class="panel"><h2>Squad Relationships</h2><div id="relationships"></div></article></section>
       <section class="panel"><div class="panel-head"><div><h2>Career Inbox</h2><p class="muted">Persistent player-facing milestones and important events.</p></div><span id="unread-badge" class="badge" hidden></span></div><div id="career-inbox"></div></section>
       <section class="panel"><h2>Career Timeline</h2><ol id="career-events" class="timeline"></ol></section>
+      <section id="administration-section" class="panel"><div class="panel-head"><div><p class="section-kicker">PERSONNEL ADMINISTRATION</p><h2>Unit Manpower</h2><p class="muted">Assignments, vacancies, replacements, status changes, ETS and separation now use durable personnel-action records.</p></div></div><div id="administration-summary" class="admin-summary"></div><div class="grid admin-grid"><article><h3>Open Vacancies / Replacements</h3><div id="replacement-requests"></div></article><article><h3>Recent Personnel Actions</h3><div id="personnel-actions"></div></article></div></section>
       <details id="more-section" class="panel diagnostics-panel"><summary>Developer Diagnostics</summary><pre id="diagnostics">Loading…</pre></details>
           <nav id="bottom-nav" class="bottom-nav" aria-label="Primary">
         <button type="button" data-target="career-home">Career</button>
         <button type="button" data-target="unit-section">Unit</button>
         <button type="button" data-target="orders-section">Orders</button>
         <button type="button" data-target="personnel-section">Personnel</button>
-        <button type="button" data-target="more-section">More</button>
+        <button type="button" data-target="administration-section">Admin</button>
       </nav>
     </div>
     <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
