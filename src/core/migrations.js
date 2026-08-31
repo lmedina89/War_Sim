@@ -178,7 +178,7 @@ function migrateWorldV10ToV11(worldState) {
     legacyWorld: true
   };
   next.schemaVersion = 11;
-  next.gameVersion = "0.3.2.1";
+  next.gameVersion = "0.3.2.2";
   return next;
 }
 
@@ -267,7 +267,7 @@ export function migratePayload(payload) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.3.2.1";
-  next.worldState.gameVersion = "0.3.2.1";
+  next.gameVersion = "0.3.2.2";
+  next.worldState.gameVersion = "0.3.2.2";
   return next;
 }

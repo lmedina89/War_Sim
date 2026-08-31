@@ -21,6 +21,7 @@ export function validateDefinitions(registries) {
     if (!registries.echelons.has(billet.echelonId)) errors.push(`${billet.id}: invalid echelonId ${billet.echelonId}.`);
     if (!registries.branches.has(billet.branchId)) errors.push(`${billet.id}: invalid branchId ${billet.branchId}.`);
     if (!registries.roles.has(billet.roleId)) errors.push(`${billet.id}: invalid roleId ${billet.roleId}.`);
+    if (!billet.primaryEquipmentDefinitionId || !registries.equipment.has(billet.primaryEquipmentDefinitionId)) errors.push(`${billet.id}: invalid primaryEquipmentDefinitionId ${billet.primaryEquipmentDefinitionId}.`);
   }
 
   for (const component of registries.components.values()) {
@@ -58,6 +59,14 @@ export function validateDefinitions(registries) {
     for (const unit of profile.units) {
       if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${profile.id}/${unit.id}: invalid organizationDefinitionId ${unit.organizationDefinitionId}.`);
       if (unit.parentUnitId && !unitIds.has(unit.parentUnitId)) errors.push(`${profile.id}/${unit.id}: invalid parentUnitId ${unit.parentUnitId}.`);
+    }
+    for (const [rankId, years] of Object.entries(profile.rankServiceYearsByRankId ?? {})) {
+      if (!registries.ranks.has(rankId)) errors.push(`${profile.id}: invalid service-years rank ${rankId}.`);
+      if (!Number.isFinite(years) || years < 0) errors.push(`${profile.id}: invalid service-years value for ${rankId}.`);
+    }
+    for (const [billetId, specialtyId] of Object.entries(profile.billetSpecialtyIdsByDefinitionId ?? {})) {
+      if (!registries.billets.has(billetId)) errors.push(`${profile.id}: invalid billet specialty mapping ${billetId}.`);
+      if (!registries.specialties.has(specialtyId)) errors.push(`${profile.id}: invalid specialty mapping ${specialtyId}.`);
     }
     for (const [billetId, rankId] of Object.entries(profile.billetRankIdsByDefinitionId ?? {})) {
       if (!registries.billets.has(billetId)) errors.push(`${profile.id}: invalid billet rank mapping ${billetId}.`);

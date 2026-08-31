@@ -26,12 +26,13 @@ function unitsGroup(state) {
 }
 
 function billetsGroup(state) {
-  const billetsByUnitId = new Map(), billetByAssignedPersonId = new Map();
+  const billetsByUnitId = new Map(), billetByAssignedPersonId = new Map(), vacantBilletIds = [];
   for (const billet of Object.values(state.entities.billets)) {
     addToIndex(billetsByUnitId, billet.unitId, billet.id);
     if (billet.assignedPersonId) billetByAssignedPersonId.set(billet.assignedPersonId, billet.id);
+    else if (billet.status === "vacant") vacantBilletIds.push(billet.id);
   }
-  return { billetsByUnitId, billetByAssignedPersonId };
+  return { billetsByUnitId, billetByAssignedPersonId, vacantBilletIds: Object.freeze(vacantBilletIds) };
 }
 
 function personHistoryGroup(state) {
@@ -92,10 +93,10 @@ function careerGroup(state) {
 
 
 function adminGroup(state) {
-  const personnelActionsByPersonId = new Map(), replacementRequestsByUnitId = new Map();
+  const personnelActionsByPersonId = new Map(), replacementRequestsByUnitId = new Map(), replacementRequestsByStatus = new Map();
   for (const record of Object.values(state.entities.personnelActionRecords ?? {})) addToIndex(personnelActionsByPersonId, record.personId, record.id);
-  for (const record of Object.values(state.entities.replacementRequestRecords ?? {})) addToIndex(replacementRequestsByUnitId, record.unitId, record.id);
-  return { personnelActionsByPersonId, replacementRequestsByUnitId };
+  for (const record of Object.values(state.entities.replacementRequestRecords ?? {})) { addToIndex(replacementRequestsByUnitId, record.unitId, record.id); addToIndex(replacementRequestsByStatus, record.status, record.id); }
+  return { personnelActionsByPersonId, replacementRequestsByUnitId, replacementRequestsByStatus };
 }
 
 function actionGroup(state) {

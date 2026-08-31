@@ -48,7 +48,7 @@ export function validateWorldState(state, registries) {
   for (const person of Object.values(e.people)) {
     if (!["active","training","leave","tdy","deployed","hospitalized","wounded","missing","pow","separated","retired","deceased"].includes(person.condition.status)) errors.push(`${person.id}: invalid personnel status ${person.condition.status}.`);
     if (!registries.ranks.has(person.affiliation.rankId)) errors.push(`${person.id}: invalid rankId.`); if (!registries.branches.has(person.affiliation.branchId)) errors.push(`${person.id}: invalid branchId.`);
-    if (!registries.components.has(person.affiliation.componentId ?? "component_active")) errors.push(`${person.id}: invalid componentId.`); if (!registries.specialties.has(person.affiliation.specialtyId ?? "specialty_army_11b")) errors.push(`${person.id}: invalid specialtyId.`);
+    if (!registries.components.has(person.affiliation.componentId)) errors.push(`${person.id}: invalid componentId.`); if (!registries.specialties.has(person.affiliation.specialtyId)) errors.push(`${person.id}: invalid specialtyId.`);
     requireRef(errors, e.units, person.affiliation.unitId, `${person.id}.unitId`); requireRef(errors, e.billets, person.affiliation.billetId, `${person.id}.billetId`);
     if (person.affiliation.billetId && e.billets[person.affiliation.billetId]?.assignedPersonId !== person.id) errors.push(`${person.id}: billet/person assignment mismatch.`);
     if (person.affiliation.billetId && e.billets[person.affiliation.billetId]?.unitId !== person.affiliation.unitId) errors.push(`${person.id}: person unit does not match billet unit.`);

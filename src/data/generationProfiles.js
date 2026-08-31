@@ -20,6 +20,16 @@ export const generationProfileDefinitions = [
       { id: "unit_sq_32", name: "2nd Squad", organizationDefinitionId: "orgdef_infantry_squad", parentUnitId: "unit_platoon_003" },
       { id: "unit_sq_33", name: "3rd Squad", organizationDefinitionId: "orgdef_infantry_squad", parentUnitId: "unit_platoon_003" }
     ],
+    rankServiceYearsByRankId: {
+      rank_army_e1: 0, rank_army_e2: 1, rank_army_e3: 2, rank_army_e4: 3,
+      rank_army_e5: 5, rank_army_e6: 7, rank_army_e7: 10, rank_army_e8: 14,
+      rank_army_o1: 2, rank_army_o2: 4, rank_army_o3: 7
+    },
+    billetSpecialtyIdsByDefinitionId: {
+      billet_company_commander: "specialty_army_11a", billet_executive_officer: "specialty_army_11a", billet_first_sergeant: "specialty_army_11b", billet_company_clerk: "specialty_army_42a",
+      billet_platoon_leader: "specialty_army_11a", billet_platoon_sergeant: "specialty_army_11b", billet_squad_leader: "specialty_army_11b", billet_team_leader: "specialty_army_11b",
+      billet_grenadier: "specialty_army_11b", billet_automatic_rifleman: "specialty_army_11b", billet_rifleman: "specialty_army_11b"
+    },
     billetRankIdsByDefinitionId: {
       billet_company_commander: "rank_army_o3",
       billet_executive_officer: "rank_army_o2",

@@ -24,10 +24,14 @@ const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 for (const id of [...appSource.matchAll(/\$\("#([^"]+)"\)/g)].map(match => match[1])) {
   assert.match(htmlSource, new RegExp(`id=["']${id}["']`), `index.html missing #${id} required by app.js`);
 }
-assert.match(htmlSource, /WAR SIM · v0\.3\.2\.1/);
+assert.match(htmlSource, /WAR SIM · v0\.3\.2\.2/);
 assert.match(htmlSource, /id="world-seed"/);
 assert.match(htmlSource, /id="reroll-seed"/);
 assert.doesNotMatch(appSource, /!assignment\.chain\.some\(x => x\.unitId === selectedUnitId\)/);
+assert.equal([...htmlSource.matchAll(/class="game-view" data-view="([^"]+)"/g)].length, 5, "five real primary views must exist");
+for (const view of ["career","unit","personnel","orders","more"]) assert.match(htmlSource, new RegExp(`data-view=["']${view}["']`));
+assert.match(appSource, /function setActiveView\(/);
+assert.doesNotMatch(appSource, /scrollIntoView\(/, "primary navigation must switch views rather than scroll anchors");
 
 // Generation and simulation randomness must stay centralized; no direct Math.random() calls.
 for (const file of fs.readdirSync(path.join(root, "src"), { recursive: true }).filter(name => name.endsWith(".js"))) {
@@ -45,7 +49,7 @@ const sameA = createInitialWorldState({ seed: 123456789 });
 const sameB = createInitialWorldState({ seed: 123456789 });
 assert.deepEqual(sameA, sameB, "same seed must reproduce the same generated world");
 assert.equal(sameA.schemaVersion, 11);
-assert.equal(sameA.gameVersion, "0.3.2.1");
+assert.equal(sameA.gameVersion, "0.3.2.2");
 assert.equal(sameA.world.generation.generatorVersion, 1);
 assert.equal(Object.keys(sameA.entities.units).length, 13);
 assert.equal(Object.keys(sameA.entities.billets).length, 91);
@@ -89,6 +93,8 @@ const player = state.entities.people[state.playerPersonId];
 assert.equal(player.affiliation.billetId, expectedBilletId);
 assert.equal(player.affiliation.unitId, expectedUnitId);
 assert.equal(state.entities.billets[expectedBilletId].assignedPersonId, player.id);
+const playerEquipment = state.entities.equipmentInstances[state.entities.loadouts[player.loadoutId].slots.primaryWeaponInstanceId];
+assert.equal(playerEquipment.definitionId, registries.billets.get(state.entities.billets[expectedBilletId].definitionId).primaryEquipmentDefinitionId);
 assert.equal(Object.keys(state.entities.people).length, 91);
 for (const unitId of squadIds) assert.equal(selectUnitPersonnel(state, store.getIndexes(), registries, unitId).length, 9, `${unitId} must have 9 personnel after career creation`);
 const squadsContainingPlayer = squadIds.filter(unitId => selectUnitPersonnel(state, store.getIndexes(), registries, unitId).some(p => p.isPlayer));
@@ -116,7 +122,7 @@ assert.deepEqual(npcNamesA, npcNamesB);
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema10", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 11);
-  assert.equal(payload.worldState.gameVersion, "0.3.2.1");
+  assert.equal(payload.worldState.gameVersion, "0.3.2.2");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(payload.worldState.world.generation.legacyWorld, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -141,7 +147,7 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   const adminState = adminStore.getState();
   const npc = Object.values(adminState.entities.people).find(p => p.id !== adminState.playerPersonId && p.affiliation.unitId !== adminState.entities.people[adminState.playerPersonId].affiliation.unitId);
   const vacatedBilletId = npc.affiliation.billetId;
-  adminStore.mutate(draft => { separatePersonAdministrative(draft, npc.id, "administrative_separation"); processPersonnelAdministration(draft); }, ["people","billets","history","orders","notifications","career","admin"]);
+  adminStore.mutate(draft => { separatePersonAdministrative(draft, npc.id, "administrative_separation"); processPersonnelAdministration(draft, registries); }, ["people","billets","history","orders","notifications","career","admin"]);
   let adminView = selectPersonnelAdministration(adminStore.getState(), adminStore.getIndexes(), registries);
   assert.equal(adminStore.getState().entities.billets[vacatedBilletId].status, "vacant");
   assert.equal(adminView.openRequests.some(r => r.billetId === vacatedBilletId), true);
@@ -149,7 +155,49 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   adminView = selectPersonnelAdministration(adminStore.getState(), adminStore.getIndexes(), registries);
   assert.equal(adminStore.getState().entities.billets[vacatedBilletId].status, "filled");
   assert.equal(adminView.openRequests.some(r => r.billetId === vacatedBilletId), false);
+  const replacementId = adminStore.getState().entities.billets[vacatedBilletId].assignedPersonId;
+  const replacement = adminStore.getState().entities.people[replacementId];
+  const vacatedDef = registries.billets.get(adminStore.getState().entities.billets[vacatedBilletId].definitionId);
+  const replacementEq = adminStore.getState().entities.equipmentInstances[adminStore.getState().entities.loadouts[replacement.loadoutId].slots.primaryWeaponInstanceId];
+  assert.equal(replacement.affiliation.branchId, adminStore.getState().entities.units[replacement.affiliation.unitId].branchId);
+  assert.ok(registries.specialties.get(replacement.affiliation.specialtyId).eligibleBilletDefinitionIds.includes(adminStore.getState().entities.billets[vacatedBilletId].definitionId));
+  assert.equal(replacementEq.definitionId, vacatedDef.primaryEquipmentDefinitionId);
   assert.equal(validateWorldState(adminStore.getState(), registries).ok, true);
+}
+
+// ETS is effective on the contract end date, not one day later.
+{
+  const etsSeed = 777;
+  const etsStore = createStateStore(createInitialWorldState({ seed: etsSeed }));
+  createPlayerCareer(etsStore, registries, { firstName:"ETS", lastName:"Exact", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_3y", seed:etsSeed });
+  const personId = etsStore.getState().playerPersonId;
+  const contractId = etsStore.getState().entities.serviceRecords[etsStore.getState().entities.people[personId].serviceRecordId].currentContractId;
+  const endDate = etsStore.getState().entities.contractRecords[contractId].endDate;
+  const days = Math.round((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${etsStore.getState().world.date}T00:00:00Z`)) / 86400000);
+  advanceWorldDays(etsStore, days);
+  assert.equal(etsStore.getState().world.date, endDate);
+  assert.equal(etsStore.getState().entities.people[personId].condition.status, "separated");
+}
+
+// Monthly personnel simulation is time-step independent for 30x1 day vs 1x30 days.
+{
+  const stepSeed = 424242;
+  const a = createStateStore(createInitialWorldState({ seed: stepSeed }));
+  const b = createStateStore(createInitialWorldState({ seed: stepSeed }));
+  createPlayerCareer(a, registries, { firstName:"Step", lastName:"A", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed:stepSeed });
+  createPlayerCareer(b, registries, { firstName:"Step", lastName:"B", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed:stepSeed });
+  advanceWorldDays(a, 30);
+  for (let i=0;i<30;i++) advanceWorldDays(b,1);
+  const npcIdsA = Object.keys(a.getState().entities.people).filter(id => id.startsWith("pers_gen_")).sort();
+  const npcIdsB = Object.keys(b.getState().entities.people).filter(id => id.startsWith("pers_gen_")).sort();
+  assert.deepEqual(npcIdsA, npcIdsB);
+  for (const id of npcIdsA) {
+    const pa=a.getState().entities.people[id], pb=b.getState().entities.people[id];
+    assert.equal(pa.career.experience,pb.career.experience,`${id} XP step independence`);
+    assert.equal(pa.condition.fatigue,pb.condition.fatigue,`${id} fatigue step independence`);
+    assert.equal(pa.condition.readiness,pb.condition.readiness,`${id} readiness step independence`);
+    assert.equal(pa.affiliation.rankId,pb.affiliation.rankId,`${id} rank step independence`);
+  }
 }
 
 // Low-level assignment uses store.mutate and works with generated billet IDs.
@@ -161,4 +209,4 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   assert.equal(low.getState().entities.billets[vacant.id].assignedPersonId, npc.id);
 }
 
-console.log("War Sim v0.3.2.1 starting world diversity + generation integrity smoke test passed");
+console.log("War Sim v0.3.2.2 foundation cleanup + interface smoke test passed");

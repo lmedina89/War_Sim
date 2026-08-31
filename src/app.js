@@ -24,10 +24,11 @@ if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${d
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save", selectedUnitId = null;
+let achievementQueue = [], saveMode = "save", selectedUnitId = null, activeView = "career";
 
 const $ = selector => document.querySelector(selector);
 const els = {
+  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), recentActivity: $("#recent-activity"),
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
   squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), status: $("#status-message"),
   train: $("#train-player"), advanceTime: $("#advance-time"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
@@ -52,6 +53,21 @@ for (const contract of registries.contracts.values()) { const option = document.
 
 function setStatus(message, tone = "") { els.status.textContent = message; els.status.className = `status-message ${tone}`.trim(); }
 function statLine(label, value) { const wrapper = document.createElement("div"); wrapper.className = "statline"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = String(value); wrapper.append(key, val); return wrapper; }
+function progressRow(label, value, max) {
+  const safeMax = Math.max(1, Number(max) || 1), safeValue = Math.max(0, Number(value) || 0), percent = Math.max(0, Math.min(100, Math.round((safeValue / safeMax) * 100)));
+  const wrapper = document.createElement("div"); wrapper.className = "progress-row";
+  const head = document.createElement("div"); head.className = "progress-row-head"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = `${safeValue.toLocaleString()} / ${safeMax.toLocaleString()}`; head.append(key, val);
+  const track = document.createElement("div"); track.className = "progress-track"; track.setAttribute("role", "progressbar"); track.setAttribute("aria-label", label); track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", String(safeMax)); track.setAttribute("aria-valuenow", String(safeValue));
+  const fill = document.createElement("div"); fill.className = "progress-fill"; fill.style.setProperty("--progress", `${percent}%`); track.appendChild(fill); wrapper.append(head, track); return wrapper;
+}
+function setActiveView(view, { scroll = true } = {}) {
+  activeView = ["career", "unit", "personnel", "orders", "more"].includes(view) ? view : "career";
+  document.querySelectorAll(".game-view[data-view]").forEach(section => { section.hidden = section.dataset.view !== activeView; });
+  document.querySelectorAll("#bottom-nav [data-view]").forEach(button => {
+    if (button.dataset.view === activeView) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
+  });
+  if (scroll) window.scrollTo({ top: 0, behavior: "auto" });
+}
 function renderList(container, items, emptyText) { container.replaceChildren(); if (!items.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = emptyText; container.appendChild(p); return; } const ul = document.createElement("ul"); ul.className = "compact-list"; for (const item of items) { const li = document.createElement("li"); li.textContent = item; ul.appendChild(li); } container.appendChild(ul); }
 function resolveRankName(rankId) { return rankId ? `${registries.ranks.get(rankId).abbreviation} · ${registries.ranks.get(rankId).name}` : "—"; }
 function resolveBranchName(branchId) { return branchId ? registries.branches.get(branchId).name : "—"; }
@@ -65,7 +81,7 @@ function renderInbox(state, indexes, personId) {
   const list = document.createElement("div"); list.className = "inbox-list";
   for (const notice of notices.slice(0, 30)) {
     const item = document.createElement("article"); item.className = `inbox-item ${notice.readAtElapsedDay == null ? "unread" : ""}`.trim();
-    const meta = document.createElement("div"); meta.className = "inbox-meta"; meta.innerHTML = `<span>${notice.type.replaceAll("_", " ")}</span><span>${notice.gameDate}</span>`;
+    const meta = document.createElement("div"); meta.className = "inbox-meta"; const type=document.createElement("span"), date=document.createElement("span"); type.textContent=notice.type.replaceAll("_", " "); date.textContent=notice.gameDate; meta.append(type,date);
     const h = document.createElement("h3"); h.textContent = notice.title; const p = document.createElement("p"); p.textContent = notice.message; item.append(meta, h, p);
     if (notice.readAtElapsedDay == null) item.addEventListener("click", () => markNotificationRead(store, notice.id), { once: true });
     list.appendChild(item);
@@ -172,15 +188,27 @@ function render() {
   els.careerCard.replaceChildren(statLine("Name", career.name), statLine("Branch", career.branch), statLine("Component", career.component), statLine("MOS", career.specialty), statLine("Rank", career.rank), statLine("Pay Grade", career.payGrade), statLine("Role", career.role), statLine("Experience", career.experience), statLine("Prestige", career.prestige));
   els.promotionCard.replaceChildren();
   if (!career.promotion.nextRank) { const p = document.createElement("p"); p.className = "muted"; p.textContent = "No higher rank is defined in this foundation build."; els.promotionCard.appendChild(p); els.promote.disabled = true; }
-  else { els.promotionCard.append(statLine("Next Rank", `${career.promotion.nextRank.abbreviation} · ${career.promotion.nextRank.name}`), statLine("Eligible", career.promotion.eligible ? "Yes" : "No")); const reasonBox = document.createElement("div"); renderList(reasonBox, career.promotion.reasons, "All current requirements are satisfied."); els.promotionCard.appendChild(reasonBox); els.promote.disabled = !career.promotion.eligible; }
+  else {
+    els.promotionCard.append(statLine("Next Rank", `${career.promotion.nextRank.abbreviation} · ${career.promotion.nextRank.name}`));
+    const prog = career.promotion.progress ?? {};
+    if (prog.requiredExperience) els.promotionCard.append(progressRow("Experience", prog.experience, prog.requiredExperience));
+    if (prog.requiredServiceDays) els.promotionCard.append(progressRow("Time in Service", prog.serviceDays, prog.requiredServiceDays));
+    if (prog.requiredGradeDays) els.promotionCard.append(progressRow("Time in Grade", prog.gradeDays, prog.requiredGradeDays));
+    const reasonBox = document.createElement("div"); renderList(reasonBox, career.promotion.reasons, "All current requirements are satisfied."); els.promotionCard.appendChild(reasonBox); els.promote.disabled = !career.promotion.eligible;
+  }
   renderList(els.schoolsAwards, [...career.qualifications.map(item => `${item.name} — ${item.completedDate}`), ...career.awards.map(item => `${item.name} (${item.category}) — ${item.earnedDate}`)], "No schools, qualifications, or awards recorded yet.");
   renderList(els.relationships, career.relationships.map(rel => `${rel.otherName} · ${rel.relationshipType} · familiarity ${rel.familiarity} · trust ${rel.trust}`), "No relationship records.");
   els.careerEvents.replaceChildren(...career.events.map(event => { const li = document.createElement("li"), time = document.createElement("time"); time.textContent = event.date; li.append(time, document.createTextNode(event.label)); return li; }));
+  els.recentActivity.replaceChildren();
+  const recentEvents = career.events.slice().reverse().slice(0, 5);
+  if (!recentEvents.length) { const p=document.createElement("p"); p.className="muted"; p.textContent="No recent career activity."; els.recentActivity.appendChild(p); }
+  else for (const event of recentEvents) { const item=document.createElement("article"); item.className="activity-item"; const time=document.createElement("time"); time.textContent=event.date; const text=document.createElement("span"); text.textContent=event.label; item.append(time,text); els.recentActivity.appendChild(item); }
   renderInbox(state, indexes, state.playerPersonId);
   renderOrganization(state, indexes, state.playerPersonId);
   renderServiceCareer(state, indexes, state.playerPersonId);
   renderAdministration(state, indexes);
-  els.diagnostics.textContent = JSON.stringify({ valid: validation.ok, validationErrors: validation.errors, definitionValidation, worldSchemaVersion: state.schemaVersion, gameVersion: state.gameVersion, worldClock: state.world.clock, rngState: state.world.rngState, nextEntitySequence: state.world.nextEntitySequence, registryCounts: Object.fromEntries(Object.entries(registries).map(([k, r]) => [k, r.size])), runtimeCounts: Object.fromEntries(Object.entries(state.entities).map(([name, collection]) => [name, Object.keys(collection).length])), indexedSquadMembers: indexes.peopleByUnitId.get(squad.unitId)?.length ?? 0, playerRelationships: indexes.relationshipsByPersonId.get(state.playerPersonId)?.length ?? 0 }, null, 2);
+  els.diagnostics.textContent = JSON.stringify({ valid: validation.ok, validationErrors: validation.errors, definitionValidation, worldSchemaVersion: state.schemaVersion, gameVersion: state.gameVersion, worldClock: state.world.clock, worldSeed: state.world.seed, generation: state.world.generation, rngState: state.world.rngState, nextEntitySequence: state.world.nextEntitySequence, registryCounts: Object.fromEntries(Object.entries(registries).map(([k, r]) => [k, r.size])), runtimeCounts: Object.fromEntries(Object.entries(state.entities).map(([name, collection]) => [name, Object.keys(collection).length])), indexedSquadMembers: indexes.peopleByUnitId.get(squad.unitId)?.length ?? 0, playerRelationships: indexes.relationshipsByPersonId.get(state.playerPersonId)?.length ?? 0 }, null, 2);
+  setActiveView(activeView, { scroll: false });
 }
 
 function getNoticesByIds(ids) { const state = store.getState(); return ids.map(id => state.entities.notificationRecords[id]).filter(Boolean); }
@@ -201,7 +229,7 @@ function renderSaveManager(mode) {
     const h = document.createElement("h3"); h.textContent = meta.slotId === AUTOSAVE_SLOT ? "Autosave" : `Save ${Number(meta.slotId.split("_")[1])}`; card.appendChild(h);
     if (meta.empty) { const p = document.createElement("p"); p.textContent = "Empty"; card.appendChild(p); }
     else {
-      for (const text of [meta.characterName, `${resolveRankName(meta.rankId)} · ${resolveBranchName(meta.branchId)}`, `Game date ${meta.gameDate}`, `Saved ${formatSavedAt(meta.savedAt)}`, `v${meta.gameVersion} · schema ${meta.worldSchemaVersion}`]) { const p = document.createElement("p"); p.textContent = text; card.appendChild(p); }
+      for (const text of [meta.characterName, `${resolveRankName(meta.rankId)} · ${resolveBranchName(meta.branchId)}`, meta.specialtyId && registries.specialties.has(meta.specialtyId) ? `${registries.specialties.get(meta.specialtyId).code} · ${registries.specialties.get(meta.specialtyId).name}` : null, meta.unitName ? `Unit · ${meta.unitName}` : null, `Game date ${meta.gameDate}`, `Saved ${formatSavedAt(meta.savedAt)}`, `v${meta.gameVersion} · schema ${meta.worldSchemaVersion}`].filter(Boolean)) { const p = document.createElement("p"); p.textContent = text; card.appendChild(p); }
     }
     const actions = document.createElement("div"); actions.className = "actions";
     if (mode === "save" && meta.slotId !== AUTOSAVE_SLOT) { const button = document.createElement("button"); button.type = "button"; button.textContent = meta.empty ? "Save Here" : "Overwrite"; button.addEventListener("click", async () => { if (!meta.empty && !(await confirmAction("Overwrite Save?", `Replace ${meta.characterName} in this slot?`))) return; const validation = validateWorldState(store.getState(), registries); if (!validation.ok) { setStatus(`Save blocked: ${validation.errors.join(" | ")}`, "bad"); return; } const saved = saveToSlot(store.getState(), meta.slotId); setStatus(`Saved ${saved.characterName} to ${meta.slotId}.`, "good"); renderSaveManager("save"); }); actions.appendChild(button); }
@@ -222,13 +250,28 @@ els.leadership.addEventListener("click", () => runCommand(() => completeSchool(s
 els.save.addEventListener("click", () => openSaveManager("save")); els.load.addEventListener("click", () => openSaveManager("load")); els.loadFromStart.addEventListener("click", () => openSaveManager("load"));
 els.saveDialogClose.addEventListener("click", () => els.saveDialog.close());
 els.personProfileClose.addEventListener("click", () => els.personDialog.close());
-els.newCareer.addEventListener("click", async () => { if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return; const seed = freshWorldSeed(); store.replaceState(createInitialWorldState({ seed })); els.newCareerForm.reset(); els.branchSelect.value = registries.branches.values()[0]?.id ?? ""; els.componentSelect.value = "component_active"; els.specialtySelect.value = "specialty_army_11b"; els.contractSelect.value = "contract_army_4y"; els.worldSeed.value = String(seed); setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn"); });
-
-document.querySelectorAll("#bottom-nav [data-target]").forEach(button => {
-  button.addEventListener("click", () => {
-    const target = document.getElementById(button.dataset.target);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+els.newCareer.addEventListener("click", async () => {
+  if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return;
+  const seed = freshWorldSeed(); const scenario = registries.careerStartScenarios.values().find(item => item.enabled);
+  store.replaceState(createInitialWorldState({ seed, scenarioId: scenario?.id })); els.newCareerForm.reset();
+  if (scenario) {
+    els.branchSelect.value = scenario.branchId; els.componentSelect.value = scenario.componentId; els.specialtySelect.value = scenario.specialtyId;
+    els.contractSelect.value = scenario.allowedContractDefinitionIds[0] ?? registries.components.get(scenario.componentId).defaultContractDefinitionId;
+  }
+  els.worldSeed.value = String(seed); activeView = "career"; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
 });
 
-store.subscribe(render); eventBus.subscribe("command_completed", () => {}); render();
+document.querySelectorAll("#bottom-nav [data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
+els.appErrorDismiss.addEventListener("click", () => { els.appError.hidden = true; });
+
+function safeRender() {
+  try { render(); els.appError.hidden = true; }
+  catch (error) {
+    console.error("Render failure", error);
+    els.appErrorMessage.textContent = error instanceof Error ? error.message : String(error);
+    els.appError.hidden = false;
+    setStatus("A display error was contained. Your canonical save state was not modified.", "bad");
+  }
+}
+
+store.subscribe(safeRender); eventBus.subscribe("command_completed", () => {}); safeRender();

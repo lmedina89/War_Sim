@@ -30,27 +30,11 @@ function generatedIdentity(state, usedNames) {
   throw new Error("Personnel name pool exhausted.");
 }
 
-function serviceYearsForRank(rankId) {
-  if (rankId.includes("_o3")) return 7;
-  if (rankId.includes("_o1")) return 2;
-  if (rankId.includes("_e8")) return 14;
-  if (rankId.includes("_e7")) return 10;
-  if (rankId.includes("_e5")) return 5;
-  if (rankId.includes("_e4")) return 3;
-  if (rankId.includes("_e3")) return 2;
-  if (rankId.includes("_e2")) return 1;
-  return 0;
-}
-
 function dateYearsBefore(iso, years, extraDays = 0) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCFullYear(d.getUTCFullYear() - years);
   d.setUTCDate(d.getUTCDate() - extraDays);
   return d.toISOString().slice(0, 10);
-}
-
-function primaryWeaponForBillet(definitionId) {
-  return definitionId === "billet_automatic_rifleman" ? "weapon_auto_rifle" : "weapon_service_rifle";
 }
 
 export function generateCareerStartWorld(state, registries, scenarioId) {
@@ -105,7 +89,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
     if (!rankId) throw new Error(`Generation profile ${profile.id} has no rank mapping for ${billet.definitionId}.`);
     const id = `pers_gen_${String(personSequence++).padStart(3, "0")}`;
     const identity = generatedIdentity(state, usedNames);
-    const years = serviceYearsForRank(rankId);
+    const years = profile.rankServiceYearsByRankId?.[rankId] ?? 0;
     const enlistmentDate = dateYearsBefore(state.world.date, years, randomInt(state, 0, 330));
     const serviceRecordId = `service_${id}`;
     const loadoutId = `loadout_${id}`;
@@ -118,7 +102,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
       traitIds: [...personnelData.traits], loadoutId, serviceRecordId, simulationTier: 2
     };
     e.serviceRecords[serviceRecordId] = { id: serviceRecordId, schemaVersion: 2, personId: id, serviceStatus: "active", entryDate: enlistmentDate, separationDate: null, branchId: scenario.branchId, componentId: scenario.componentId, specialtyId: scenario.specialtyId, currentContractId: null, servicePeriodIds: [] };
-    e.equipmentInstances[equipmentId] = { id: equipmentId, schemaVersion: 1, definitionId: primaryWeaponForBillet(billet.definitionId), ownerPersonId: id, condition: randomInt(state, 94, 100), upgradeIds: [] };
+    e.equipmentInstances[equipmentId] = { id: equipmentId, schemaVersion: 1, definitionId: registries.billets.get(billet.definitionId).primaryEquipmentDefinitionId, ownerPersonId: id, condition: randomInt(state, 94, 100), upgradeIds: [] };
     e.loadouts[loadoutId] = { id: loadoutId, schemaVersion: 2, ownerPersonId: id, slots: { primaryWeaponInstanceId: equipmentId } };
     billet.assignedPersonId = id;
     billet.status = "filled";

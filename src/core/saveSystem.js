@@ -21,7 +21,7 @@ function buildMetadata(state, slotId, savedAt, saveId) {
   const player = state.playerPersonId ? state.entities.people[state.playerPersonId] : null;
   return {
     slotId, saveId, characterName: player?.identity.displayName ?? "No active career", rankId: player?.affiliation.rankId ?? null,
-    branchId: player?.affiliation.branchId ?? null, gameDate: state.world.date, gameVersion: state.gameVersion,
+    branchId: player?.affiliation.branchId ?? null, componentId: player?.affiliation.componentId ?? null, specialtyId: player?.affiliation.specialtyId ?? null, unitName: player?.affiliation.unitId ? state.entities.units[player.affiliation.unitId]?.name ?? null : null, gameDate: state.world.date, gameVersion: state.gameVersion,
     worldSchemaVersion: state.schemaVersion, savedAt
   };
 }

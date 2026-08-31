@@ -5,8 +5,8 @@ export function selectServiceCareer(state, indexes, registries, personId) {
   if (!person) throw new Error(`Unknown person: ${personId}`);
   const service = state.entities.serviceRecords[person.serviceRecordId];
   const contract = service?.currentContractId ? state.entities.contractRecords[service.currentContractId] : null;
-  const component = registries.components.get(service?.componentId ?? person.affiliation.componentId ?? "component_active");
-  const specialty = registries.specialties.get(service?.specialtyId ?? person.affiliation.specialtyId ?? "specialty_army_11b");
+  const component = registries.components.get(service?.componentId ?? person.affiliation.componentId);
+  const specialty = registries.specialties.get(service?.specialtyId ?? person.affiliation.specialtyId);
   const contractDef = contract ? registries.contracts.get(contract.contractDefinitionId) : null;
   const daysRemaining = contract ? daysBetweenIso(state.world.date, contract.endDate) : null;
   const offerIds = indexes.reenlistmentOffersByPersonId?.get(personId) ?? [];
