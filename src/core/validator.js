@@ -10,18 +10,39 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 8) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 9) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };
 
-  for (const unit of Object.values(e.units)) { if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${unit.id}: invalid organizationDefinitionId.`); if (!registries.echelons.has(unit.echelonId)) errors.push(`${unit.id}: invalid echelonId.`); requireRef(errors, e.units, unit.parentUnitId, `${unit.id}.parentUnitId`); for (const childId of unit.childUnitIds ?? []) requireRef(errors, e.units, childId, `${unit.id}.childUnitIds`); }
-  for (const billet of Object.values(e.billets)) { requireRef(errors, e.units, billet.unitId, `${billet.id}.unitId`); if (!registries.billets.has(billet.definitionId)) errors.push(`${billet.id}: invalid billet definition.`); requireRef(errors, e.people, billet.assignedPersonId, `${billet.id}.assignedPersonId`); }
+  for (const unit of Object.values(e.units)) {
+    if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${unit.id}: invalid organizationDefinitionId.`);
+    if (!registries.echelons.has(unit.echelonId)) errors.push(`${unit.id}: invalid echelonId.`);
+    requireRef(errors, e.units, unit.parentUnitId, `${unit.id}.parentUnitId`);
+    if (new Set(unit.childUnitIds ?? []).size !== (unit.childUnitIds ?? []).length) errors.push(`${unit.id}: duplicate childUnitIds.`);
+    for (const childId of unit.childUnitIds ?? []) {
+      requireRef(errors, e.units, childId, `${unit.id}.childUnitIds`);
+      if (e.units[childId] && e.units[childId].parentUnitId !== unit.id) errors.push(`${unit.id}/${childId}: parent-child unit mismatch.`);
+    }
+    if (unit.parentUnitId && e.units[unit.parentUnitId] && !(e.units[unit.parentUnitId].childUnitIds ?? []).includes(unit.id)) errors.push(`${unit.id}: parent does not list unit as child.`);
+  }
+  const assignedPersonToBillet = new Map();
+  for (const billet of Object.values(e.billets)) {
+    requireRef(errors, e.units, billet.unitId, `${billet.id}.unitId`);
+    if (!registries.billets.has(billet.definitionId)) errors.push(`${billet.id}: invalid billet definition.`);
+    requireRef(errors, e.people, billet.assignedPersonId, `${billet.id}.assignedPersonId`);
+    if (billet.assignedPersonId) {
+      const prior = assignedPersonToBillet.get(billet.assignedPersonId);
+      if (prior) errors.push(`${billet.assignedPersonId}: assigned to multiple billets (${prior}, ${billet.id}).`);
+      else assignedPersonToBillet.set(billet.assignedPersonId, billet.id);
+    }
+  }
   for (const person of Object.values(e.people)) {
     if (!registries.ranks.has(person.affiliation.rankId)) errors.push(`${person.id}: invalid rankId.`); if (!registries.branches.has(person.affiliation.branchId)) errors.push(`${person.id}: invalid branchId.`);
     if (!registries.components.has(person.affiliation.componentId ?? "component_active")) errors.push(`${person.id}: invalid componentId.`); if (!registries.specialties.has(person.affiliation.specialtyId ?? "specialty_army_11b")) errors.push(`${person.id}: invalid specialtyId.`);
     requireRef(errors, e.units, person.affiliation.unitId, `${person.id}.unitId`); requireRef(errors, e.billets, person.affiliation.billetId, `${person.id}.billetId`);
     if (person.affiliation.billetId && e.billets[person.affiliation.billetId]?.assignedPersonId !== person.id) errors.push(`${person.id}: billet/person assignment mismatch.`);
+    if (person.affiliation.billetId && e.billets[person.affiliation.billetId]?.unitId !== person.affiliation.unitId) errors.push(`${person.id}: person unit does not match billet unit.`);
     requireRef(errors, e.serviceRecords, person.serviceRecordId, `${person.id}.serviceRecordId`); requireRef(errors, e.loadouts, person.loadoutId, `${person.id}.loadoutId`);
   }
   for (const service of Object.values(e.serviceRecords)) { requireRef(errors, e.people, service.personId, `${service.id}.personId`); if (service.branchId && !registries.branches.has(service.branchId)) errors.push(`${service.id}: invalid branchId.`); if (service.componentId && !registries.components.has(service.componentId)) errors.push(`${service.id}: invalid componentId.`); if (service.specialtyId && !registries.specialties.has(service.specialtyId)) errors.push(`${service.id}: invalid specialtyId.`); requireRef(errors, e.contractRecords, service.currentContractId, `${service.id}.currentContractId`); for (const id of service.servicePeriodIds ?? []) requireRef(errors, e.servicePeriodRecords, id, `${service.id}.servicePeriodIds`); }

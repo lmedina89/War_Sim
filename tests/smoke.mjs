@@ -11,6 +11,7 @@ import { generateReenlistmentOffers, acceptReenlistmentOffer } from "../src/comm
 import { selectCurrentSquad } from "../src/selectors/selectCurrentSquad.js";
 import { selectCareerRecord } from "../src/selectors/selectCareerRecord.js";
 import { selectOrganizationView } from "../src/selectors/selectOrganizationView.js";
+import { selectUnitPersonnel } from "../src/selectors/selectAssignmentView.js";
 import { selectServiceCareer } from "../src/selectors/selectServiceCareer.js";
 import { migratePayload } from "../src/core/migrations.js";
 
@@ -20,12 +21,15 @@ const appSource = fs.readFileSync(new URL("../src/app.js", import.meta.url), "ut
 const htmlSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const queriedIds = [...appSource.matchAll(/\$\(\"#([^\"]+)\"\)/g)].map(match => match[1]);
 for (const id of queriedIds) assert.match(htmlSource, new RegExp(`id=[\"']${id}[\"']`), `index.html missing #${id} required by app.js`);
-assert.match(htmlSource, /WAR SIM · v0\.3\.1\.1/);
+assert.match(htmlSource, /WAR SIM · v0\.3\.1\.2/);
 assert.match(htmlSource, /id="component-select"/);
 assert.match(htmlSource, /id="specialty-select"/);
 assert.match(htmlSource, /id="contract-select"/);
 assert.match(htmlSource, /id="service-career"/);
 assert.match(htmlSource, /id="review-reenlistment"/);
+// Regression: browsing sibling squads must not snap back to the player's assignment chain.
+assert.doesNotMatch(appSource, /!assignment\.chain\.some\(x => x\.unitId === selectedUnitId\)/);
+assert.match(appSource, /const browseChain = organizationChain\(state, indexes, selectedUnitId\)/);
 
 
 // Regression: schema-6 migrated saves already have a complete legacy squad using
@@ -60,8 +64,27 @@ assert.match(htmlSource, /id="review-reenlistment"/);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"regression", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.0", worldState:legacy });
   const migrated = payload.worldState;
   const squadBillets = Object.values(migrated.entities.billets).filter(b=>b.unitId==="unit_sq_001");
-  assert.equal(migrated.schemaVersion, 8);
+  assert.equal(migrated.schemaVersion, 9);
   assert.equal(squadBillets.length, 9, "legacy migrated squad must remain 9 billets");
+}
+
+// Regression: v0.3.1.1/schema-8 saves with generated surname blocks migrate to schema 9
+// without changing player identity.
+{
+  const old = createInitialWorldState();
+  old.schemaVersion = 8;
+  old.gameVersion = "0.3.1.1";
+  const playerLike = old.entities.people[Object.keys(old.entities.people)[0]];
+  const oldGeneratedName = playerLike.identity.displayName;
+  // Simulate the old bad naming pattern on several generated NPCs.
+  for (const person of Object.values(old.entities.people).filter(p => p.id.startsWith("pers_org_")).slice(0, 10)) {
+    person.identity.lastName = "Hill";
+    person.identity.displayName = `${person.identity.firstName} Hill`;
+  }
+  const payload = migratePayload({ saveFormatVersion:3, saveId:"identity-repair", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.1.1", worldState:old });
+  assert.equal(payload.worldState.schemaVersion, 9);
+  const repaired = Object.values(payload.worldState.entities.people).filter(p => p.id.startsWith("pers_org_")).slice(0, 10);
+  assert.ok(new Set(repaired.map(p => p.identity.lastName)).size > 5);
 }
 
 const defs = validateDefinitions(registries);
@@ -72,10 +95,15 @@ assert.equal(registries.contracts.size, 3);
 
 const initial = createInitialWorldState();
 assert.equal(initial.playerPersonId, null);
-assert.equal(initial.schemaVersion, 8);
-assert.equal(initial.gameVersion, "0.3.1.1");
+assert.equal(initial.schemaVersion, 9);
+assert.equal(initial.gameVersion, "0.3.1.2");
 assert.equal(Object.keys(initial.entities.units).length, 13);
 assert.equal(Object.keys(initial.entities.billets).length, 91);
+// Generated NPC identities should be deterministic but distributed, not surname blocks.
+const generatedPeople = Object.values(initial.entities.people).filter(p => p.id.startsWith("pers_org_"));
+const firstPlatoonGenerated = generatedPeople.slice(0, 29);
+assert.ok(new Set(firstPlatoonGenerated.map(p => p.identity.lastName)).size >= 12, "generated platoon should have varied surnames");
+assert.equal(new Set(generatedPeople.map(p => p.identity.displayName)).size, generatedPeople.length, "generated NPC display names should be unique in the seeded company");
 
 const store = createStateStore(initial);
 let validation = validateWorldState(store.getState(), registries);
@@ -102,6 +130,11 @@ const squad = selectCurrentSquad(state, store.getIndexes(), registries, state.pl
 assert.equal(squad.authorizedStrength, 9);
 assert.equal(squad.assignedStrength, 9);
 assert.equal(squad.members.find(x => x.isPlayer).role, "Rifleman");
+// The player belongs to exactly one squad; sibling squad rosters must not contain the player.
+const squadIds = ["unit_sq_11", "unit_sq_001", "unit_sq_13", "unit_sq_21", "unit_sq_22", "unit_sq_23", "unit_sq_31", "unit_sq_32", "unit_sq_33"];
+const squadsContainingPlayer = squadIds.filter(unitId => selectUnitPersonnel(state, store.getIndexes(), registries, unitId).some(p => p.isPlayer));
+assert.deepEqual(squadsContainingPlayer, ["unit_sq_001"]);
+for (const unitId of squadIds) assert.equal(selectUnitPersonnel(state, store.getIndexes(), registries, unitId).length, 9, `${unitId} must have exactly 9 assigned personnel`);
 const career = selectCareerRecord(state, store.getIndexes(), registries, state.playerPersonId);
 assert.equal(career.specialty, "11B · Infantryman");
 const company = selectOrganizationView(state, store.getIndexes(), registries, "unit_company_001");
@@ -129,4 +162,24 @@ assert.equal(Object.keys(state.entities.orderRecords).length, 2);
 validation = validateWorldState(state, registries);
 assert.equal(validation.ok, true, validation.errors.join("\n"));
 
-console.log("War Sim v0.3.1.1 organization repair + UX smoke test passed");
+// Integrity validator must reject impossible organization state instead of silently indexing it.
+{
+  const broken = structuredClone(state);
+  const playerId = broken.playerPersonId;
+  const playerBilletId = broken.entities.people[playerId].affiliation.billetId;
+  const otherBillet = Object.values(broken.entities.billets).find(b => b.id !== playerBilletId && b.assignedPersonId);
+  otherBillet.assignedPersonId = playerId;
+  const result = validateWorldState(broken, registries);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(x => x.includes("assigned to multiple billets")));
+}
+{
+  const broken = structuredClone(state);
+  const player = broken.entities.people[broken.playerPersonId];
+  player.affiliation.unitId = "unit_sq_11";
+  const result = validateWorldState(broken, registries);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(x => x.includes("person unit does not match billet unit")));
+}
+
+console.log("War Sim v0.3.1.2 organization integrity hotfix smoke test passed");

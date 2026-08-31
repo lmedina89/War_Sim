@@ -5,11 +5,19 @@ const SQUAD_RANKS = ["rank_army_e5","rank_army_e4","rank_army_e3","rank_army_e3"
 
 function unit(id,name,echelonId,parentUnitId,childUnitIds=[]) { return { id,schemaVersion:3,organizationDefinitionId:echelonId==="echelon_company"?"orgdef_infantry_company":echelonId==="echelon_platoon"?"orgdef_infantry_platoon":"orgdef_infantry_squad",nationId:"nation_demo",branchId:"branch_army",echelonId,name,parentUnitId,childUnitIds,condition:{readiness:84,morale:78,cohesion:81,supply:92} }; }
 function ensureCollections(state){ for(const k of ["people","units","billets","serviceRecords","loadouts","equipmentInstances"]) state.entities[k] ??= {}; }
+export function npcIdentityForIndex(index) {
+  const firstName = FIRST[index % FIRST.length];
+  // Spread surnames across adjacent generated personnel instead of assigning the
+  // same surname to blocks of 30. The arithmetic is deterministic for saves/tests.
+  const lastName = LAST[((index * 7) + (Math.floor(index / FIRST.length) * 11)) % LAST.length];
+  return { firstName, lastName, displayName: `${firstName} ${lastName}` };
+}
+
 function makeNpc(state,{id,unitId,billetId,definitionId,rankId,index}){
   if(state.entities.people[id]) return;
-  const firstName=FIRST[index%FIRST.length], lastName=LAST[Math.floor(index/FIRST.length)%LAST.length];
+  const { firstName, lastName, displayName } = npcIdentityForIndex(index);
   const serviceId=`service_${id}`, loadoutId=`loadout_${id}`, eqId=`eq_${id}_primary`;
-  state.entities.people[id]={id,schemaVersion:4,identity:{firstName,lastName,displayName:`${firstName} ${lastName}`},affiliation:{nationId:"nation_demo",branchId:"branch_army",componentId:"component_active",specialtyId:"specialty_army_11b",unitId,billetId,rankId},career:{enlistmentDate:index%5===0?"2039-06-01":"2042-01-15",experience:800+(index%18)*190,prestige:20+(index%12)*3,bonusEarnings:0},condition:{health:90+(index%11),morale:68+(index%21),fatigue:8+(index%17),readiness:72+(index%21),status:"active"},traitIds:["trait_steady"],loadoutId,serviceRecordId:serviceId,simulationTier:unitId==="unit_sq_001"?1:2};
+  state.entities.people[id]={id,schemaVersion:4,identity:{firstName,lastName,displayName},affiliation:{nationId:"nation_demo",branchId:"branch_army",componentId:"component_active",specialtyId:"specialty_army_11b",unitId,billetId,rankId},career:{enlistmentDate:index%5===0?"2039-06-01":"2042-01-15",experience:800+(index%18)*190,prestige:20+(index%12)*3,bonusEarnings:0},condition:{health:90+(index%11),morale:68+(index%21),fatigue:8+(index%17),readiness:72+(index%21),status:"active"},traitIds:["trait_steady"],loadoutId,serviceRecordId:serviceId,simulationTier:unitId==="unit_sq_001"?1:2};
   state.entities.serviceRecords[serviceId]={id:serviceId,schemaVersion:2,personId:id,serviceStatus:"active",entryDate:state.entities.people[id].career.enlistmentDate,separationDate:null,branchId:"branch_army",componentId:"component_active",specialtyId:"specialty_army_11b",currentContractId:null,servicePeriodIds:[]};
   state.entities.equipmentInstances[eqId]={id:eqId,schemaVersion:1,definitionId:definitionId==="billet_automatic_rifleman"?"weapon_auto_rifle":"weapon_service_rifle",ownerPersonId:id,condition:96+(index%5),upgradeIds:[]};
   state.entities.loadouts[loadoutId]={id:loadoutId,schemaVersion:2,ownerPersonId:id,slots:{primaryWeaponInstanceId:eqId}};

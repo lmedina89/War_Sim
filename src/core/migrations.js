@@ -1,6 +1,6 @@
-import { ensureInfantryCompanyStructure } from "../services/organizationSeed.js";
+import { ensureInfantryCompanyStructure, npcIdentityForIndex } from "../services/organizationSeed.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 8;
+export const CURRENT_WORLD_SCHEMA_VERSION = 9;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -165,6 +165,21 @@ function repairLegacyPlayerSquadDuplicates(state) {
   }
 }
 
+
+function migrateWorldV8ToV9(worldState) {
+  const next = structuredClone(worldState);
+  // Repair the pathological v0.3.1 surname blocks for generated organization NPCs.
+  // Player identity and any non-generated personnel are intentionally untouched.
+  for (const person of Object.values(next.entities.people ?? {})) {
+    const match = /^pers_org_(\d+)$/.exec(person.id);
+    if (!match) continue;
+    person.identity = npcIdentityForIndex(Number(match[1]));
+  }
+  next.schemaVersion = 9;
+  next.gameVersion = "0.3.1.2";
+  return next;
+}
+
 function migrateWorldV7ToV8(worldState) {
   const next = structuredClone(worldState);
   repairLegacyPlayerSquadDuplicates(next);
@@ -219,12 +234,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 5) next.worldState = migrateWorldV5ToV6(next.worldState);
   if (next.worldState.schemaVersion === 6) next.worldState = migrateWorldV6ToV7(next.worldState);
   if (next.worldState.schemaVersion === 7) next.worldState = migrateWorldV7ToV8(next.worldState);
+  if (next.worldState.schemaVersion === 8) next.worldState = migrateWorldV8ToV9(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.3.1.1";
-  next.worldState.gameVersion = "0.3.1.1";
+  next.gameVersion = "0.3.1.2";
+  next.worldState.gameVersion = "0.3.1.2";
   return next;
 }

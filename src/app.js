@@ -80,17 +80,29 @@ function showPersonProfile(personId) {
   els.personProfileBody.replaceChildren(statLine("Rank", `${rank.abbreviation} · ${rank.name}`), statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Unit", unit?.name ?? "—"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience));
   els.personDialog.showModal();
 }
+function organizationChain(state, indexes, unitId) {
+  const chain = [];
+  let cursor = state.entities.units[unitId];
+  while (cursor) {
+    chain.unshift(selectOrganizationView(state, indexes, registries, cursor.id));
+    cursor = cursor.parentUnitId ? state.entities.units[cursor.parentUnitId] : null;
+  }
+  return chain;
+}
 function renderOrganization(state, indexes, personId) {
   const assignment = selectAssignmentView(state, indexes, registries, personId);
-  if (!selectedUnitId || !state.entities.units[selectedUnitId] || !assignment.chain.some(x => x.unitId === selectedUnitId)) selectedUnitId = assignment.chain.at(-1).unitId;
+  // Keep a valid browsed unit selected even when it is outside the player's own
+  // assignment chain. Only fall back to the player's unit when selection is invalid.
+  if (!selectedUnitId || !state.entities.units[selectedUnitId]) selectedUnitId = assignment.chain.at(-1).unitId;
   const current = selectOrganizationView(state, indexes, registries, selectedUnitId), aggregate = aggregateStrength(state, indexes, selectedUnitId);
+  const browseChain = organizationChain(state, indexes, selectedUnitId);
   els.assignmentCard.replaceChildren(statLine("Duty Position", assignment.billetName), statLine("Assigned Since", assignment.assignmentStartDate), statLine("Chain", assignment.chain.map(x => x.name).join(" › ")));
-  els.unitBreadcrumbs.replaceChildren(...assignment.chain.map(item => { const b=document.createElement("button"); b.type="button"; b.textContent=item.name; if(item.unitId===selectedUnitId) b.disabled=true; b.addEventListener("click",()=>{selectedUnitId=item.unitId; render();}); return b; }));
+  els.unitBreadcrumbs.replaceChildren(...browseChain.map(item => { const b=document.createElement("button"); b.type="button"; b.textContent=item.name; if(item.unitId===selectedUnitId) b.disabled=true; b.addEventListener("click",()=>{selectedUnitId=item.unitId; render();}); return b; }));
   els.organizationBrowser.replaceChildren(); const summary=document.createElement("div"); summary.className="unit-summary"; summary.append(statLine("Echelon", current.echelon),statLine("Branch",current.branch),statLine("Strength",`${aggregate.assigned} / ${aggregate.authorized}`),statLine("Vacancies",aggregate.vacancies),statLine("Readiness",`${current.readiness}%`),statLine("Morale",`${current.morale}%`)); els.organizationBrowser.append(summary);
   if(current.childUnitIds.length){ const children=document.createElement("div"); children.className="unit-children"; for(const id of current.childUnitIds){ const child=state.entities.units[id], b=document.createElement("button"); b.type="button"; b.className="unit-child"; b.textContent=`${child.name} · ${registries.echelons.get(child.echelonId).name}`; b.addEventListener("click",()=>{selectedUnitId=id; render();}); children.appendChild(b);} els.organizationBrowser.append(children); }
   const personnelIds=descendantUnitIds(state,indexes,selectedUnitId).flatMap(id=>indexes.peopleByUnitId.get(id)??[]), seen=new Set(); const personnel=personnelIds.filter(id=>!seen.has(id)&&seen.add(id)).map(id=>selectUnitPersonnel(state,indexes,registries,state.entities.people[id].affiliation.unitId).find(x=>x.id===id)).filter(Boolean);
-  els.unitPersonnelMeta.textContent=`${current.name} and subordinate units · ${personnel.length} assigned personnel`;
-  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; card.append(h,p,p2); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
+  els.unitPersonnelMeta.textContent=`${current.name}${current.childUnitIds.length ? " and subordinate units" : ""} · ${personnel.length} assigned personnel`;
+  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}${member.isPlayer ? " · YOU" : ""}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; card.append(h,p,p2); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
   const orderIds=indexes.ordersByPersonId?.get(personId)??[]; els.ordersList.replaceChildren(); if(!orderIds.length){const p=document.createElement("p");p.className="muted";p.textContent="No orders recorded yet.";els.ordersList.append(p);} else for(const id of orderIds.slice().reverse()){const o=state.entities.orderRecords[id], card=document.createElement("article");card.className="order-card";const h=document.createElement("h3");h.textContent=o.title;const p1=document.createElement("p");p1.textContent=o.summary;const p2=document.createElement("p");p2.className="muted";p2.textContent=`Issued ${o.issueDate} · Effective ${o.effectiveDate} · ${o.status}`;card.append(h,p1,p2);els.ordersList.append(card);}
 }
 

@@ -94,8 +94,8 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
   });
 
   const state = {
-    schemaVersion: 8,
-    gameVersion: "0.3.1.1",
+    schemaVersion: 9,
+    gameVersion: "0.3.1.2",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
