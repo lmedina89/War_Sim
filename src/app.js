@@ -28,11 +28,11 @@ if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${d
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career";
+let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career", statusTimer = null;
 
 const $ = selector => document.querySelector(selector);
 const els = {
-  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"),
+  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), navCareerBadge: $("#nav-career-badge"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"),
   newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
   squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), markAllRead: $("#mark-all-read"), clearRead: $("#clear-read"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), returnMyUnit: $("#return-my-unit"), viewSelectedPersonnel: $("#view-selected-personnel"), personnelMyUnit: $("#personnel-my-unit"), personDogTag: $("#person-dog-tag"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), status: $("#status-message"), resultDialog: $("#result-dialog"), resultKicker: $("#result-kicker"), resultTitle: $("#result-title"), resultBody: $("#result-body"), resultClose: $("#result-close"),
   advance1: $("#advance-1"), advance7: $("#advance-7"), advance30: $("#advance-30"), promote: $("#promote-player"), airborne: $("#airborne-player"), leadership: $("#leadership-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
@@ -55,7 +55,13 @@ for (const component of registries.components.values()) { const option = documen
 for (const specialty of registries.specialties.values()) { const option = document.createElement("option"); option.value = specialty.id; option.textContent = specialty.careerAvailable ? `${specialty.code} · ${specialty.name}` : `${specialty.code} · ${specialty.name} — unit pipeline pending`; option.disabled = !specialty.careerAvailable; els.specialtySelect.appendChild(option); }
 for (const contract of registries.contracts.values()) { const option = document.createElement("option"); option.value = contract.id; option.textContent = `${contract.name} · ${contract.termMonths / 12} years`; els.contractSelect.appendChild(option); }
 
-function setStatus(message, tone = "") { els.status.textContent = message; els.status.className = `status-message ${tone}`.trim(); }
+function setStatus(message, tone = "") {
+  if (statusTimer) clearTimeout(statusTimer);
+  els.status.textContent = message ?? "";
+  els.status.className = `status-message ${tone}`.trim();
+  els.status.hidden = !message;
+  if (message) statusTimer = setTimeout(() => { els.status.hidden = true; els.status.textContent = ""; }, tone === "bad" ? 6000 : 3200);
+}
 function statLine(label, value) { const wrapper = document.createElement("div"); wrapper.className = "statline"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = String(value); wrapper.append(key, val); return wrapper; }
 function progressRow(label, value, max) {
   const safeMax = Math.max(1, Number(max) || 1), safeValue = Math.max(0, Number(value) || 0), percent = Math.max(0, Math.min(100, Math.round((safeValue / safeMax) * 100)));
@@ -77,19 +83,49 @@ function resolveRankName(rankId) { return rankId ? `${registries.ranks.get(rankI
 function resolveBranchName(branchId) { return branchId ? registries.branches.get(branchId).name : "—"; }
 function formatSavedAt(value) { try { return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); } catch { return value ?? "—"; } }
 
+function relationshipBand(trust) { return registries.relationshipBands.values().find(band => trust >= band.minimumTrust && trust <= band.maximumTrust) ?? registries.relationshipBands.get("relationship_neutral"); }
+function meter(label, value, minimum = 0, maximum = 100, { signed = false } = {}) {
+  const wrapper=document.createElement("div"); wrapper.className="relationship-meter";
+  const head=document.createElement("div"); head.className="meter-head"; const name=document.createElement("span"), amount=document.createElement("strong"); name.textContent=label; amount.textContent=signed && value>0 ? `+${value}` : String(value); head.append(name,amount);
+  const track=document.createElement("div"); track.className="meter-track"; const fill=document.createElement("div"); fill.className="meter-fill"; const percent=Math.max(0,Math.min(100,((Number(value)-minimum)/(maximum-minimum))*100)); fill.style.setProperty("--meter",`${percent}%`); track.appendChild(fill); wrapper.append(head,track); return wrapper;
+}
+function renderRelationships(relationships) {
+  els.relationships.replaceChildren();
+  if (!relationships.length) { const p=document.createElement("p"); p.className="empty-state"; p.textContent="No relationship records yet."; els.relationships.appendChild(p); return; }
+  for (const rel of relationships) {
+    const band=relationshipBand(rel.trust); const card=document.createElement("button"); card.type="button"; card.className=`relationship-card tone-${band.tone}`;
+    const top=document.createElement("div"); top.className="relationship-card-head"; const identity=document.createElement("div"); const h=document.createElement("strong"); h.textContent=`${rel.otherRank} ${rel.otherName}`; const role=document.createElement("span"); role.textContent=`${rel.otherRole} · ${rel.relationshipType}`; identity.append(h,role); const badge=document.createElement("span"); badge.className=`relationship-badge tone-${band.tone}`; badge.textContent=band.label; top.append(identity,badge);
+    const meters=document.createElement("div"); meters.className="relationship-meters"; meters.append(meter("Familiarity",rel.familiarity,0,100),meter("Trust",rel.trust,-100,100,{signed:true}));
+    card.append(top,meters); card.addEventListener("click",()=>showPersonProfile(rel.otherPersonId)); els.relationships.appendChild(card);
+  }
+}
+function performanceProfile(rating) { return registries.performanceRatings.has(rating) ? registries.performanceRatings.get(rating) : registries.performanceRatings.get("satisfactory"); }
+function feedbackProfile(definition) { return definition?.presentationId && registries.feedbackPresentations.has(definition.presentationId) ? registries.feedbackPresentations.get(definition.presentationId) : registries.feedbackPresentations.get("feedback_routine"); }
+function humanizeStatus(value) { return String(value ?? "unknown").replaceAll("_"," "); }
+
 function renderInbox(state, indexes, personId) {
-  const notices = selectNotifications(state, indexes, personId), unread = notices.filter(n => n.readAtElapsedDay == null);
-  els.unreadBadge.hidden = unread.length === 0; els.unreadBadge.textContent = String(unread.length);
+  const notices = selectNotifications(state, indexes, personId);
+  const unread = notices.filter(n => n.readAtElapsedDay == null);
+  const read = notices.filter(n => n.readAtElapsedDay != null);
+  const pendingIds = indexes.gameplayEventsByPersonId?.get(personId) ?? [];
+  const pendingDecisionCount = pendingIds.map(id => state.entities.gameplayEventRecords[id]).filter(record => record?.status === "pending").length;
+  const attentionCount = unread.length + pendingDecisionCount;
+  els.unreadBadge.hidden = unread.length === 0;
+  els.unreadBadge.textContent = String(unread.length);
+  els.navCareerBadge.hidden = attentionCount === 0;
+  els.navCareerBadge.textContent = attentionCount > 99 ? "99+" : String(attentionCount);
+  els.markAllRead.disabled = unread.length === 0;
+  els.clearRead.disabled = read.length === 0;
   els.careerInbox.replaceChildren();
-  if (!notices.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = "No career notifications yet."; els.careerInbox.appendChild(p); return; }
+  if (!notices.length) { const p = document.createElement("p"); p.className = "empty-state"; p.textContent = "No active notifications."; els.careerInbox.appendChild(p); return; }
   const list = document.createElement("div"); list.className = "inbox-list";
   for (const notice of notices.slice(0, 30)) {
-    const item = document.createElement("article"); item.className = `inbox-item ${notice.readAtElapsedDay == null ? "unread" : ""}`.trim();
+    const item = document.createElement("article"); item.className = `inbox-item ${notice.readAtElapsedDay == null ? "unread" : "read"}`.trim();
     const meta = document.createElement("div"); meta.className = "inbox-meta"; const type=document.createElement("span"), date=document.createElement("span"); type.textContent=notice.type.replaceAll("_", " "); date.textContent=notice.gameDate; meta.append(type,date);
     const h = document.createElement("h3"); h.textContent = notice.title; const p = document.createElement("p"); p.textContent = notice.message; item.append(meta, h, p);
     const actions=document.createElement("div"); actions.className="notice-actions";
-    if (notice.readAtElapsedDay == null) { const read=document.createElement("button"); read.type="button"; read.className="secondary compact-button"; read.textContent="Mark Read"; read.addEventListener("click",()=>markNotificationRead(store,notice.id)); actions.appendChild(read); }
-    else { const clear=document.createElement("button"); clear.type="button"; clear.className="secondary compact-button"; clear.textContent="Clear"; clear.addEventListener("click",()=>archiveNotification(store,notice.id)); actions.appendChild(clear); }
+    if (notice.readAtElapsedDay == null) { const readButton=document.createElement("button"); readButton.type="button"; readButton.className="secondary compact-button"; readButton.textContent="Mark Read"; readButton.addEventListener("click",()=>runCommand(()=>markNotificationRead(store,notice.id))); actions.appendChild(readButton); }
+    else { const clear=document.createElement("button"); clear.type="button"; clear.className="secondary compact-button"; clear.textContent="Clear"; clear.addEventListener("click",()=>runCommand(()=>archiveNotification(store,notice.id))); actions.appendChild(clear); }
     item.appendChild(actions); list.appendChild(item);
   }
   els.careerInbox.appendChild(list);
@@ -122,15 +158,18 @@ function showPersonProfile(personId) {
   const state = store.getState(), indexes = store.getIndexes(), person = state.entities.people[personId]; if (!person) return;
   const rank = registries.ranks.get(person.affiliation.rankId), billet = state.entities.billets[person.affiliation.billetId], billetDef = billet ? registries.billets.get(billet.definitionId) : null, unit = state.entities.units[person.affiliation.unitId];
   const branch = registries.branches.get(person.affiliation.branchId), specialty = registries.specialties.get(person.affiliation.specialtyId);
-  els.personProfileName.textContent = person.identity.displayName;
+  els.personProfileName.textContent = `${rank.abbreviation} ${person.identity.displayName}${personId === state.playerPersonId ? " · YOU" : ""}`;
   els.personDogTag.replaceChildren();
   for (const [label, value] of [["SERVICE", branch?.name ?? "—"], ["RANK", `${rank.abbreviation} / ${rank.payGrade}`], ["SPECIALTY", specialty ? `${specialty.code} ${specialty.name}` : "—"], ["ASSIGNMENT", unit?.name ?? "Unassigned"]]) {
     const row=document.createElement("div"); row.className="dog-tag-row"; const key=document.createElement("span"), val=document.createElement("strong"); key.textContent=label; val.textContent=value; row.append(key,val); els.personDogTag.appendChild(row);
   }
-  const profileRows=[statLine("Duty Position", billetDef?.name ?? "Unassigned"), statLine("Status", person.condition.status), statLine("Health", `${person.condition.health}%`), statLine("Morale", `${person.condition.morale}%`), statLine("Readiness", `${person.condition.readiness}%`), statLine("Experience", person.career.experience)];
-  const gameplay=selectGameplay(state, indexes, registries, person.id);
-  for (const skill of gameplay?.skills ?? []) profileRows.push(statLine(skill.name, `${skill.value}/100`));
-  els.personProfileBody.replaceChildren(...profileRows);
+  const status=document.createElement("div"); status.className="profile-status-strip";
+  for (const text of [humanizeStatus(person.condition.status).toUpperCase(), `${person.condition.readiness}% READY`, `${person.condition.morale}% MORALE`]) { const chip=document.createElement("span"); chip.className="status-chip"; chip.textContent=text; status.appendChild(chip); }
+  const assignmentSection=document.createElement("section"); assignmentSection.className="profile-section"; const assignmentTitle=document.createElement("h3"); assignmentTitle.textContent="Assignment"; assignmentSection.append(assignmentTitle,statLine("Duty Position", billetDef?.name ?? "Unassigned"),statLine("Unit", unit?.name ?? "Unassigned"),statLine("Status", humanizeStatus(person.condition.status)));
+  const conditionSection=document.createElement("section"); conditionSection.className="profile-section"; const conditionTitle=document.createElement("h3"); conditionTitle.textContent="Condition"; conditionSection.append(conditionTitle,statLine("Health", `${person.condition.health}%`),statLine("Readiness", `${person.condition.readiness}%`),statLine("Morale", `${person.condition.morale}%`),statLine("Experience", person.career.experience));
+  const skillsSection=document.createElement("section"); skillsSection.className="profile-section"; const skillsTitle=document.createElement("h3"); skillsTitle.textContent="Proficiency"; skillsSection.appendChild(skillsTitle);
+  const gameplay=selectGameplay(state, indexes, registries, person.id); for (const skill of gameplay?.skills ?? []) skillsSection.appendChild(progressRow(skill.name,skill.value,100));
+  els.personProfileBody.replaceChildren(status,assignmentSection,conditionSection,skillsSection);
   els.personDialog.showModal();
 }
 function organizationChain(state, indexes, unitId) {
@@ -158,7 +197,7 @@ function renderPersonnelBrowser(state, indexes, personId) {
   if (!personnelFilterUnitId || !state.entities.units[personnelFilterUnitId]) personnelFilterUnitId = ownUnitId;
   const current=selectOrganizationView(state,indexes,registries,personnelFilterUnitId), personnel=collectUnitPersonnel(state,indexes,personnelFilterUnitId);
   els.unitPersonnelMeta.textContent=`${current.name}${current.childUnitIds.length ? " and subordinate units" : ""} · ${personnel.length} assigned personnel`;
-  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("article"); card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const tag=document.createElement("div"); tag.className="mini-tag"; const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}${member.isPlayer ? " · YOU" : ""}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${member.status}`; const p2=document.createElement("p"); p2.textContent=`Readiness ${member.readiness}% · Morale ${member.morale}%`; tag.append(h,p,p2); card.append(tag); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
+  els.unitPersonnel.replaceChildren(...personnel.map(member=>{ const card=document.createElement("button"); card.type="button"; card.className=`person-card ${member.isPlayer?"player-row":""}`.trim(); const tag=document.createElement("div"); tag.className="mini-tag"; const h=document.createElement("h3"); h.textContent=`${member.rank} · ${member.name}${member.isPlayer ? " · YOU" : ""}`; const p=document.createElement("p"); p.textContent=`${member.billet} · ${humanizeStatus(member.status)}`; const status=document.createElement("div"); status.className="mini-status-row"; for(const text of [`${member.readiness}% READY`,`${member.morale}% MORALE`]){const chip=document.createElement("span");chip.className="mini-status-chip";chip.textContent=text;status.appendChild(chip);} tag.append(h,p,status); card.append(tag); card.addEventListener("click",()=>showPersonProfile(member.id)); return card;}));
   els.personnelMyUnit.disabled = personnelFilterUnitId === ownUnitId;
 }
 function renderOrganization(state, indexes, personId) {
@@ -231,9 +270,25 @@ function renderGameplay(state, indexes, personId) {
   }
 }
 
-function deltaLabel(key, value, registries) { const labels={experience:"Experience",prestige:"Prestige",health:"Health",morale:"Morale",readiness:"Readiness",fatigue:"Fatigue",unitReadiness:"Unit Readiness",unitCohesion:"Unit Cohesion"}; return `${labels[key] ?? key}: ${value>0?"+":""}${value}`; }
-function showActivityResult(activityRecordId) { const state=store.getState(), record=state.entities.activityRecords[activityRecordId]; if(!record)return; const def=registries.activities.get(record.activityDefinitionId); els.resultKicker.textContent="AFTER ACTION REPORT"; els.resultTitle.textContent=def.name; els.resultBody.replaceChildren(); const grade=document.createElement("p"); grade.className="result-grade"; grade.textContent=`${(record.performanceRating??"completed").toUpperCase()} · ${record.startDate} → ${record.endDate}`; els.resultBody.appendChild(grade); const changes=[]; for(const [k,v] of Object.entries(record.deltas??{})){ if(k==="skills") continue; if(v) changes.push(deltaLabel(k,v,registries)); } for(const [id,v] of Object.entries(record.deltas?.skills??{})){ if(v) changes.push(`${registries.skills.get(id)?.name??id}: ${v>0?"+":""}${v}`); } const changeBox=document.createElement("div"); renderList(changeBox,changes,"No measurable changes recorded."); els.resultBody.appendChild(changeBox); if(record.repetitionMultiplier != null && record.repetitionMultiplier < 1){const rep=document.createElement("p");rep.className="muted";rep.textContent=`Repeated training: ${Math.round(record.repetitionMultiplier*100)}% learning efficiency. Rotate activities for better gains.`;els.resultBody.appendChild(rep);} if(record.eventRecordId){const ev=state.entities.gameplayEventRecords[record.eventRecordId], defEv=ev?registries.gameplayEvents.get(ev.definitionId):null; if(defEv){const p=document.createElement("p");p.className="aar-event";p.textContent=`EVENT · ${defEv.title}: ${defEv.message}`;els.resultBody.appendChild(p);}} els.resultDialog.showModal(); }
-function showCommandResult(result) { if(!result)return; if(result.code==="activity_completed") return showActivityResult(result.data.activityRecordId); if(result.code==="time_advanced"){ els.resultKicker.textContent="TIME ADVANCE SUMMARY"; els.resultTitle.textContent=`${result.data.days} Day${result.data.days===1?"":"s"} Advanced`; els.resultBody.replaceChildren(); const p=document.createElement("p");p.className="result-grade";p.textContent=`${result.data.startDate} → ${result.data.endDate}`;els.resultBody.appendChild(p); const changes=Object.entries(result.data.changes??{}).filter(([,v])=>v).map(([k,v])=>`${k.replaceAll(/([A-Z])/g," $1")}: ${v>0?"+":""}${v}`); const changeBox=document.createElement("div"); renderList(changeBox,changes,"No significant records changed during this period."); els.resultBody.appendChild(changeBox); els.resultDialog.showModal(); } }
+function resultLabel(key) { const labels={experience:"Experience",prestige:"Prestige",health:"Health",morale:"Morale",readiness:"Readiness",fatigue:"Fatigue",unitReadiness:"Unit Readiness",unitCohesion:"Unit Cohesion"}; return labels[key] ?? key; }
+function formatResultValue(key,value){ return ["health","morale","readiness","unitReadiness","unitCohesion"].includes(key) ? `${value}%` : String(value); }
+function appendChangeRow(container,{label,before,after,delta,key=""}){ const row=document.createElement("div"); row.className=`aar-change ${delta>0?"positive":delta<0?"negative":"neutral"}`; const name=document.createElement("strong"); name.textContent=label; const values=document.createElement("span"); values.className="aar-change-values"; values.textContent=`${formatResultValue(key,before)} → ${formatResultValue(key,after)}`; const change=document.createElement("b"); change.textContent=`${delta>0?"+":""}${delta}`; row.append(name,values,change); container.appendChild(row); }
+function showActivityResult(activityRecordId) {
+  const state=store.getState(), record=state.entities.activityRecords[activityRecordId]; if(!record)return; const def=registries.activities.get(record.activityDefinitionId); const perf=performanceProfile(record.performanceRating??"satisfactory");
+  els.resultDialog.dataset.tone=perf.tone; els.resultKicker.textContent="AFTER ACTION REPORT"; els.resultTitle.textContent=def.name; els.resultBody.replaceChildren();
+  const header=document.createElement("div"); header.className="aar-header"; const grade=document.createElement("span"); grade.className=`performance-badge tone-${perf.tone}`; grade.textContent=perf.label; const date=document.createElement("span"); date.className="aar-date"; date.textContent=`${record.startDate} → ${record.endDate}`; header.append(grade,date); const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=perf.description; els.resultBody.append(header,desc);
+  const changes=document.createElement("div"); changes.className="aar-change-grid";
+  for(const [key,delta] of Object.entries(record.deltas??{})){ if(key==="skills" || !delta) continue; const before=record.before?.[key],after=record.after?.[key]; if(before!=null && after!=null) appendChangeRow(changes,{label:resultLabel(key),before,after,delta,key}); }
+  for(const [id,delta] of Object.entries(record.deltas?.skills??{})){ if(!delta) continue; const before=record.before?.skills?.[id],after=record.after?.skills?.[id]; if(before!=null && after!=null) appendChangeRow(changes,{label:registries.skills.get(id)?.name??id,before,after,delta,key:"skill"}); }
+  if(changes.childElementCount){const heading=document.createElement("h3");heading.className="aar-subheading";heading.textContent="Recorded Changes";els.resultBody.append(heading,changes);} else {const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No measurable changes recorded.";els.resultBody.appendChild(empty);}
+  if(record.repetitionMultiplier != null && record.repetitionMultiplier < 1){const rep=document.createElement("p");rep.className="aar-advisory";rep.textContent=`Repeated training reduced learning efficiency to ${Math.round(record.repetitionMultiplier*100)}%. Rotate activities for better gains.`;els.resultBody.appendChild(rep);}
+  if(record.eventRecordId){const ev=state.entities.gameplayEventRecords[record.eventRecordId], defEv=ev?registries.gameplayEvents.get(ev.definitionId):null; if(defEv){const feedback=feedbackProfile(defEv);const box=document.createElement("section");box.className=`aar-event tone-${feedback.tone}`;const kicker=document.createElement("span");kicker.className="event-kicker";kicker.textContent=feedback.label;const title=document.createElement("strong");title.textContent=defEv.title;const message=document.createElement("p");message.textContent=defEv.message;box.append(kicker,title,message);els.resultBody.appendChild(box);}}
+  els.resultDialog.showModal();
+}
+function showCommandResult(result) {
+  if(!result)return; if(result.code==="activity_completed") return showActivityResult(result.data.activityRecordId);
+  if(result.code==="time_advanced"){ els.resultDialog.dataset.tone="routine"; els.resultKicker.textContent="TIME ADVANCE SUMMARY"; els.resultTitle.textContent=`${result.data.days} Day${result.data.days===1?"":"s"} Advanced`; els.resultBody.replaceChildren(); const p=document.createElement("p");p.className="result-grade";p.textContent=`${result.data.startDate} → ${result.data.endDate}`;els.resultBody.appendChild(p); const list=document.createElement("div");list.className="time-summary-list"; for(const item of result.data.summaryItems??[]){const row=document.createElement("div");row.className=`time-summary-item tone-${item.tone??"routine"}`;row.textContent=item.label;list.appendChild(row);} if(!list.childElementCount){const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No major career or unit events occurred.";list.appendChild(empty);} els.resultBody.appendChild(list); els.resultDialog.showModal(); }
+}
 
 function renderAdministration(state, indexes) {
   const view = selectPersonnelAdministration(state, indexes, registries);
@@ -274,7 +329,7 @@ function render() {
     const reasonBox = document.createElement("div"); renderList(reasonBox, career.promotion.reasons, "All current requirements are satisfied."); els.promotionCard.appendChild(reasonBox); els.promote.disabled = !career.promotion.eligible;
   }
   renderList(els.schoolsAwards, [...career.qualifications.map(item => `${item.name} — ${item.completedDate}`), ...career.awards.map(item => `${item.name} (${item.category}) — ${item.earnedDate}`)], "No schools, qualifications, or awards recorded yet.");
-  renderList(els.relationships, career.relationships.map(rel => `${rel.otherName} · ${rel.relationshipType} · familiarity ${rel.familiarity} · trust ${rel.trust}`), "No relationship records.");
+  renderRelationships(career.relationships);
   els.careerEvents.replaceChildren(...career.events.map(event => { const li = document.createElement("li"), time = document.createElement("time"); time.textContent = event.date; li.append(time, document.createTextNode(event.label)); return li; }));
   renderInbox(state, indexes, state.playerPersonId);
   renderGameplay(state, indexes, state.playerPersonId);
@@ -291,7 +346,11 @@ function showNextAchievement() { if (els.achievementDialog.open || achievementQu
 els.achievementOk.addEventListener("click", () => { const id = els.achievementDialog.dataset.notificationId; if (id) { try { markNotificationRead(store, id); } catch {} } els.achievementDialog.close(); showNextAchievement(); });
 
 function autosave() { if (!store.getState().playerPersonId) return; const validation = validateWorldState(store.getState(), registries); if (validation.ok) saveToSlot(store.getState(), AUTOSAVE_SLOT); }
-function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { try { const result = fn(); if (result?.notifications?.length) queueNotifications(result.notifications); eventBus.publish({ type: "command_completed", result }); showCommandResult(result); if (autosaveAfter) autosave(); setStatus(result?.message ?? "Command completed.", statusTone); return result; } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : String(error), "bad"); return null; } }
+function pulseFeedback(result) {
+  const targets = result?.code === "activity_completed" ? [els.careerSummary, els.skillSummary, els.activityHistory] : result?.code === "time_advanced" ? [els.careerSummary, els.promotionCard] : [];
+  for (const target of targets.filter(Boolean)) { target.classList.remove("feedback-pulse"); void target.offsetWidth; target.classList.add("feedback-pulse"); setTimeout(() => target.classList.remove("feedback-pulse"), 700); }
+}
+function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { try { const result = fn(); if (result?.notifications?.length) queueNotifications(result.notifications); eventBus.publish({ type: "command_completed", result }); showCommandResult(result); pulseFeedback(result); if (autosaveAfter) autosave(); setStatus(result?.message ?? "Command completed.", statusTone); return result; } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : String(error), "bad"); return null; } }
 
 function confirmAction(title, message) { return new Promise(resolve => { els.confirmTitle.textContent = title; els.confirmMessage.textContent = message; const handler = () => { els.confirmDialog.removeEventListener("close", handler); resolve(els.confirmDialog.returnValue === "confirm"); }; els.confirmDialog.addEventListener("close", handler); els.confirmDialog.showModal(); }); }
 

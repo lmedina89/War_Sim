@@ -13,7 +13,8 @@ export function generateReenlistmentOffers(store, registries, personId) {
   if (daysRemaining > 180) throw new Error(`Reenlistment window opens in ${daysRemaining - 180} days.`);
   if (daysRemaining < -30) throw new Error("Current contract has already expired.");
 
-  const existing = Object.values(state.entities.reenlistmentOfferRecords).filter(x => x.personId === personId && x.status === "open");
+  const offerIdsForPerson = [...(store.getIndexes().reenlistmentOffersByPersonId?.get(personId) ?? [])];
+  const existing = offerIdsForPerson.map(id => state.entities.reenlistmentOfferRecords[id]).filter(x => x?.status === "open");
   if (existing.length) return commandResult({ code: "offers_existing", message: "Reenlistment offers are already available.", data: { offerIds: existing.map(x => x.id) } });
 
   const specialty = registries.specialties.get(service.specialtyId);
@@ -36,6 +37,7 @@ export function acceptReenlistmentOffer(store, registries, offerId) {
   if (!offer || offer.status !== "open") throw new Error("This reenlistment offer is no longer available.");
   const person = state.entities.people[offer.personId], service = state.entities.serviceRecords[person.serviceRecordId];
   const oldContract = state.entities.contractRecords[service.currentContractId], def = registries.contracts.get(offer.contractDefinitionId);
+  const siblingOfferIds = [...(store.getIndexes().reenlistmentOffersByPersonId?.get(offer.personId) ?? [])];
   let newContractId;
   store.mutate(draft => {
     draft.entities.contractRecords[oldContract.id].status = "completed";
@@ -44,7 +46,7 @@ export function acceptReenlistmentOffer(store, registries, offerId) {
     draft.entities.contractRecords[newContractId] = { id: newContractId, schemaVersion: 1, personId: offer.personId, contractDefinitionId: def.id, branchId: service.branchId, componentId: offer.componentId, specialtyId: offer.specialtyId, startDate, endDate: addMonthsIso(startDate, def.termMonths), termMonths: def.termMonths, bonus: offer.bonus, type: "reenlistment", status: "active" };
     draft.entities.serviceRecords[service.id].currentContractId = newContractId;
     draft.entities.reenlistmentOfferRecords[offerId].status = "accepted";
-    for (const other of Object.values(draft.entities.reenlistmentOfferRecords)) if (other.personId === offer.personId && other.id !== offerId && other.status === "open") other.status = "declined";
+    for (const id of siblingOfferIds) { const other = draft.entities.reenlistmentOfferRecords[id]; if (other && other.id !== offerId && other.status === "open") other.status = "declined"; }
     const eventId = createEntityId(draft, "career");
     draft.entities.careerEvents[eventId] = { id: eventId, schemaVersion: 1, personId: offer.personId, type: "reenlistment", date: draft.world.date, references: { contractId: newContractId, specialtyId: offer.specialtyId } };
     const orderId = createEntityId(draft, "order");

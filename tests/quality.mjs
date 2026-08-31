@@ -12,8 +12,12 @@ import { createStateStore } from "../src/core/stateStore.js";
 import { createPlayerCareer } from "../src/commands/createPlayerCareer.js";
 import { saveToSlot, loadFromSlot, listSaveSlots } from "../src/core/saveSystem.js";
 import { performActivity } from "../src/commands/performActivity.js";
+import { advanceWorldDays } from "../src/commands/advanceCareer.js";
 import { selectGameplay } from "../src/selectors/selectGameplay.js";
+import { selectCareerRecord } from "../src/selectors/selectCareerRecord.js";
 import { migratePayload } from "../src/core/migrations.js";
+import { markAllNotificationsRead, clearReadNotifications } from "../src/commands/manageNotifications.js";
+import { selectNotifications } from "../src/selectors/selectNotifications.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const srcRoot = path.join(root, "src");
@@ -21,6 +25,7 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes:true }).flatMap(entry =>
 const jsFiles = walk(srcRoot).filter(file => file.endsWith(".js"));
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(srcRoot, "app.js"), "utf8");
+const css = fs.readFileSync(path.join(srcRoot, "ui", "styles.css"), "utf8");
 
 // Import graph integrity: every relative static import resolves.
 for (const file of jsFiles) {
@@ -41,10 +46,17 @@ assert.match(html, /aria-current="page"/);
 assert.equal([...html.matchAll(/class="game-view" data-view=/g)].length, 5);
 assert.ok(ids.includes("return-my-unit") && ids.includes("view-selected-personnel") && ids.includes("personnel-my-unit"), "unit/personnel scope controls must exist");
 assert.ok(ids.includes("person-dog-tag"), "personnel identification plate must exist");
+assert.ok(ids.includes("nav-career-badge"), "Career navigation attention badge must exist");
+assert.match(html, /Squad Connections/, "relationship presentation heading must be present");
 assert.match(app, /selectedOrganizationUnitId/, "Unit view must own organization selection state");
 assert.match(app, /personnelFilterUnitId/, "Personnel view must own independent filter state");
 assert.doesNotMatch(app, /selectedUnitId/, "legacy shared Unit/Personnel selection state must not return");
 assert.match(app, /renderUnitRoster\(state, indexes, selectedOrganizationUnitId\)/, "Unit roster must follow selected organization scope");
+assert.match(app, /summaryItems/, "time-advance UI must consume semantic summary items");
+assert.doesNotMatch(app, /action Records|actionRecords:\s*\+/, "player-facing time summary must not leak raw record collection names");
+assert.match(app, /statusTimer/, "transient status feedback must replace persistent page messages");
+assert.match(app, /relationshipBand/, "relationship presentation must use definition-driven bands");
+assert.match(app, /performanceProfile/, "AAR performance presentation must use definition-driven profiles");
 
 // Security / containment hygiene: no eval-style execution, document.write, or HTML injection in runtime UI.
 for (const file of jsFiles) {
@@ -54,6 +66,9 @@ for (const file of jsFiles) {
   assert.doesNotMatch(source, /Math\.random\s*\(/, `${path.relative(root,file)} bypasses deterministic RNG`);
 }
 assert.match(app, /function safeRender\(/, "top-level UI render containment is required");
+assert.match(css, /prefers-reduced-motion/, "motion polish must respect reduced-motion preferences");
+assert.match(css, /safe-area-inset-bottom/, "mobile fixed controls must respect safe-area insets");
+assert.equal((css.match(/\{/g) ?? []).length, (css.match(/\}/g) ?? []).length, "CSS braces must remain balanced");
 
 // Runtime architecture must not know concrete Army/11B/rank/weapon IDs. Data and legacy migration code may.
 const runtimeFiles = jsFiles.filter(file => !file.includes(`${path.sep}data${path.sep}`) && !file.endsWith(`${path.sep}core${path.sep}migrations.js`) && !file.endsWith(`${path.sep}services${path.sep}organizationSeed.js`));
@@ -67,6 +82,10 @@ for (const file of runtimeFiles) {
 for (const file of walk(path.join(srcRoot, "selectors")).filter(file => file.endsWith(".js"))) {
   const source = fs.readFileSync(file, "utf8");
   assert.doesNotMatch(source, /Object\.values\(state\.entities\.people/, `${path.relative(root,file)} performs a global people scan instead of using indexes`);
+}
+for (const relative of ["commands/manageNotifications.js","commands/awardQualification.js","commands/reenlistment.js","commands/createPlayerCareer.js","commands/assignPerson.js"]) {
+  const source = fs.readFileSync(path.join(srcRoot, relative), "utf8");
+  assert.doesNotMatch(source, /Object\.values\(state\.entities\.(?:notificationRecords|qualificationRecords|reenlistmentOfferRecords|billets)/, `${relative} should use derived indexes for scoped lookup paths`);
 }
 
 // Definition and generated-world integrity across a broader seed sweep than smoke tests.
@@ -85,6 +104,11 @@ assert.equal(registries.skills.size, 5);
 assert.ok(registries.activities.size >= 5);
 assert.ok(registries.gameplayEvents.size >= 4);
 assert.ok(registries.eventTables.size >= 3);
+assert.equal(registries.feedbackPresentations.size, 3);
+assert.equal(registries.performanceRatings.size, 4);
+assert.equal(registries.relationshipBands.size, 5);
+for (const activity of registries.activities.values()) assert.ok(registries.feedbackPresentations.has(activity.presentationId), `${activity.id} missing feedback presentation`);
+for (const event of registries.gameplayEvents.values()) assert.ok(registries.feedbackPresentations.has(event.presentationId), `${event.id} missing feedback presentation`);
 {
   const seed = 404040;
   const a = createStateStore(createInitialWorldState({ seed }));
@@ -107,10 +131,53 @@ assert.ok(registries.eventTables.size >= 3);
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 12);
-  assert.equal(payload.worldState.gameVersion, "0.4.0.1");
+  assert.equal(payload.worldState.gameVersion, "0.4.0.2");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
+}
+
+// v0.4.0.2 presentation-result integrity: human-readable time summary and indexed relationship metadata.
+{
+  const seed = 420042;
+  const uiStore = createStateStore(createInitialWorldState({ seed }));
+  createPlayerCareer(uiStore, registries, { firstName:"Polish", lastName:"Check", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed });
+  const personId = uiStore.getState().playerPersonId;
+  const result = advanceWorldDays(uiStore, 7);
+  assert.equal(result.ok, true);
+  assert.ok(Array.isArray(result.data.summaryItems) && result.data.summaryItems.length >= 1);
+  assert.ok(result.data.summaryItems.every(item => item.id && item.label && item.tone));
+  assert.ok(result.data.summaryItems.some(item => /service time accrued/i.test(item.label)));
+  assert.ok(result.data.summaryItems.every(item => !/Records|recordRecords|actionRecords/.test(item.label)), "time summary must be player-facing");
+  const career = selectCareerRecord(uiStore.getState(), uiStore.getIndexes(), registries, personId);
+  assert.ok(career.relationships.length > 0);
+  assert.ok(career.relationships.every(rel => rel.otherRank && rel.otherRole && rel.otherStatus));
+  assert.equal(validateWorldState(uiStore.getState(), registries).ok, true);
+}
+
+// Same-schema hotfix loads normalize the runtime game version without a schema bump.
+{
+  const current = createInitialWorldState({ seed: 909090 });
+  current.gameVersion = "0.4.0.1";
+  const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.1", worldState:current });
+  assert.equal(migrated.worldState.schemaVersion, 12);
+  assert.equal(migrated.worldState.gameVersion, "0.4.0.2");
+}
+
+// Notification clearing archives records, uses indexed scope, and keeps canonical history intact.
+{
+  const seed = 121212;
+  const notificationStore = createStateStore(createInitialWorldState({ seed }));
+  createPlayerCareer(notificationStore, registries, { firstName:"Notify", lastName:"Check", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed });
+  const personId = notificationStore.getState().playerPersonId;
+  const allBefore = selectNotifications(notificationStore.getState(), notificationStore.getIndexes(), personId, { includeArchived:true });
+  assert.ok(allBefore.length >= 1);
+  assert.equal(markAllNotificationsRead(notificationStore, personId).ok, true);
+  const clearResult = clearReadNotifications(notificationStore, personId);
+  assert.equal(clearResult.ok, true);
+  assert.ok(clearResult.data.count >= 1);
+  assert.equal(selectNotifications(notificationStore.getState(), notificationStore.getIndexes(), personId).length, 0);
+  assert.equal(selectNotifications(notificationStore.getState(), notificationStore.getIndexes(), personId, { includeArchived:true }).length, allBefore.length);
 }
 
 // Browser-save round trip with an in-memory localStorage stand-in.
@@ -165,5 +232,13 @@ console.log(JSON.stringify({
   gameplayDefinitions:true,
   deterministicActivities:true,
   selectorIndexAudit:true,
-  schema12Migration:true
+  schema12Migration:true,
+  semanticTimeAdvanceSummary:true,
+  transientStatusFeedback:true,
+  relationshipPresentationDefinitions:true,
+  performancePresentationDefinitions:true,
+  reducedMotionSupport:true,
+  indexedScopedCommandLookups:true,
+  archivedNotificationHistory:true,
+  sameSchemaHotfixVersionNormalization:true
 }, null, 2));

@@ -8,11 +8,9 @@ export function assignPersonToUnit(store, registries, personId, unitId, roleId) 
   if (!unit) throw new Error(`Unknown unit: ${unitId}`);
   registries.roles.get(roleId);
 
-  const vacantBillet = Object.values(state.entities.billets).find(billet =>
-    billet.unitId === unitId &&
-    billet.status === "vacant" &&
-    registries.billets.get(billet.definitionId).roleId === roleId
-  );
+  const vacantBillet = [...(store.getIndexes().billetsByUnitId?.get(unitId) ?? [])]
+    .map(id => state.entities.billets[id])
+    .find(billet => billet?.status === "vacant" && registries.billets.get(billet.definitionId).roleId === roleId);
   if (!vacantBillet) throw new Error(`No vacant billet for role ${roleId} in ${unit.name}.`);
 
   const previousBilletId = person.affiliation.billetId;

@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.0.1</title>
+  <title>War Sim v0.4.0.2</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.0.1</p>
+        <p class="eyebrow">WAR SIM · v0.4.0.2</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -96,7 +96,7 @@
 
       <section class="game-view" data-view="personnel" hidden>
         <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">PERSONNEL</p><h2>Personnel Files</h2><p id="unit-personnel-meta" class="muted"></p></div><button id="personnel-my-unit" type="button" class="secondary compact-button">My Unit</button></div><div id="unit-personnel" class="personnel-grid"></div></section>
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RELATIONSHIPS</p><h2>People You Know</h2></div><div id="relationships"></div></section>
+        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RELATIONSHIPS</p><h2>Squad Connections</h2><p class="muted">Trust and familiarity develop through shared activities and future events.</p></div><div id="relationships" class="relationship-grid"></div></section>
       </section>
 
       <section class="game-view" data-view="orders" hidden>
@@ -110,7 +110,7 @@
       </section>
 
       <nav id="bottom-nav" class="bottom-nav" aria-label="Primary navigation">
-        <button type="button" data-view="career" aria-current="page"><span class="nav-dot"></span>Career</button>
+        <button type="button" data-view="career" aria-current="page"><span class="nav-dot"></span><span>Career</span><span id="nav-career-badge" class="nav-badge" hidden></span></button>
         <button type="button" data-view="unit"><span class="nav-dot"></span>Unit</button>
         <button type="button" data-view="personnel"><span class="nav-dot"></span>Personnel</button>
         <button type="button" data-view="orders"><span class="nav-dot"></span>Orders</button>

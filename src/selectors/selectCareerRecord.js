@@ -30,10 +30,18 @@ export function selectCareerRecord(state, indexes, registries, personId) {
   const relationships = relationshipIds.map(id => {
     const record = state.entities.relationshipRecords[id];
     const otherId = record.personAId === personId ? record.personBId : record.personAId;
+    const other = state.entities.people[otherId];
+    const otherRank = other?.affiliation.rankId && registries.ranks.has(other.affiliation.rankId) ? registries.ranks.get(other.affiliation.rankId) : null;
+    const otherBillet = other?.affiliation.billetId ? state.entities.billets[other.affiliation.billetId] : null;
+    const otherBilletDef = otherBillet && registries.billets.has(otherBillet.definitionId) ? registries.billets.get(otherBillet.definitionId) : null;
     return {
       id,
       otherPersonId: otherId,
-      otherName: state.entities.people[otherId]?.identity.displayName ?? "Unknown",
+      otherName: other?.identity.displayName ?? "Unknown",
+      otherRank: otherRank?.abbreviation ?? "—",
+      otherPayGrade: otherRank?.payGrade ?? "—",
+      otherRole: otherBilletDef?.name ?? "Unassigned",
+      otherStatus: other?.condition.status ?? "unknown",
       relationshipType: record.relationshipType,
       familiarity: record.familiarity,
       trust: record.trust,

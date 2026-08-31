@@ -1,79 +1,109 @@
-# War Sim v0.4.0 — Software Quality Report
+# War Sim v0.4.0.2 — Software Quality Report
 
 ## Result
 
 **PASS**
 
-This report is separate from the gameplay implementation summary. It covers source integrity, simulation determinism, data-model correctness, migration safety, runtime architecture, save integrity, browser/UI coupling, and basic scaling characteristics for the final v0.4.0 worktree.
+This audit was run separately from feature implementation against the v0.4.0.2 source tree. The exact packaged ZIP is re-extracted and re-tested before release.
 
-## Scope audited
+## Scope
 
-- 67 JavaScript modules under `src/`
-- canonical world schema 12
-- four new gameplay entity collections
-- four new definition registries
-- activity/effect/event/decision pipeline
-- existing military organization, contracts, reenlistment, personnel administration, migration, save/load, and five-view UI foundation
+- 69 JavaScript source modules
+- ~3,191 JavaScript source lines
+- 5 primary player views
+- world schema 12 / save format 3
+- plain HTML/CSS/ES modules, no runtime framework dependency
 
-## Automated quality results
+## Automated verification
 
-| Check | Result |
-|---|---|
-| JavaScript syntax | PASS |
-| Static relative-import resolution | PASS |
-| Definition validation | PASS |
-| DOM IDs required by controller | PASS |
-| Duplicate DOM IDs | PASS |
-| Five-view navigation foundation | PASS |
-| Unit/Personnel state independence | PASS |
-| Render error containment | PASS |
-| Direct `Math.random()` audit | PASS |
-| `eval` / `new Function` / `document.write` audit | PASS |
-| Runtime `innerHTML =` audit | PASS |
-| Concrete Army/11B/rank/weapon ID audit in normal runtime modules | PASS |
-| Hot-selector global people-scan guard | PASS |
-| Save/checksum round trip | PASS |
-| Corrupted-save checksum rejection | PASS |
-| Schema 11 → 12 preservation | PASS |
-| Same-seed world determinism | PASS |
-| Same-seed activity determinism | PASS |
-| Generated-world integrity (formal suite) | PASS — 300 seeds |
-| Extended generated-world sweep | PASS — 1,000 seeds, 0 failures |
-| 10,000-person index stress | PASS |
+### Syntax and module integrity — PASS
 
-Formal quality-suite index benchmark on the final worktree: approximately **12 ms** for the 10,000-person synthetic index build in this container environment. This is a regression indicator, not a device-performance guarantee.
+- Every `.js` and `.mjs` source/test file passes `node --check`.
+- Every relative static import resolves to an existing file.
+- No duplicate DOM IDs.
+- Every `app.js` DOM selector used through the project selector helper resolves to an element in `index.html`.
 
-## Gameplay-system checks
+### Data/definition integrity — PASS
 
-The QA suite verifies that:
+- Branch, rank, billet, specialty, equipment, organization, generation, skill, activity, event, contract, and presentation references validate.
+- Activity and gameplay-event presentation IDs resolve through immutable registries.
+- Relationship-band definitions cover the complete -100…100 trust range with contiguous intervals.
+- Performance and feedback presentation definitions are immutable registry data rather than canonical runtime state.
 
-- every generated person has exactly one skill profile;
-- skill values remain inside definition bounds;
-- activity definitions resolve through registries;
-- activities consume canonical world time;
-- activity effects update skills through the generic effect engine;
-- activity completion creates canonical activity and performance records;
-- event tables use centralized deterministic RNG;
-- pending decision records expose definition-driven choices;
-- resolving a decision applies the selected definition effects and closes the pending event;
-- fresh generated personnel specialty matches the billet-specialty mapping in the generation profile;
-- replacement personnel continue to resolve branch/specialty/rank/equipment from definitions/profiles;
-- old v0.3.2.3 careers migrate without roster regeneration or reassignment.
+### Determinism — PASS
 
-## Efficiency review
+- Runtime source contains no direct `Math.random()` calls.
+- Identical seeds + identical activity sequences produce identical states.
+- Formal QA validates 300 generated seeds.
+- Additional independent sweep validates 1,000 generated seeds with zero failures.
+- Personnel monthly progression remains equivalent for 30×1-day versus 1×30-day advancement where the model requires step independence.
 
-The normal gameplay paths use derived indexes for person-by-unit, relationships-by-person, activities-by-person, events-by-person, skill-profile-by-person, career/order/admin lookups, and recent personnel actions. The generic effect engine accepts indexed relationship IDs from the activity command so squad relationship effects do not require a world-wide relationship scan.
+### Runtime architecture / hardcoding — PASS
 
-Known whole-collection passes remain where they are appropriate or currently bounded: index construction, full validation, migration/repair code, world generation, personnel lifecycle batch simulation, and rare replacement-name uniqueness checks. These are not normal per-card UI query paths.
+Normal runtime modules are checked for concrete Army/11B/rank/weapon IDs. Content-specific IDs remain confined to definition data and explicit legacy migration/repair code.
 
-## Architecture review
+Scoped lookups added/confirmed in this release use derived indexes for:
 
-The v0.4 runtime remains definition-driven. Content-specific identifiers are allowed in definition files and historical migration/repair code, but the quality audit rejects concrete Army/11B/rank/weapon IDs in normal runtime modules. The new gameplay services consume registry definitions by ID and execute generic rules.
+- notification bulk operations
+- school duplicate-completion checks
+- reenlistment offers
+- starting billet lookup
+- role-based vacant billet assignment
+- player-facing time-summary counts
 
-A pre-existing generator inconsistency was identified during this review and corrected: fresh NPC specialty affiliation now resolves from the generation profile's billet-specialty map instead of copying the player scenario specialty to every generated billet.
+### Gameplay feedback integrity — PASS
 
-## Risk / deferred work
+- Activity AAR records preserve before/after snapshots and deltas.
+- AAR performance presentation resolves through `performanceRatings` definitions.
+- Gameplay event emphasis resolves through `feedbackPresentations` definitions.
+- Time advancement emits semantic player-facing summary items instead of raw entity collection names.
+- Relationship cards receive rank/role/status from indexed canonical person/billet data and trust labels from relationship-band definitions.
+- Career navigation attention count is derived from unread notifications + pending decisions.
 
-v0.4.0 intentionally does **not** attempt to implement the whole v0.4 roadmap in one release. Deferred systems include calculated unit readiness from underlying training/equipment state, NPC scheduled training, richer qualifications, unit field exercises/AARs, evaluations, leave/pass, broad event libraries, deployment alerts/staging, and deployment missions. Building those on the generic v0.4.0 activity/effect/event framework is safer than implementing them as isolated features now.
+### Notification lifecycle — PASS
 
-No blocker was found that should prevent progression to v0.4.1 after live-device validation.
+- Mark-all-read and clear-read commands operate only on the selected person's indexed notification IDs.
+- Clear archives records instead of deleting them.
+- Archived records remain retrievable through canonical notification history.
+- Empty/no-op notification actions return user-facing command results.
+
+### Save/migration compatibility — PASS
+
+- Schema remains 12; no unnecessary schema churn.
+- Existing schema-12 v0.4.0.1 saves normalize runtime `gameVersion` to 0.4.0.2 on load.
+- Existing schema-11 saves still migrate to schema 12.
+- Save/checksum round trip preserves canonical state.
+- Deliberately corrupted save payloads are rejected.
+
+### Security / UI containment — PASS
+
+Source audit rejects:
+
+- `eval(...)`
+- `new Function(...)`
+- `document.write(...)`
+- runtime `.innerHTML = ...`
+- direct `Math.random()`
+
+Top-level rendering remains error-contained so a display error does not mutate canonical save state.
+
+### Accessibility/mobile — PASS
+
+- safe-area handling remains present for fixed bottom navigation/toasts
+- primary navigation retains current-page semantics
+- dynamic status feedback is announced through the existing polite live region
+- focus-visible styling added for interactive controls
+- reduced-motion CSS is present
+- relationship/personnel interactions use native buttons rather than clickable generic containers
+
+### Performance — PASS
+
+The quality suite constructs indexes for a synthetic 10,000-person population and enforces a generous regression ceiling to catch accidental quadratic index construction. Current observed runs remain far below the threshold; exact timing varies by environment.
+
+## Known intentional boundaries
+
+This release does **not** implement deployment, tactical combat, a world map, national economics, or deep unit-readiness gameplay. Those remain staged roadmap systems. Legacy organization migration code still contains historical concrete IDs by design and is excluded from normal-runtime hardcoding rules.
+
+## Release recommendation
+
+**Approved for live mobile validation.** If the interaction/visual test passes, v0.4.0.2 is suitable as the polished base for v0.4.1 Training & Readiness Gameplay.

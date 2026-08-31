@@ -6,7 +6,7 @@ export function completeSchool(store, registries, personId, schoolId) {
   const state = store.getState(), person = state.entities.people[personId];
   if (!person) throw new Error(`Unknown person: ${personId}`);
   const school = registries.schools.get(schoolId);
-  const existing = Object.values(state.entities.qualificationRecords).some(record => record.personId === personId && record.schoolId === schoolId);
+  const existing = [...(store.getIndexes().qualificationsByPersonId?.get(personId) ?? [])].some(id => state.entities.qualificationRecords[id]?.schoolId === schoolId);
   if (existing) throw new Error(`${person.identity.displayName} already completed ${school.name}.`);
   const noticeIds = [];
   store.mutate(draft => {

@@ -1,127 +1,90 @@
-# War Sim v0.4.0.1 — Core Gameplay Systems
+# War Sim v0.4.0.2 — Interaction & Visual Polish
 
-War Sim v0.4.0.1 is the first playable-career systems release built on the frozen v0.3.2.3 military organization foundation. The focus is not deployment or tactical combat yet; it is making time, training, skills, decisions, and performance into reusable gameplay systems that later deployment/combat systems can consume.
+War Sim v0.4.0.2 is a focused presentation, feedback, and efficiency release built on the v0.4.0.1 gameplay foundation. It does not add deployment or tactical combat. Its job is to make the systems already present easier to understand, faster to query, and more satisfying to interact with on mobile.
 
-## Player-facing gameplay
+## Player-facing improvements
 
-- Replaces the old generic `Train +250 XP` action with data-defined activities.
-- Adds five initial skills on a normalized 0–100 scale:
-  - Fitness
-  - Marksmanship
-  - Fieldcraft
-  - MOS Proficiency
-  - Leadership
-- Adds initial data-driven activities:
-  - Physical Training
-  - Weapons Qualification Range
-  - MOS Training
-  - Squad Drills
-  - Leadership Development
-- Activities consume world time and can affect skills, XP, prestige, fatigue, readiness, unit cohesion, and relationships.
-- Adds 1-day / 7-day / 30-day free time advancement.
-- Adds a recent training / after-action history.
-- Personnel profiles now include their simulated skills.
-- Adds the first reusable gameplay-event and decision framework. Some activities can produce weighted events, including an actionable leadership decision with definition-driven choices/effects.
+- Activity AARs now show **before → after values** and the exact delta for each changed stat/skill.
+- Performance grades use definition-driven presentation profiles: Exceptional, Strong, Satisfactory, and Poor.
+- Gameplay events use definition-driven presentation profiles so routine, attention, and future critical events can be styled consistently without one-off UI rules.
+- Time advancement now reports player-facing summaries such as service time accrued, new notifications/orders, status changes, and unit readiness/morale changes. Raw collection names such as `actionRecords` are no longer shown to the player.
+- Routine command/status feedback is now a **temporary toast** instead of permanent text left in page flow.
+- The Career navigation tab receives an attention badge for unread notifications and pending player decisions.
+- Inbox controls are context-aware: Mark All Read / Clear Read disable when there is nothing applicable.
+- Individual notification Mark Read / Clear actions now use the normal command/autosave/feedback pipeline.
+- Clearing notifications still **archives** canonical notification records; it does not destroy history.
+- Relationship presentation is redesigned from a raw bullet list into compact, tappable squad-connection cards with rank, duty position, relationship type, familiarity, trust, and a definition-driven relationship band.
+- Personnel cards are denser and use readiness/morale status chips.
+- Personnel profiles are reorganized into military ID, status, assignment, condition, and proficiency sections.
+- Subtle command-result highlighting, pressed states, focus states, and reduced-motion support improve responsiveness without heavy animation.
+- Empty states are styled intentionally rather than appearing as loose page text.
 
-## Architecture
+## Data-driven presentation definitions
 
-### Data definitions
+New immutable registries:
 
-New definition registries:
+- `feedbackPresentations`
+- `performanceRatings`
+- `relationshipBands`
 
-- `skills`
-- `activities`
-- `gameplayEvents`
-- `eventTables`
+Activities and gameplay events reference presentation definitions by stable ID. Relationship trust labels are resolved from definition ranges rather than hard-coded per person. No player-facing presentation string is authoritative simulation state.
 
-Normal runtime systems do not contain concrete branch/MOS/rank/weapon content IDs. Activities and events describe effects; generic engines execute them.
+## Efficiency cleanup
 
-### Generic effect engine
+Several scoped command paths now use existing derived indexes instead of global collection scans:
 
-Activity/event definitions use standardized effects such as:
+- notification bulk read/archive
+- school-completion duplicate qualification lookup
+- reenlistment-offer lookup/decline
+- new-career starting billet lookup
+- role-based vacant-billet assignment
 
-- skill changes
-- person stat changes
-- unit-condition changes
-- relationship changes
-
-The effect engine owns clamping and mutation semantics. Future schools, injuries, equipment, deployments, weather, logistics, and combat can reuse the same mechanism rather than adding one-off mutation logic.
-
-### Canonical gameplay records
-
-World schema 12 introduces:
-
-- `skillProfiles`
-- `activityRecords`
-- `performanceRecords`
-- `gameplayEventRecords`
-
-These records are authoritative and saved. Derived indexes are rebuilt from canonical state and are never serialized.
-
-### Determinism and efficiency
-
-- Gameplay-event rolls use the centralized seeded RNG; no runtime `Math.random()`.
-- Activity history, skill profiles, gameplay events, personnel, units, billets, relationships, orders, career records, and admin records use derived indexes for normal query paths.
-- Unit relationship effects use the existing relationship index rather than scanning all relationship records in the normal activity command.
-- Career creation uses the existing unit personnel index to seed squad relationships.
-- Recent personnel actions are prepared by the admin index rather than sorted from the full collection every render.
-- World generator version is now **2** because generated NPC skill profiles are part of fresh generated worlds.
-
-## Data-integrity correction included
-
-During the v0.4 audit, the fresh-world generator was found to have a legacy inconsistency: generated NPCs were receiving the player scenario's specialty even though the generation profile already defined billet-specific specialty mappings. v0.4.0.1 corrects this. Company/platoon officers and administrative billets now resolve specialty through `billetSpecialtyIdsByDefinitionId`, while infantry billets resolve to the infantry specialty.
+Time-advance feedback no longer counts every canonical collection before and after each advance. It uses player-scoped indexes and targeted unit snapshots to produce a semantic summary.
 
 ## Compatibility
 
-- Save format remains **3**.
-- World schema: **12**.
-- v0.3.2.3 schema-11 saves migrate to schema 12 without regenerating the world, changing names, or moving personnel.
-- Migration creates a skill profile for every existing person and initializes the new canonical gameplay collections.
+- Save format: **3**
+- World schema: **12** (unchanged)
+- Runtime version: **0.4.0.2**
+- v0.4.0 / v0.4.0.1 schema-12 saves load without a schema migration and normalize to the current runtime version.
+- v0.3.2.3 schema-11 saves still migrate through the existing schema-12 migration path.
 
 ## Quality gates
 
-Before packaging, v0.4.0.1 passed:
+The final source tree is checked by both `tests/smoke.mjs` and `tests/quality.mjs`, including:
 
-- JavaScript syntax validation across all source/test modules
-- full gameplay/regression smoke suite
-- independent software-quality suite
-- definition-reference validation
-- 300-seed generated-world validation in the formal QA suite
-- additional 1,000-seed generated-world validation sweep
-- same-seed deterministic world generation
-- same-seed deterministic repeated-activity simulation
-- exact squad/player assignment checks
-- schema-11 → schema-12 migration preservation
-- save/checksum round trip and corruption rejection
-- static import-graph validation
-- DOM/controller ID validation
-- duplicate DOM-ID audit
-- direct `Math.random()` audit
-- dynamic-code / `innerHTML` assignment audit
+- syntax validation for every JS/MJS file
+- static import resolution
+- DOM/controller ID matching and duplicate-ID checks
+- definition/reference validation
+- deterministic RNG audit / no direct `Math.random()`
 - runtime concrete-content-ID audit
-- selector global-people-scan guard
-- 10,000-person index build stress benchmark
+- selector and scoped-command index-use guards
+- 300-seed formal generated-world validation
+- separate 1,000-seed generated-world sweep
+- deterministic activity simulation
+- exact squad/player organization integrity
+- personnel administration and replacement pipeline
+- exact-date ETS behavior
+- 30×1-day vs 1×30-day simulation consistency
+- semantic time-advance summary tests
+- relationship presentation metadata tests
+- notification archive/history preservation
+- same-schema hotfix version normalization
+- save/checksum round trip and corruption rejection
+- reduced-motion and safe-area CSS checks
+- 10,000-person index stress benchmark
+- render-error containment
 
-See `SOFTWARE_QUALITY_REPORT.md` for the separate QA report.
+See `SOFTWARE_QUALITY_REPORT.md` for the separate audit report.
 
 ## Roadmap
 
-The v0.4 series remains intentionally staged:
-
-- **v0.4.0.1** — Core Gameplay Systems (current)
+- **v0.4.0.2** — Interaction & Visual Polish (current)
 - **v0.4.1** — Training & Readiness Gameplay
 - **v0.4.2** — Career & Personnel Gameplay
 - **v0.4.3** — Unit Events & Decision Gameplay
 - **v0.4.4** — Deployment Preparation Foundation
 - **v0.5.x** — Actual Deployment Gameplay
 
-The project remains definition/registry driven: definitions describe content, generic services execute rules, canonical records preserve history, indexes serve queries, and UI code does not own simulation state.
-
-## v0.4.0.1 Gameplay Feedback & Information Hierarchy
-- Activity commands now produce an immediate After Action Report with performance grade and recorded stat/skill deltas.
-- Activity Log entries open their durable AAR instead of duplicating the Career Timeline.
-- Repeated identical training within seven world-days has diminishing learning efficiency; fatigue costs are not reduced.
-- Time advancement produces a date-range summary and refuses to skip an unresolved player decision.
-- Career Inbox is now notification-focused with Mark All Read, per-item Clear, and Clear Read controls. Clearing archives notifications rather than deleting canonical history.
-- Career Timeline is relabeled Service Record and remains reserved for durable career milestones.
-- The redundant Recent Activity panel was removed.
+The architecture rule remains unchanged: definitions describe content and presentation; generic services execute rules; canonical records preserve history; derived indexes serve queries; UI code presents state and invokes commands rather than owning simulation truth.

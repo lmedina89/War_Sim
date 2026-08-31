@@ -1,21 +1,25 @@
 export const gameplayEventDefinitions = [
   {
     id: "event_training_breakthrough", schemaVersion: 1, name: "Training Breakthrough", type: "activity", priority: "normal",
+    presentationId: "feedback_routine",
     title: "Training Breakthrough", message: "The training period clicked. Your performance noticeably improved.",
     effects: [{ target: "skill", skillId: "skill_mos_proficiency", operation: "add", value: 1 }, { target: "person", field: "career.experience", operation: "add", value: 25 }]
   },
   {
     id: "event_minor_training_injury", schemaVersion: 1, name: "Minor Training Injury", type: "activity", priority: "attention",
+    presentationId: "feedback_attention",
     title: "Minor Training Injury", message: "A minor training injury reduces readiness and requires recovery.",
     effects: [{ target: "person", field: "condition.health", operation: "add", value: -4, clamp: [0,100] }, { target: "person", field: "condition.readiness", operation: "add", value: -3, clamp: [0,100] }]
   },
   {
     id: "event_squad_cohesion_gain", schemaVersion: 1, name: "Squad Cohesion Gain", type: "activity", priority: "normal",
+    presentationId: "feedback_routine",
     title: "Squad Working Better Together", message: "The squad's repetitions are paying off. Coordination and trust improve.",
     effects: [{ target: "unit", field: "condition.cohesion", operation: "add", value: 2, clamp: [0,100] }, { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }]
   },
   {
     id: "event_training_leadership_moment", schemaVersion: 1, name: "Leadership Moment", type: "decision", priority: "attention",
+    presentationId: "feedback_attention",
     title: "A Teammate Is Struggling", message: "During squad drills, a teammate falls behind and the team starts to lose rhythm. How do you respond?",
     choices: [
       { id: "choice_help_teammate", label: "Coach the teammate", effects: [{ target: "skill", skillId: "skill_leadership", operation: "add", value: 2 }, { target: "relationships", field: "trust", operation: "add", value: 2, clamp: [-100,100] }, { target: "person", field: "career.experience", operation: "add", value: 20 }] },

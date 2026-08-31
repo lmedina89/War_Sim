@@ -102,6 +102,7 @@ export function validateDefinitions(registries) {
 
   for (const activity of registries.activities.values()) {
     if (!Number.isInteger(activity.durationDays) || activity.durationDays <= 0) errors.push(`${activity.id}: invalid durationDays.`);
+    if (activity.presentationId && !registries.feedbackPresentations.has(activity.presentationId)) errors.push(`${activity.id}: invalid presentationId ${activity.presentationId}.`);
     if (activity.eventTableId && !registries.eventTables.has(activity.eventTableId)) errors.push(`${activity.id}: invalid eventTableId ${activity.eventTableId}.`);
     for (const effect of activity.effects ?? []) validateEffect(errors, activity.id, effect, registries);
   }
@@ -110,6 +111,7 @@ export function validateDefinitions(registries) {
     for (const entry of table.entries ?? []) { if (entry.eventId && !registries.gameplayEvents.has(entry.eventId)) errors.push(`${table.id}: invalid event ${entry.eventId}.`); if (!Number.isInteger(entry.weight) || entry.weight <= 0) errors.push(`${table.id}: invalid weight.`); }
   }
   for (const event of registries.gameplayEvents.values()) {
+    if (event.presentationId && !registries.feedbackPresentations.has(event.presentationId)) errors.push(`${event.id}: invalid presentationId ${event.presentationId}.`);
     for (const effect of event.effects ?? []) validateEffect(errors, event.id, effect, registries);
     const choiceIds = new Set();
     for (const choice of event.choices ?? []) {
@@ -117,6 +119,15 @@ export function validateDefinitions(registries) {
       choiceIds.add(choice.id);
       for (const effect of choice.effects ?? []) validateEffect(errors, `${event.id}/${choice.id}`, effect, registries);
     }
+  }
+
+
+  const relationshipBands = registries.relationshipBands.values().slice().sort((a,b) => a.minimumTrust - b.minimumTrust);
+  if (!relationshipBands.length || relationshipBands[0].minimumTrust > -100 || relationshipBands.at(-1).maximumTrust < 100) errors.push("relationshipBands: trust range must cover -100 through 100.");
+  for (let i = 0; i < relationshipBands.length; i++) {
+    const band = relationshipBands[i];
+    if (!Number.isFinite(band.minimumTrust) || !Number.isFinite(band.maximumTrust) || band.maximumTrust < band.minimumTrust) errors.push(`${band.id}: invalid trust range.`);
+    if (i > 0 && band.minimumTrust !== relationshipBands[i-1].maximumTrust + 1) errors.push(`${band.id}: relationship trust bands must be contiguous.`);
   }
 
   return { ok: errors.length === 0, errors };

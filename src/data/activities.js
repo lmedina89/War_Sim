@@ -2,6 +2,7 @@ export const activityDefinitions = [
   {
     id: "activity_pt", schemaVersion: 1, name: "Physical Training", shortName: "PT", category: "individual", durationDays: 1,
     description: "Structured physical training improves fitness and general readiness.",
+    presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 60 },
     effects: [
       { target: "skill", skillId: "skill_fitness", operation: "add", value: 2 },
@@ -14,6 +15,7 @@ export const activityDefinitions = [
   {
     id: "activity_range", schemaVersion: 1, name: "Weapons Qualification Range", shortName: "Range", category: "individual", durationDays: 2,
     description: "Live-fire range time improves marksmanship and weapons proficiency.",
+    presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 70 },
     effects: [
       { target: "skill", skillId: "skill_marksmanship", operation: "add", value: 4 },
@@ -26,6 +28,7 @@ export const activityDefinitions = [
   {
     id: "activity_mos_training", schemaVersion: 1, name: "MOS Training", shortName: "MOS", category: "individual", durationDays: 3,
     description: "Job-specific training develops specialty proficiency.",
+    presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 60 },
     effects: [
       { target: "skill", skillId: "skill_mos_proficiency", operation: "add", value: 4 },
@@ -37,6 +40,7 @@ export const activityDefinitions = [
   {
     id: "activity_squad_drills", schemaVersion: 1, name: "Squad Drills", shortName: "Squad Drills", category: "unit", durationDays: 3,
     description: "Collective drills improve fieldcraft, cohesion, relationships, and squad readiness.",
+    presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 70, requiresAssignedUnit: true },
     effects: [
       { target: "skill", skillId: "skill_fieldcraft", operation: "add", value: 3 },
@@ -51,6 +55,7 @@ export const activityDefinitions = [
   {
     id: "activity_leadership_development", schemaVersion: 1, name: "Leadership Development", shortName: "Leadership", category: "individual", durationDays: 2,
     description: "Leader development builds judgment and leadership proficiency.",
+    presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 60, minimumRankLevel: 3 },
     effects: [
       { target: "skill", skillId: "skill_leadership", operation: "add", value: 3 },

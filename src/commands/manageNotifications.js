@@ -8,25 +8,28 @@ export function archiveNotification(store, notificationId) {
     notice.readAtElapsedDay ??= draft.world.clock.elapsedDays;
     notice.archivedAtElapsedDay = draft.world.clock.elapsedDays;
   }, ["notifications"]);
-  return commandResult({ code: "notification_archived", data: { notificationId } });
+  return commandResult({ code: "notification_archived", message: "Notification cleared.", data: { notificationId } });
 }
 
 export function markAllNotificationsRead(store, personId) {
+  const ids = [...(store.getIndexes().notificationsByPersonId?.get(personId) ?? [])];
+  let count = 0;
   store.mutate(draft => {
-    for (const notice of Object.values(draft.entities.notificationRecords)) {
-      if (notice.personId === personId && notice.archivedAtElapsedDay == null && notice.readAtElapsedDay == null) notice.readAtElapsedDay = draft.world.clock.elapsedDays;
+    for (const id of ids) {
+      const notice = draft.entities.notificationRecords[id];
+      if (notice?.archivedAtElapsedDay == null && notice.readAtElapsedDay == null) { notice.readAtElapsedDay = draft.world.clock.elapsedDays; count++; }
     }
   }, ["notifications"]);
-  return commandResult({ code: "notifications_read", message: "Notifications marked read." });
+  return commandResult({ code: "notifications_read", message: count ? `Marked ${count} notification${count === 1 ? "" : "s"} read.` : "No unread notifications.", data: { count } });
 }
 
 export function clearReadNotifications(store, personId) {
+  const ids = [...(store.getIndexes().notificationsByPersonId?.get(personId) ?? [])];
   let count = 0;
   store.mutate(draft => {
-    for (const notice of Object.values(draft.entities.notificationRecords)) {
-      if (notice.personId === personId && notice.readAtElapsedDay != null && notice.archivedAtElapsedDay == null) {
-        notice.archivedAtElapsedDay = draft.world.clock.elapsedDays; count++;
-      }
+    for (const id of ids) {
+      const notice = draft.entities.notificationRecords[id];
+      if (notice?.readAtElapsedDay != null && notice.archivedAtElapsedDay == null) { notice.archivedAtElapsedDay = draft.world.clock.elapsedDays; count++; }
     }
   }, ["notifications"]);
   return commandResult({ code: "notifications_archived", message: count ? `Cleared ${count} read notification${count === 1 ? "" : "s"}.` : "No read notifications to clear.", data: { count } });

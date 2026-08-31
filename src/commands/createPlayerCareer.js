@@ -34,7 +34,8 @@ export function createPlayerCareer(store, registries, input) {
   const unitId = state.world.careerStartUnitByBranchId[branch.id], unit = state.entities.units[unitId];
   if (!unit) throw new Error(`No starting unit is configured for ${branch.name}.`);
   const designatedStartingBilletId = state.world.generation?.startingBilletId;
-  const billet = (designatedStartingBilletId ? state.entities.billets[designatedStartingBilletId] : null) ?? Object.values(state.entities.billets).find(candidate => candidate.unitId === unitId && candidate.status === "vacant" && specialty.eligibleBilletDefinitionIds.includes(candidate.definitionId) && registries.billets.get(candidate.definitionId).roleId === startingRole.id);
+  const unitBilletIds = store.getIndexes().billetsByUnitId?.get(unitId) ?? [];
+  const billet = (designatedStartingBilletId ? state.entities.billets[designatedStartingBilletId] : null) ?? unitBilletIds.map(id => state.entities.billets[id]).find(candidate => candidate?.status === "vacant" && specialty.eligibleBilletDefinitionIds.includes(candidate.definitionId) && registries.billets.get(candidate.definitionId).roleId === startingRole.id);
   if (billet && (billet.status !== "vacant" || !scenario.eligibleStartingBilletDefinitionIds.includes(billet.definitionId))) throw new Error("Generated starting billet is not valid for this career-start scenario.");
   if (!billet) throw new Error(`No vacant ${startingRole.name} billet exists in ${unit.name}.`);
 
