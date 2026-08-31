@@ -1,6 +1,6 @@
 import { ensureInfantryCompanyStructure } from "../services/organizationSeed.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 7;
+export const CURRENT_WORLD_SCHEMA_VERSION = 8;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -129,6 +129,51 @@ function migrateWorldV5ToV6(worldState) {
 }
 
 
+
+function removeGeneratedPerson(state, personId) {
+  const person = state.entities.people?.[personId];
+  if (!person) return;
+  if (person.loadoutId) delete state.entities.loadouts?.[person.loadoutId];
+  if (person.serviceRecordId) delete state.entities.serviceRecords?.[person.serviceRecordId];
+  for (const [id, instance] of Object.entries(state.entities.equipmentInstances ?? {})) {
+    if (instance.ownerPersonId === personId) delete state.entities.equipmentInstances[id];
+  }
+  for (const [collectionName, collection] of Object.entries(state.entities ?? {})) {
+    if (["people","billets","units","loadouts","serviceRecords","equipmentInstances"].includes(collectionName)) continue;
+    for (const [id, record] of Object.entries(collection ?? {})) {
+      if (record && typeof record === "object" && Object.values(record).includes(personId)) delete collection[id];
+    }
+  }
+  delete state.entities.people[personId];
+}
+
+function repairLegacyPlayerSquadDuplicates(state) {
+  const billets = Object.values(state.entities.billets ?? {}).filter(b => b.unitId === "unit_sq_001");
+  const hasLegacyMigratedBillets = billets.some(b => b.id.startsWith("billet_from_"));
+  if (!hasLegacyMigratedBillets || billets.length <= 9) return;
+
+  // v0.3.1 added billet_1..8 and pers_org_* NPCs on top of an already complete
+  // migrated squad. Remove only those generated additions; preserve the legacy
+  // people, player billet, history, and all user career data.
+  for (let i = 1; i <= 8; i++) {
+    const billetId = `billet_${i}`;
+    const billet = state.entities.billets?.[billetId];
+    if (!billet || billet.unitId !== "unit_sq_001") continue;
+    const generatedPersonId = billet.assignedPersonId;
+    if (generatedPersonId?.startsWith("pers_org_")) removeGeneratedPerson(state, generatedPersonId);
+    delete state.entities.billets[billetId];
+  }
+}
+
+function migrateWorldV7ToV8(worldState) {
+  const next = structuredClone(worldState);
+  repairLegacyPlayerSquadDuplicates(next);
+  ensureInfantryCompanyStructure(next);
+  next.schemaVersion = 8;
+  next.gameVersion = "0.3.1.1";
+  return next;
+}
+
 function migrateWorldV6ToV7(worldState) {
   const next = structuredClone(worldState);
   next.schemaVersion = 7;
@@ -173,12 +218,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 4) next.worldState = migrateWorldV4ToV5(next.worldState);
   if (next.worldState.schemaVersion === 5) next.worldState = migrateWorldV5ToV6(next.worldState);
   if (next.worldState.schemaVersion === 6) next.worldState = migrateWorldV6ToV7(next.worldState);
+  if (next.worldState.schemaVersion === 7) next.worldState = migrateWorldV7ToV8(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.3.1";
-  next.worldState.gameVersion = "0.3.1";
+  next.gameVersion = "0.3.1.1";
+  next.worldState.gameVersion = "0.3.1.1";
   return next;
 }

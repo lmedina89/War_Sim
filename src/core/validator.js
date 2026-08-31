@@ -10,7 +10,7 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 7) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 8) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };

@@ -12,6 +12,7 @@ import { selectCurrentSquad } from "../src/selectors/selectCurrentSquad.js";
 import { selectCareerRecord } from "../src/selectors/selectCareerRecord.js";
 import { selectOrganizationView } from "../src/selectors/selectOrganizationView.js";
 import { selectServiceCareer } from "../src/selectors/selectServiceCareer.js";
+import { migratePayload } from "../src/core/migrations.js";
 
 
 // Catch UI/controller mismatches before packaging: every #id queried by app.js must exist in index.html.
@@ -19,12 +20,49 @@ const appSource = fs.readFileSync(new URL("../src/app.js", import.meta.url), "ut
 const htmlSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const queriedIds = [...appSource.matchAll(/\$\(\"#([^\"]+)\"\)/g)].map(match => match[1]);
 for (const id of queriedIds) assert.match(htmlSource, new RegExp(`id=[\"']${id}[\"']`), `index.html missing #${id} required by app.js`);
-assert.match(htmlSource, /WAR SIM · v0\.3\.1/);
+assert.match(htmlSource, /WAR SIM · v0\.3\.1\.1/);
 assert.match(htmlSource, /id="component-select"/);
 assert.match(htmlSource, /id="specialty-select"/);
 assert.match(htmlSource, /id="contract-select"/);
 assert.match(htmlSource, /id="service-career"/);
 assert.match(htmlSource, /id="review-reenlistment"/);
+
+
+// Regression: schema-6 migrated saves already have a complete legacy squad using
+// billet_from_* IDs. The organization expansion must not stack 8 new NPC billets
+// on top of it (the v0.3.1 17-person squad bug).
+{
+  const legacy = createInitialWorldState();
+  legacy.schemaVersion = 6;
+  legacy.gameVersion = "0.3.0";
+  // Remove the expanded organization so migration 6->7 rebuilds it.
+  for (const [id, unit] of Object.entries(legacy.entities.units)) {
+    if (!["unit_company_001","unit_platoon_001","unit_sq_001"].includes(id)) delete legacy.entities.units[id];
+  }
+  legacy.entities.units.unit_company_001.childUnitIds = ["unit_platoon_001"];
+  legacy.entities.units.unit_platoon_001.childUnitIds = ["unit_sq_001"];
+  // Remove non-player-squad expansion billets/personnel.
+  for (const [id, billet] of Object.entries(legacy.entities.billets)) {
+    if (billet.unitId !== "unit_sq_001") {
+      const pid = billet.assignedPersonId;
+      if (pid) delete legacy.entities.people[pid];
+      delete legacy.entities.billets[id];
+    }
+  }
+  // Convert the 8 canonical NPC billet IDs to the legacy migration naming pattern.
+  for (let i=1;i<=8;i++) {
+    const oldId=`billet_${i}`, billet=legacy.entities.billets[oldId];
+    const newId=`billet_from_slot_${i}`;
+    delete legacy.entities.billets[oldId];
+    billet.id=newId; legacy.entities.billets[newId]=billet;
+    legacy.entities.people[billet.assignedPersonId].affiliation.billetId=newId;
+  }
+  const payload = migratePayload({ saveFormatVersion:3, saveId:"regression", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.0", worldState:legacy });
+  const migrated = payload.worldState;
+  const squadBillets = Object.values(migrated.entities.billets).filter(b=>b.unitId==="unit_sq_001");
+  assert.equal(migrated.schemaVersion, 8);
+  assert.equal(squadBillets.length, 9, "legacy migrated squad must remain 9 billets");
+}
 
 const defs = validateDefinitions(registries);
 assert.equal(defs.ok, true, defs.errors.join("\n"));
@@ -34,8 +72,8 @@ assert.equal(registries.contracts.size, 3);
 
 const initial = createInitialWorldState();
 assert.equal(initial.playerPersonId, null);
-assert.equal(initial.schemaVersion, 7);
-assert.equal(initial.gameVersion, "0.3.1");
+assert.equal(initial.schemaVersion, 8);
+assert.equal(initial.gameVersion, "0.3.1.1");
 assert.equal(Object.keys(initial.entities.units).length, 13);
 assert.equal(Object.keys(initial.entities.billets).length, 91);
 
@@ -91,4 +129,4 @@ assert.equal(Object.keys(state.entities.orderRecords).length, 2);
 validation = validateWorldState(state, registries);
 assert.equal(validation.ok, true, validation.errors.join("\n"));
 
-console.log("War Sim v0.3.1 living organization smoke test passed");
+console.log("War Sim v0.3.1.1 organization repair + UX smoke test passed");

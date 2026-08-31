@@ -99,3 +99,36 @@ details.panel[open] summary { margin-bottom: 14px; }
 .offer-card p { margin:4px 0; color:var(--muted); }
 .offer-card .offer-bonus { color:var(--good); font-weight:900; font-size:1.15rem; margin:8px 0; }
 @media (min-width:761px){ .career-form { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+/* v0.3.1.1 gameplay UX pass */
+.hero { padding: 8px 2px 2px; }
+.hero .lede { max-width: 46rem; margin-bottom: 0; }
+.section-kicker { margin: 0 0 4px; color: var(--accent); font-size: .72rem; font-weight: 900; letter-spacing: .12em; }
+.career-overview-panel { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--panel)), var(--panel)); }
+.career-summary { display: grid; gap: 14px; }
+.career-identity h2 { margin-bottom: 2px; font-size: clamp(1.55rem, 6vw, 2.2rem); }
+.career-subtitle, .career-chain { margin: 3px 0; }
+.career-chain { font-weight: 800; color: var(--text); }
+.status-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.status-chip { display: inline-flex; align-items: center; min-height: 30px; padding: .25rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.quick-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 16px; }
+.action-panel .actions { width: 100%; }
+.action-panel .actions button { flex: 1 1 150px; }
+.person-card { transition: border-color .15s ease, transform .15s ease; }
+.person-card:active { transform: scale(.99); }
+.bottom-nav { position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20; display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; width: min(680px, calc(100% - 18px)); padding: 6px; border: 1px solid var(--border); border-radius: 16px; background: rgb(23 28 36 / .96); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgb(0 0 0 / .32); }
+.bottom-nav button { min-height: 42px; padding: .45rem .3rem; background: transparent; color: var(--muted); border: 0; border-radius: 10px; font-size: .78rem; }
+.bottom-nav button:active { background: var(--panel-2); color: var(--text); }
+#career-content { padding-bottom: 82px; }
+#career-home, #unit-section, #orders-section, #personnel-section, #more-section { scroll-margin-top: 16px; }
+@media (max-width:760px){
+  .app-shell { width: min(100% - 18px,1100px); padding-top: 14px; }
+  .hero { margin-bottom: 12px; }
+  .panel { padding: 14px; border-radius: 14px; }
+  .quick-stats { grid-template-columns: 1fr; }
+  .action-panel .panel-head { display: block; }
+  .action-panel .actions { margin-top: 12px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .action-panel .actions button { width: 100%; }
+  .personnel-grid { grid-template-columns: 1fr; }
+  .bottom-nav button { font-size: .72rem; }
+}

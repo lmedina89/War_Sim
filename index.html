@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>War Sim v0.3.1</title>
+  <title>War Sim v0.3.1.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <section class="hero">
-      <p class="eyebrow">WAR SIM · v0.3.1</p>
-      <h1>Service Career & Contracts</h1>
-      <p class="lede">Military specialties, enlistment contracts, service components, reenlistment offers, service history, and the existing unit career simulation.</p>
+      <p class="eyebrow">WAR SIM · v0.3.1.1</p>
+      <h1>Military Career</h1>
+      <p class="lede">Build a career inside a living military organization.</p>
     </section>
 
     <section id="new-career-panel" class="panel setup-panel" hidden>
@@ -30,9 +30,13 @@
     </section>
 
     <div id="career-content" hidden>
-      <section class="panel">
+      <section id="career-home" class="panel career-overview-panel">
+        <div id="career-summary" class="career-summary"></div>
+      </section>
+
+      <section class="panel action-panel">
         <div class="panel-head">
-          <div><h2>Current Squad</h2><p id="squad-meta" class="muted">Loading…</p></div>
+          <div><p class="section-kicker">CAREER ACTIONS</p><h2>Current Assignment</h2><p id="squad-meta" class="muted">Loading…</p></div>
           <div class="actions">
             <button id="train-player" type="button">Train +250 XP</button><button id="advance-time" type="button">Advance 30 Days</button><button id="promote-player" type="button">Request Promotion</button>
             <button id="airborne-player" type="button">Complete Airborne</button><button id="leadership-player" type="button">Complete BLC</button>
@@ -45,13 +49,20 @@
       <section class="grid"><article class="panel"><h2>Player Career</h2><div id="career-card"></div></article><article class="panel"><h2>Promotion Status</h2><div id="promotion-card"></div></article></section>
       <section class="grid"><article class="panel"><h2>Service Career</h2><p class="muted">Your component, MOS, active contract, ETS date, and contract bonus are stored as canonical career records.</p><div id="service-career"></div></article><article class="panel"><div class="panel-head"><div><h2>Reenlistment</h2><p class="muted">Options become available during the final 180 days of the active contract.</p></div></div><button id="review-reenlistment" type="button">Review Reenlistment Options</button><div id="reenlistment-offers"></div></article></section>
       <section class="panel"><h2>Service History</h2><p class="muted">Permanent service periods preserve branch, component, and specialty history for future MOS changes and inter-service transfers.</p><div id="career-framework"></div></section>
-      <section class="grid organization-grid"><article class="panel"><h2>My Assignment</h2><div id="assignment-card"></div></article><article class="panel"><div class="panel-head"><div><h2>Unit & Chain of Command</h2><p class="muted">Browse your organization from company to squad.</p></div></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article></section>
-      <section class="panel"><div class="panel-head"><div><h2>Unit Personnel</h2><p id="unit-personnel-meta" class="muted"></p></div></div><div id="unit-personnel" class="personnel-grid"></div></section>
-      <section class="panel"><h2>Orders</h2><p class="muted">Permanent career orders are stored as canonical records. PCS, deployment, reenlistment, MOS-change, and transfer systems share this same canonical orders pipeline.</p><div id="orders-list"></div></section>
+      <section id="unit-section" class="grid organization-grid"><article class="panel"><h2>My Assignment</h2><div id="assignment-card"></div></article><article class="panel"><div class="panel-head"><div><h2>Unit & Chain of Command</h2><p class="muted">Browse your organization from company to squad.</p></div></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article></section>
+      <section id="personnel-section" class="panel"><div class="panel-head"><div><h2>Unit Personnel</h2><p id="unit-personnel-meta" class="muted"></p></div></div><div id="unit-personnel" class="personnel-grid"></div></section>
+      <section id="orders-section" class="panel"><h2>Orders</h2><p class="muted">Permanent career orders are stored as canonical records. PCS, deployment, reenlistment, MOS-change, and transfer systems share this same canonical orders pipeline.</p><div id="orders-list"></div></section>
       <section class="grid"><article class="panel"><h2>Schools & Awards</h2><div id="schools-awards"></div></article><article class="panel"><h2>Squad Relationships</h2><div id="relationships"></div></article></section>
       <section class="panel"><div class="panel-head"><div><h2>Career Inbox</h2><p class="muted">Persistent player-facing milestones and important events.</p></div><span id="unread-badge" class="badge" hidden></span></div><div id="career-inbox"></div></section>
       <section class="panel"><h2>Career Timeline</h2><ol id="career-events" class="timeline"></ol></section>
-      <details class="panel diagnostics-panel"><summary>Developer Diagnostics</summary><pre id="diagnostics">Loading…</pre></details>
+      <details id="more-section" class="panel diagnostics-panel"><summary>Developer Diagnostics</summary><pre id="diagnostics">Loading…</pre></details>
+          <nav id="bottom-nav" class="bottom-nav" aria-label="Primary">
+        <button type="button" data-target="career-home">Career</button>
+        <button type="button" data-target="unit-section">Unit</button>
+        <button type="button" data-target="orders-section">Orders</button>
+        <button type="button" data-target="personnel-section">Personnel</button>
+        <button type="button" data-target="more-section">More</button>
+      </nav>
     </div>
     <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
   </main>

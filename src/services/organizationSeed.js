@@ -41,11 +41,17 @@ export function ensureInfantryCompanyStructure(state){
       SQUAD_BILLETS.forEach((def,i)=>addBillet(state,{id:`billet_${p}${s}_${i+1}`,unitId:sid,definitionId:def,rankId:SQUAD_RANKS[i],index:n++}));
     }
   }
-  // Preserve the player's original squad IDs for save compatibility; fill only missing slots.
-  const legacyDefs=SQUAD_BILLETS, legacyRanks=SQUAD_RANKS;
-  for(let i=0;i<9;i++){
-    const id=i===8?"billet_player":`billet_${i+1}`;
-    if(!state.entities.billets[id]) addBillet(state,{id,unitId:"unit_sq_001",definitionId:legacyDefs[i],rankId:legacyRanks[i],index:n++,vacant:i===8});
+  // Preserve whatever valid 9-billet player squad already exists. Older migrated saves
+  // use billet_from_* IDs, while fresh worlds use billet_1..8 + billet_player.
+  // Never key seeding solely off the canonical IDs: doing so duplicated an already-full
+  // migrated squad in v0.3.1.
+  const playerSquadBillets = () => Object.values(state.entities.billets).filter(b => b.unitId === "unit_sq_001");
+  if (!state.entities.billets.billet_player) {
+    addBillet(state,{id:"billet_player",unitId:"unit_sq_001",definitionId:"billet_rifleman",rankId:"rank_army_e1",index:n++,vacant:true});
+  }
+  for(let i=0; playerSquadBillets().length < 9 && i<8; i++){
+    const id=`billet_${i+1}`;
+    if(!state.entities.billets[id]) addBillet(state,{id,unitId:"unit_sq_001",definitionId:SQUAD_BILLETS[i],rankId:SQUAD_RANKS[i],index:n++});
   }
   state.world.careerStartUnitByBranchId={...(state.world.careerStartUnitByBranchId??{}),branch_army:"unit_sq_001"};
   return state;
