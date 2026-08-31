@@ -1,5 +1,6 @@
 import { createEntityId } from "../core/ids.js";
 import { recordNotification } from "./recordServices.js";
+import { applyEffects } from "./effectEngine.js";
 
 export function completeSchoolInDraft(draft, registries, personId, schoolId, { sourceType = "school_completion" } = {}) {
   const person = draft.entities.people[personId];
@@ -8,6 +9,8 @@ export function completeSchoolInDraft(draft, registries, personId, schoolId, { s
   const existing = Object.values(draft.entities.qualificationRecords).some(record => record.personId === personId && record.schoolId === schoolId);
   if (existing) return { schoolId, alreadyCompleted: true, qualificationRecordIds: [], awardRecordIds: [], notificationIds: [] };
   const qualificationRecordIds = [], awardRecordIds = [], notificationIds = [];
+  const beforeSkills={ ...(draft.entities.skillProfiles?.[`skills_${personId}`]?.values ?? {}) };
+  if (school.completionEffects?.length) applyEffects(draft, registries, { personId, unitId: person.affiliation?.unitId ?? null, effects: school.completionEffects });
   for (const qualificationId of school.grantsQualificationIds ?? []) {
     const qualification = registries.qualifications.get(qualificationId), recordId = createEntityId(draft, "qual");
     draft.entities.qualificationRecords[recordId] = { id: recordId, schemaVersion: 1, personId, schoolId, qualificationId, completedDate: draft.world.date, result: "graduate" };
@@ -24,5 +27,6 @@ export function completeSchoolInDraft(draft, registries, personId, schoolId, { s
   const eventId = createEntityId(draft, "career");
   draft.entities.careerEvents[eventId] = { id: eventId, schemaVersion: 1, personId, type: "school_completion", date: draft.world.date, references: { schoolId } };
   draft.entities.people[personId].career.prestige += 3;
-  return { schoolId, alreadyCompleted: false, qualificationRecordIds, awardRecordIds, notificationIds, careerEventId: eventId };
+  const afterSkills={ ...(draft.entities.skillProfiles?.[`skills_${personId}`]?.values ?? {}) };
+  return { schoolId, alreadyCompleted: false, qualificationRecordIds, awardRecordIds, notificationIds, careerEventId: eventId, skillChanges:Object.fromEntries(Object.keys(afterSkills).filter(id=>afterSkills[id]!==beforeSkills[id]).map(id=>[id,afterSkills[id]-(beforeSkills[id]??0)])) };
 }

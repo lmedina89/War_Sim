@@ -409,7 +409,7 @@ export function migratePayload(payload) {
   repairLegacyAffiliationFields(next.worldState);
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
-  next.gameVersion = "0.4.1.4";
-  next.worldState.gameVersion = "0.4.1.4";
+  next.gameVersion = "0.4.1.5";
+  next.worldState.gameVersion = "0.4.1.5";
   return next;
 }

@@ -59,30 +59,38 @@ export function recordDutyQualification(draft, registries, personId, duty, perfo
   const rawScore=qualificationRawScore(qualification,performanceScore);
   const maxScore=Math.max(1, Number(qualification.scoring?.maxScore) || 100);
   const band=qualificationBand(qualification,rawScore);
-  if (band.result === "unqualified") return { qualificationRecordId:null, result:band.result, label:band.label, score:rawScore, maxScore, qualified:false };
+  draft.entities.qualificationAttemptRecords ??= {};
+  const attemptId=createEntityId(draft,"qattempt");
+  draft.entities.qualificationAttemptRecords[attemptId]={
+    id:attemptId,schemaVersion:1,personId,qualificationId:duty.qualificationId,gameDate:draft.world.date,
+    elapsedDay:draft.world.clock.elapsedDays,result:band.result,label:band.label,score:rawScore,maxScore,
+    qualified:band.result!=="unqualified",sourceType,sourceId:sourceId ?? duty.id
+  };
+  if (band.result === "unqualified") return { qualificationRecordId:null, qualificationAttemptRecordId:attemptId, result:band.result, label:band.label, score:rawScore, maxScore, qualified:false, activeCredentialUpdated:false };
   let record=null;
   for (const candidate of Object.values(draft.entities.qualificationRecords ?? {})) {
     if (candidate.personId === personId && candidate.qualificationId === duty.qualificationId) { record=candidate; break; }
   }
+  const isExpired=record && Number.isInteger(record.expiresElapsedDay) && record.expiresElapsedDay < draft.world.clock.elapsedDays;
+  const shouldUpdate=!record || isExpired || rawScore >= Number(record.score ?? -1);
   if (!record) {
     const id=createEntityId(draft,"qual");
-    record={ id, schemaVersion:3, personId, schoolId:null, qualificationId:duty.qualificationId, completedDate:draft.world.date, result:band.result };
+    record={ id, schemaVersion:4, personId, schoolId:null, qualificationId:duty.qualificationId, completedDate:draft.world.date, result:band.result };
     draft.entities.qualificationRecords[id]=record;
-  } else {
-    record.schemaVersion=Math.max(3,record.schemaVersion??1); record.completedDate=draft.world.date; record.result=band.result;
   }
-  record.score=rawScore; record.maxScore=maxScore;
-  record.weaponDefinitionId=qualification.weaponDefinitionId ?? null;
-  record.badgeClasp=qualification.badgeClasp ?? null;
-  if (qualification.renewable) {
-    const validityDays=qualification.validityDays ?? 365;
-    record.expiresElapsedDay=draft.world.clock.elapsedDays + validityDays;
-    record.expiresDate=new Date(new Date(`${draft.world.date}T00:00:00Z`).getTime()+validityDays*86400000).toISOString().slice(0,10);
-  } else {
-    record.expiresElapsedDay=null; record.expiresDate=null;
+  if (shouldUpdate) {
+    record.schemaVersion=Math.max(4,record.schemaVersion??1); record.completedDate=draft.world.date; record.result=band.result;
+    record.score=rawScore; record.maxScore=maxScore;
+    record.weaponDefinitionId=qualification.weaponDefinitionId ?? null;
+    record.badgeClasp=qualification.badgeClasp ?? null;
+    if (qualification.renewable) {
+      const validityDays=qualification.validityDays ?? 365;
+      record.expiresElapsedDay=draft.world.clock.elapsedDays + validityDays;
+      record.expiresDate=new Date(new Date(`${draft.world.date}T00:00:00Z`).getTime()+validityDays*86400000).toISOString().slice(0,10);
+    } else { record.expiresElapsedDay=null; record.expiresDate=null; }
+    record.sourceType=sourceType; record.sourceId=sourceId ?? duty.id; record.latestAttemptRecordId=attemptId;
   }
-  record.sourceType=sourceType; record.sourceId=sourceId ?? duty.id;
-  return { qualificationRecordId:record.id, result:band.result, label:band.label, score:rawScore, maxScore, qualified:true };
+  return { qualificationRecordId:record.id, qualificationAttemptRecordId:attemptId, result:band.result, label:band.label, score:rawScore, maxScore, qualified:true, activeCredentialUpdated:shouldUpdate, retainedResult:shouldUpdate?null:record.result, retainedScore:shouldUpdate?null:record.score };
 }
 export function applyNpcParticipationForDuty(draft, registries, { unitId, duty, playerPersonId, performanceScore, participantPersonIds = null }) {
   if (!unitId || !duty) return { participantIds:[], performanceRecordIds:[], relationshipIds:[] };

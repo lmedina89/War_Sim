@@ -15,7 +15,7 @@ export const activityDefinitions = [
   },
   {
     id: "activity_range", schemaVersion: 2, name: "Weapons Qualification Range", shortName: "Range", category: "individual", durationDays: 2,
-    qualificationDutyDefinitionId: "duty_range",
+    qualificationDutyDefinitionId: "duty_range", participantScope: "individual",
     description: "Live-fire range time improves marksmanship and weapons proficiency.",
     cooldownDays: 3, repetitionWindowDays: 10, performanceSkillIds: ["skill_marksmanship","skill_fieldcraft"], unitTrainingEffects: { weapons: 3, equipmentReadiness: -1 },
     presentationId: "feedback_routine",

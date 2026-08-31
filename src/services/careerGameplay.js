@@ -356,6 +356,10 @@ export function updateCareerObjectivesInDraft(draft, registries, personId, { pro
   return [...completed,...created];
 }
 
+function activeSchoolAbsence(draft, personId) {
+  return Object.values(draft.entities.opportunityRecords ?? {}).find(record => record.personId === personId && ["in_progress","completed"].includes(record.status) && record.definitionId && Number.isInteger(record.reportElapsedDay) && Number.isInteger(record.completeElapsedDay) && draft.world.clock.elapsedDays >= record.reportElapsedDay && draft.world.clock.elapsedDays <= record.completeElapsedDay) ?? null;
+}
+
 export function processScheduledDutyForDay(draft, registries, scheduleIds, { personId, relationshipIds = [], billetIds = [], personIds = [] } = {}) {
   const notifications = [], completedDutyIds = [], startedDutyIds = [], eventRecordIds = [];
   for (const id of scheduleIds) {
@@ -363,21 +367,23 @@ export function processScheduledDutyForDay(draft, registries, scheduleIds, { per
     if (!record || !["scheduled","in_progress"].includes(record.status)) continue;
     const duty = registries.duties.get(record.dutyDefinitionId);
     const person = draft.entities.people[personId];
+    const schoolAbsence = activeSchoolAbsence(draft, personId);
     if (record.status === "scheduled" && draft.world.clock.elapsedDays >= record.startElapsedDay) {
       record.status = "in_progress"; record.startedDate = draft.world.date; startedDutyIds.push(record.id);
-      if (person.condition.status === "active") person.condition.status = duty.statusWhileActive ?? "active";
+      if (!schoolAbsence && person.condition.status === "active") person.condition.status = duty.statusWhileActive ?? "active";
     }
     if (record.status === "in_progress" && draft.world.clock.elapsedDays >= record.endElapsedDay) {
       const unit = draft.entities.units[record.unitId];
       const trainingProfile = ensureUnitTrainingProfile(draft, record.unitId, unit?.readinessModelId);
+      const playerParticipated = !schoolAbsence;
       const before = {
         readiness: person.condition.readiness, morale: person.condition.morale, fatigue: person.condition.fatigue,
         unitReadiness: unit?.condition?.readiness ?? null, unitCohesion: unit?.condition?.cohesion ?? null, training: { ...trainingProfile.values }
       };
-      applyEffects(draft, registries, { personId, unitId: record.unitId, relationshipIds, effects: duty.playerEffects ?? [] });
+      if (playerParticipated) applyEffects(draft, registries, { personId, unitId: record.unitId, relationshipIds, effects: duty.playerEffects ?? [] });
       applyUnitTrainingEffects(draft, record.unitId, duty.trainingEffects ?? {});
       let event = null;
-      if (duty.eventTableId) event = resolveActivityEvent(draft, registries, { personId, unitId: record.unitId, relationshipIds, activityId: duty.id, eventTableId: duty.eventTableId });
+      if (playerParticipated && duty.eventTableId) event = resolveActivityEvent(draft, registries, { personId, unitId: record.unitId, relationshipIds, activityId: duty.id, eventTableId: duty.eventTableId });
       const currentPersonIds = billetIds.length ? billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean) : personIds;
       const readinessResult = syncUnitReadiness(draft, registries, record.unitId, { billetIds, personIds: currentPersonIds });
       const score = calculateDutyPerformanceScore(draft, person, readinessResult, trainingProfile.values);
@@ -389,16 +395,18 @@ export function processScheduledDutyForDay(draft, registries, scheduleIds, { per
       if (event?.notificationId) notifications.push(event.notificationId);
       if (event?.eventRecordId) { eventRecordIds.push(event.eventRecordId); record.outcomeEventRecordId = event.eventRecordId; }
       record.performanceScore = score; record.performanceRating = rating.id; record.before = before; record.after = after;
-      const qualificationResult = duty.qualificationId ? recordDutyQualification(draft,registries,personId,duty,score) : null;
+      const qualificationResult = playerParticipated && duty.qualificationId ? recordDutyQualification(draft,registries,personId,duty,score) : null;
       if (qualificationResult) record.qualificationResult = qualificationResult.result;
       record.status = "completed"; record.completedDate = draft.world.date; completedDutyIds.push(record.id);
-      const perfId = createEntityId(draft, "perf");
-      draft.entities.performanceRecords[perfId] = { id:perfId, schemaVersion:2, personId, unitId:record.unitId, sourceType:"scheduled_duty", sourceId:record.id, gameDate:draft.world.date, rating:rating.id, score, notes:`${duty.name} completed with ${rating.label.toLowerCase()} performance.` };
+      if (playerParticipated) {
+        const perfId = createEntityId(draft, "perf");
+        draft.entities.performanceRecords[perfId] = { id:perfId, schemaVersion:2, personId, unitId:record.unitId, sourceType:"scheduled_duty", sourceId:record.id, gameDate:draft.world.date, rating:rating.id, score, notes:`${duty.name} completed with ${rating.label.toLowerCase()} performance.` };
+      } else { record.playerAbsent=true; record.playerAbsenceReason="military_school"; }
       const npcResult=applyNpcParticipationForDuty(draft,registries,{unitId:record.unitId,duty,playerPersonId:personId,performanceScore:score,participantPersonIds:currentPersonIds});
-      record.participantPersonIds=[personId,...npcResult.participantIds];
+      record.participantPersonIds=playerParticipated ? [personId,...npcResult.participantIds] : [...npcResult.participantIds];
       if (record.calendarVisibility !== "background") recordUnitEvent(draft,{unitId:record.unitId,type:"training_completed",title:`${duty.name} completed`,summary:`${record.participantPersonIds.length} personnel participated · ${rating.label} ${score}/100.`,personId,sourceType:"schedule",sourceId:record.id,importance:record.significance === "major" ? "significant" : "routine"});
       recordReadinessSnapshot(draft,record.unitId,readinessResult,{force:duty.id === "duty_field_exercise"});
-      if (person.condition.status === (duty.statusWhileActive ?? "active")) person.condition.status = "active";
+      if (playerParticipated && person.condition.status === (duty.statusWhileActive ?? "active")) person.condition.status = "active";
     }
   }
   return { notifications, completedDutyIds, startedDutyIds, eventRecordIds };
