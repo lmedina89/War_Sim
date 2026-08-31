@@ -46,7 +46,7 @@ export function selectGameplay(state, indexes, registries, personId) {
     return { id: activity.id, name: activity.name, shortName: activity.shortName, durationDays: activity.durationDays, description: activity.description, eligible: reasons.length === 0, availabilityState, reasons, efficiency, cooldownRemaining };
   });
 
-  const recentActivities = recentRecords.slice(-5).reverse();
+  const recentActivities = recentRecords.slice(-30).reverse();
   const eventIds = indexes.gameplayEventsByPersonId?.get(personId) ?? [];
   const pendingDecisions = eventIds.map(id => state.entities.gameplayEventRecords[id]).filter(record => record?.status === "pending").map(record => {
     const def = registries.gameplayEvents.get(record.definitionId);
@@ -66,7 +66,7 @@ export function selectGameplay(state, indexes, registries, personId) {
     return { ...record, name: duty.name, shortName: duty.shortName, category: duty.category, description: duty.description, planningStatus:record.planningStatus ?? "firm" };
   });
   const currentDuty = currentRaw ? (()=>{ const duty=registries.duties.get(currentRaw.dutyDefinitionId); return {...currentRaw,name:duty.name,shortName:duty.shortName,category:duty.category,description:duty.description}; })() : null;
-  const recentDuties = scheduleRecords.filter(record => record.status === "completed").sort((a,b) => (b.endElapsedDay ?? 0) - (a.endElapsedDay ?? 0)).slice(0,5).map(record => {
+  const recentDuties = scheduleRecords.filter(record => record.status === "completed").sort((a,b) => (b.endElapsedDay ?? 0) - (a.endElapsedDay ?? 0)).slice(0,30).map(record => {
     const duty = registries.duties.get(record.dutyDefinitionId);
     return { ...record, name:duty.name, shortName:duty.shortName, category:duty.category };
   });

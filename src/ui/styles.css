@@ -613,3 +613,47 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .routine-duty-summary{margin:0 0 .85rem;padding:.75rem .85rem;border:1px dashed var(--line,#465767);border-radius:.7rem;background:rgba(255,255,255,.02)}
 .routine-duty-summary strong{display:block;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#9aa9b8)}
 .routine-duty-summary p{margin:.35rem 0 0;color:var(--text,#edf2f7);font-size:.92rem;line-height:1.35}
+
+/* v0.4.1.7 mobile UX and career-page consolidation */
+.compact-intro{margin:.15rem 0 .75rem}
+.history-row-shell{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.45rem;align-items:stretch;min-width:0}
+.history-row-shell>.activity-item,.history-row-shell>.duty-history-row{min-width:0}
+.history-archive{align-self:stretch;min-width:78px}
+.history-actions{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.6rem}
+.history-actions:empty{display:none}
+.attention-flash{animation:attention-flash 1.35s ease}
+@keyframes attention-flash{0%,100%{box-shadow:none}35%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}}
+
+/* Long labels are common in military records. Let reusable record components shrink and wrap. */
+.mil-metric,.mil-metric strong,.record-strip,.record-strip>*,.current-duty-card>*,.schedule-row>*,.opportunity-card,.activity-reasons,.activity-item,.duty-history-row,.dispatch-card,.personnel-file-card,.order-card{min-width:0;overflow-wrap:anywhere;word-break:normal}
+.statline strong,.progress-row-head strong{min-width:0;overflow-wrap:anywhere}
+
+/* Keep dialog controls reachable on iPhone and make the content, not the page behind it, scroll. */
+.modal{max-height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom)));overflow:visible}
+.modal-card{box-sizing:border-box;max-height:calc(100dvh - max(24px,env(safe-area-inset-top)) - max(24px,env(safe-area-inset-bottom)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.modal-card>.panel-head{position:sticky;top:-18px;z-index:4;margin:-18px -18px 12px;padding:18px 18px 10px;background:linear-gradient(180deg,var(--surface) 80%,color-mix(in srgb,var(--surface) 82%,transparent));border-bottom:1px solid var(--border)}
+.result-card #result-body{padding-bottom:.75rem}
+
+/* Routine PT remains simulated but dense daily history is summarized. */
+.duty-history-row:disabled{cursor:default;opacity:1}
+.duty-history-row:disabled strong{color:var(--muted)}
+
+@media (max-width: 560px){
+  .current-duty-card{grid-template-columns:1fr}
+  .current-duty-card .mil-status-stamp{grid-column:auto;justify-self:stretch}
+  .record-strip{grid-template-columns:1fr}
+  .record-strip>*{grid-column:auto!important}
+  .history-row-shell{grid-template-columns:1fr}
+  .history-archive{justify-self:end;min-height:38px}
+  .duty-history-row{align-items:flex-start;flex-direction:column;gap:.25rem}
+  .duty-history-row strong{white-space:normal;text-align:left}
+  .activity-item{grid-template-columns:1fr;gap:.2rem}
+  .opportunity-card{padding:14px}
+  .opportunity-metrics{grid-template-columns:1fr}
+  .opportunity-metrics .mil-status-stamp{grid-column:auto}
+  .modal{max-width:calc(100% - 12px)}
+  .modal-card{padding:14px;max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom)))}
+  .modal-card>.panel-head{top:-14px;margin:-14px -14px 10px;padding:14px 14px 10px}
+  .aar-performance,.aar-header{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){.attention-flash{animation:none;outline:2px solid var(--accent)}}

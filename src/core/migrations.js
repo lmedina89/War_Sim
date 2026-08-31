@@ -416,7 +416,7 @@ export function migratePayload(payload) {
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.1.6";
-  next.worldState.gameVersion = "0.4.1.6";
+  next.gameVersion = "0.4.1.7";
+  next.worldState.gameVersion = "0.4.1.7";
   return next;
 }

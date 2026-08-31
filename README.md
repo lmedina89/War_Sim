@@ -1,32 +1,42 @@
-# War Sim v0.4.1.6 — Training Results & Schedule Clarity Consolidation
+# War Sim v0.4.1.7 — Mobile UX & Career Page Consolidation
 
-War Sim v0.4.1.6 is the planned consolidation pass for the v0.4.1.x training, scheduling, qualification-result, and availability layer. It keeps world schema 14 and save format 3 while correcting contradictory AAR messaging, making routine Army PT a non-blocking background duty, making true schedule conflicts duration-aware and explainable, and preventing individual training from being presented as a direct collective-unit training gain.
+War Sim v0.4.1.7 is a presentation-focused stabilization update built on the verified v0.4.1.6 training foundation. It keeps **world schema 14** and **save format 3**. The simulation rules from v0.4.1.6 are intentionally preserved; this release focuses on mobile usability, history presentation, and making important career opportunities impossible to miss.
 
-## v0.4.1.6 changes
+## v0.4.1.7 changes
 
-- **Qualification-aware AARs:** weapon qualification `/40` result is the primary outcome. The generic `/100` training-performance grade is secondary context and can no longer imply that an unqualified attempt passed.
-- **Qualification-aware history/messages:** activity history, performance notes, and completion notifications preserve the actual qualified/unqualified result and native score.
-- **Outcome-compatible training events:** positive events such as Training Breakthrough and Performance Recognized have definition-driven minimum performance thresholds, preventing a poor result from simultaneously receiving contradictory positive feedback.
-- **Routine PT is non-blocking:** routine unit PT is modeled as a background time slice rather than a full-day exclusivity lock. It no longer greys out unrelated focused training.
-- **Weekday PT cadence:** garrison/elevated/predeployment routine PT is generated on normal weekdays and kept out of the major-event calendar. Weekend nominal dates are skipped rather than stacked onto Monday.
-- **Explicit schedule blocking:** duty definitions own `blocksFocusedActivities`; generated schedule records persist the resolved rule. Significant mandatory events can still block overlapping activities.
-- **Explainable conflicts:** activity cards and command errors name the conflicting duty and exact scheduled date/window.
-- **Individual vs collective readiness:** player-selected individual PT/range/MOS training develop the Soldier without directly increasing collective unit-training proficiency. Collective activities can still change collective unit proficiency.
-- **Causal AAR deltas:** individual activity AARs no longer attribute incidental whole-unit readiness/cohesion recalculation to the individual activity as a direct effect.
-- **Background-duty visibility:** the Duty Schedule shows a compact Routine Background Duties summary without crowding the significant-event calendar.
-- **School/availability and qualification-history rules from v0.4.1.5 remain intact.**
+- **Long Career page reduction**
+  - The Activities panel is now a remembered disclosure panel and can be collapsed without losing state.
+  - Activity Log shows a short recent preview by default with Show More / Recent Only controls.
+  - Recent Unit Training uses the same bounded-preview pattern.
+- **Presentation-only archive controls**
+  - Individual Activity Log and Recent Unit Training entries can be archived from the current UI, similar to Personnel Dispatches.
+  - Archived UI entries do **not** delete or mutate canonical simulation records; archive state is local presentation state scoped to the player.
+  - Archived entries can be restored.
+- **Routine PT history compression**
+  - Repeated Unit Physical Training records are summarized in Recent Unit Training instead of filling the page with one card per routine PT occurrence.
+  - The canonical scheduled-duty records remain intact for simulation/history use.
+- **Career opportunity visibility and navigation**
+  - Major career/school opportunities now join the high-visibility popup queue.
+  - The popup action changes to **Open Opportunity** and takes the player directly to the matching opportunity card.
+  - Career-opportunity dispatches also expose a working Open Opportunity action.
+  - Opening an opportunity highlights the target card briefly.
+- **Mobile modal hardening**
+  - Long AAR/personnel/save dialogs are bounded by the dynamic mobile viewport and scroll internally.
+  - Modal header/Close controls remain reachable while scrolling long content.
+  - Safe-area bottom padding is included.
+- **Narrow-screen wrapping fixes**
+  - Current Duty stacks vertically on narrow phones instead of letting duty name/date fields collide.
+  - Long military labels, qualifications, orders, opportunity text, status blocks, and record values wrap rather than spill outside their cards.
+  - Activity/duty history rows reflow cleanly on narrow screens.
 
-## Architecture rules preserved
+## Compatibility
 
-- immutable definition registries and stable IDs
-- player and NPCs share the same Person model
-- commands/services mutate authoritative state; selectors/view models read
-- deterministic seeded RNG; no direct `Math.random()`
-- canonical world clock and schema-versioned saves/migrations
-- derived indexes are not serialized
-- no deployment/combat implementation in this release
-- future schools, credentials, unit types, doctrine, capabilities, and combat remain definition-driven rather than special-cased in UI code
+- Runtime: **0.4.1.7**
+- Save format: **3**
+- World schema: **14**
+- Existing schema-14 careers are normalized to the current runtime version on load.
+- Legacy schema migrations remain supported through the existing migration chain.
 
-## Quality verification
+## Architecture note
 
-See `SOFTWARE_QUALITY_REPORT.md` for the exact release audit. Automated/static QA cannot prove iPhone Safari pixel rendering; live-device validation remains a separate release check.
+History archiving in this release is deliberately a **UI concern only**. War Sim continues to preserve canonical activity, duty, qualification, career, and notification records so those records remain available to future service-record, capability, readiness, and combat-simulation systems.

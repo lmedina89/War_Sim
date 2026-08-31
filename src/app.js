@@ -34,6 +34,8 @@ if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${d
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
 let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career", statusTimer = null;
+const CAREER_HISTORY_PREVIEW_LIMIT = 5;
+const UNIT_TRAINING_PREVIEW_LIMIT = 4;
 
 const $ = selector => document.querySelector(selector);
 const els = {
@@ -93,6 +95,23 @@ function setActiveView(view, { scroll = true } = {}) {
   if (scroll) window.scrollTo({ top: 0, behavior: "auto" });
 }
 function renderList(container, items, emptyText) { container.replaceChildren(); if (!items.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = emptyText; container.appendChild(p); return; } const ul = document.createElement("ul"); ul.className = "compact-list"; for (const item of items) { const li = document.createElement("li"); li.textContent = item; ul.appendChild(li); } container.appendChild(ul); }
+function uiArchiveKey(kind, personId) { return `war-sim:ui:archive:${kind}:${personId ?? "none"}`; }
+function readUiArchive(kind, personId) { try { const raw=localStorage.getItem(uiArchiveKey(kind,personId)); const values=raw?JSON.parse(raw):[]; return new Set(Array.isArray(values)?values:[]); } catch { return new Set(); } }
+function writeUiArchive(kind, personId, values) { try { localStorage.setItem(uiArchiveKey(kind,personId), JSON.stringify([...values])); } catch {} }
+function archiveUiRecord(kind, personId, recordId) { archiveUiRecords(kind,personId,[recordId]); }
+function archiveUiRecords(kind, personId, recordIds) { const values=readUiArchive(kind,personId); for(const id of recordIds) values.add(id); writeUiArchive(kind,personId,values); render(); }
+function clearUiArchive(kind, personId) { writeUiArchive(kind,personId,new Set()); render(); }
+function createHistoryControls({ kind, personId, hiddenCount=0, archivedCount=0, expanded=false, onToggle }) {
+  const actions=document.createElement("div"); actions.className="history-actions";
+  if(hiddenCount>0){const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary compact-button";toggle.textContent=expanded?"Recent Only":`Show More (${hiddenCount})`;toggle.addEventListener("click",onToggle);actions.appendChild(toggle);}
+  if(archivedCount>0){const restore=document.createElement("button");restore.type="button";restore.className="secondary compact-button";restore.textContent=`Restore Archived (${archivedCount})`;restore.addEventListener("click",()=>clearUiArchive(kind,personId));actions.appendChild(restore);}
+  return actions;
+}
+function scrollToCareerTarget(targetId) {
+  setActiveView("career", { scroll:false });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const target=document.getElementById(targetId); if(target){ const top=Math.max(0,window.scrollY+target.getBoundingClientRect().top-110); window.scrollTo({top,behavior:"smooth"}); target.classList.add("attention-flash"); setTimeout(()=>target.classList.remove("attention-flash"),1400); } }));
+}
+function openOpportunityRecord(opportunityRecordId) { scrollToCareerTarget(opportunityRecordId); }
 function resolveRankName(rankId) { return rankId ? `${registries.ranks.get(rankId).abbreviation} · ${registries.ranks.get(rankId).name}` : "—"; }
 function resolveBranchName(branchId) { return branchId ? registries.branches.get(branchId).name : "—"; }
 function formatSavedAt(value) { try { return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); } catch { return value ?? "—"; } }
@@ -149,6 +168,8 @@ function renderInbox(state, indexes, personId) {
     const meta = document.createElement("div"); meta.className = "inbox-meta"; const type=document.createElement("span"), date=document.createElement("span"); type.textContent=notice.type.replaceAll("_", " ").toUpperCase(); date.textContent=notice.gameDate; meta.append(type,date);
     const h = document.createElement("h3"); h.textContent = notice.title; const p = document.createElement("p"); p.textContent = notice.message; item.append(rail, meta, h, p);
     const actions=document.createElement("div"); actions.className="notice-actions";
+    const opportunityRecordId=notice.references?.opportunityRecordId ?? null;
+    if(opportunityRecordId && state.entities.opportunityRecords?.[opportunityRecordId]) { const open=document.createElement("button"); open.type="button"; open.className="compact-button"; open.textContent="Open Opportunity"; open.addEventListener("click",()=>{ if(notice.readAtElapsedDay==null) try{markNotificationRead(store,notice.id);}catch{} openOpportunityRecord(opportunityRecordId); }); actions.appendChild(open); }
     if (notice.readAtElapsedDay == null) { const readButton=document.createElement("button"); readButton.type="button"; readButton.className="secondary compact-button"; readButton.textContent="Acknowledge"; readButton.addEventListener("click",()=>runCommand(()=>markNotificationRead(store,notice.id))); actions.appendChild(readButton); }
     else { const clear=document.createElement("button"); clear.type="button"; clear.className="secondary compact-button"; clear.textContent="Archive"; clear.addEventListener("click",()=>runCommand(()=>archiveNotification(store,notice.id))); actions.appendChild(clear); }
     item.appendChild(actions); list.appendChild(item);
@@ -387,13 +408,21 @@ function renderGameplay(state, indexes, personId) {
     const body=document.createElement("div"); const h=document.createElement("strong"); h.textContent=item.name; const meta=document.createElement("span"); meta.textContent=`${item.category.toUpperCase()} · ${item.mandatory ? "MANDATORY" : "OPTIONAL"} · ${(item.planningStatus ?? "firm").toUpperCase()}`; body.append(h,meta);
     row.append(date,body,statusStamp(item.status)); els.dutySchedule.appendChild(row);
   }
-  if(view.recentDuties.length){const heading=document.createElement("h3");heading.className="schedule-history-heading";heading.textContent="Recent Unit Training";els.dutySchedule.appendChild(heading);const history=document.createElement("div");history.className="duty-history";for(const item of view.recentDuties){const button=document.createElement("button");button.type="button";button.className="duty-history-row";const text=document.createElement("span");text.textContent=`${item.completedDate} · ${item.name}`;const result=document.createElement("strong");result.textContent=item.performanceRating?`${registries.performanceRatings.get(item.performanceRating)?.label ?? item.performanceRating} · ${item.performanceScore ?? "—"}/100`:"COMPLETED";button.append(text,result);button.addEventListener("click",()=>showDutyResult(item.id));history.appendChild(button);}els.dutySchedule.appendChild(history);}
+  if(view.recentDuties.length){
+    const archived=readUiArchive("unit-training",personId); const visible=view.recentDuties.filter(item=>!archived.has(item.id)); const archivedCount=view.recentDuties.length-visible.length; const expanded=els.dutySchedule.dataset.historyExpanded==="true";
+    const significant=visible.filter(item=>item.dutyDefinitionId!=="duty_pt"); const pt=visible.filter(item=>item.dutyDefinitionId==="duty_pt"); const rows=[...significant];
+    if(pt.length){ const newest=pt[0], oldest=pt.at(-1); rows.push({...newest,id:`pt-summary:${pt.map(x=>x.id).join(",")}`,isPtSummary:true,summaryIds:pt.map(x=>x.id),name:`Unit Physical Training · ${pt.length} session${pt.length===1?"":"s"}`,completedDate:pt.length===1?newest.completedDate:`${oldest.completedDate} → ${newest.completedDate}`}); }
+    const heading=document.createElement("h3");heading.className="schedule-history-heading";heading.textContent="Recent Unit Training";els.dutySchedule.appendChild(heading);
+    const history=document.createElement("div");history.className="duty-history"; const shown=expanded?rows:rows.slice(0,UNIT_TRAINING_PREVIEW_LIMIT);
+    for(const item of shown){const row=document.createElement("div");row.className="history-row-shell";const button=document.createElement("button");button.type="button";button.className="duty-history-row";const text=document.createElement("span");text.textContent=`${item.completedDate} · ${item.name}`;const result=document.createElement("strong");result.textContent=item.isPtSummary?"ROUTINE":item.performanceRating?`${registries.performanceRatings.get(item.performanceRating)?.label ?? item.performanceRating} · ${item.performanceScore ?? "—"}/100`:"COMPLETED";button.append(text,result);if(!item.isPtSummary)button.addEventListener("click",()=>showDutyResult(item.id));else button.disabled=true;const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecords("unit-training",personId,item.isPtSummary?item.summaryIds:[item.id]));row.append(button,archive);history.appendChild(row);}els.dutySchedule.appendChild(history);
+    const controls=createHistoryControls({kind:"unit-training",personId,hiddenCount:Math.max(0,rows.length-UNIT_TRAINING_PREVIEW_LIMIT),archivedCount,expanded,onToggle:()=>{els.dutySchedule.dataset.historyExpanded=expanded?"false":"true";render();}}); if(controls.childElementCount)els.dutySchedule.appendChild(controls);
+  }
 
   els.careerOpportunities.replaceChildren();
   const visibleOpportunities=view.opportunities.filter(item=>["open","accepted","in_progress"].includes(item.status));
   if (!visibleOpportunities.length) { const p=document.createElement("p"); p.className="empty-state military-empty"; p.textContent="NO ACTIVE CAREER OPPORTUNITIES"; els.careerOpportunities.appendChild(p); }
   else for (const item of visibleOpportunities) {
-    const card=document.createElement("article"); card.className="opportunity-card";
+    const card=document.createElement("article"); card.className="opportunity-card"; card.id=item.id; card.dataset.recordId=item.id; card.dataset.opportunityStatus=item.status;
     const rail=document.createElement("div"); rail.className="document-rail"; const label=document.createElement("span"); label.textContent="PERSONNEL OPPORTUNITY"; const ref=document.createElement("span"); ref.textContent=compactReference("OPP",item.id); rail.append(label,ref);
     const h=document.createElement("h3"); h.textContent=item.title; const p=document.createElement("p"); p.textContent=item.message;
     const metrics=document.createElement("div"); metrics.className="opportunity-metrics"; metrics.append(statusStamp(item.status)); if(item.schoolName) metrics.append(metricBlock("SCHOOL",item.schoolName)); if(item.durationDays) metrics.append(metricBlock("DURATION",`${item.durationDays} days`)); if(item.status==="open") metrics.append(metricBlock("RESPOND",`${item.daysRemaining} days`)); if(item.reportDate) metrics.append(metricBlock("REPORT",item.reportDate));
@@ -423,8 +452,10 @@ function renderGameplay(state, indexes, personId) {
   }
 
   els.activityHistory.replaceChildren();
-  if (!view.recentActivities.length) { const p=document.createElement("p"); p.className="muted"; p.textContent="No focused training activities completed yet."; els.activityHistory.appendChild(p); }
-  else for (const record of view.recentActivities) { const def=registries.activities.get(record.activityDefinitionId), item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); const outcome=record.qualificationResult?`${record.qualificationResult.label.toUpperCase()} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`:`${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""}`; text.textContent=`${def.name} · ${outcome} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>showActivityResult(record.id)); els.activityHistory.appendChild(item); }
+  const activityArchive=readUiArchive("activity-history",personId); const visibleActivities=view.recentActivities.filter(record=>!activityArchive.has(record.id)); const archivedActivityCount=view.recentActivities.length-visibleActivities.length; const activityExpanded=els.activityHistory.dataset.expanded==="true";
+  if (!visibleActivities.length) { const p=document.createElement("p"); p.className="muted"; p.textContent=archivedActivityCount?"All recent activity records are archived from this view.":"No focused training activities completed yet."; els.activityHistory.appendChild(p); }
+  else for (const record of (activityExpanded?visibleActivities:visibleActivities.slice(0,CAREER_HISTORY_PREVIEW_LIMIT))) { const def=registries.activities.get(record.activityDefinitionId), shell=document.createElement("div");shell.className="history-row-shell"; const item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); const outcome=record.qualificationResult?`${record.qualificationResult.label.toUpperCase()} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`:`${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""}`; text.textContent=`${def.name} · ${outcome} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>showActivityResult(record.id)); const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecord("activity-history",personId,record.id));shell.append(item,archive);els.activityHistory.appendChild(shell); }
+  const activityControls=createHistoryControls({kind:"activity-history",personId,hiddenCount:Math.max(0,visibleActivities.length-CAREER_HISTORY_PREVIEW_LIMIT),archivedCount:archivedActivityCount,expanded:activityExpanded,onToggle:()=>{els.activityHistory.dataset.expanded=activityExpanded?"false":"true";render();}}); if(activityControls.childElementCount)els.activityHistory.appendChild(activityControls);
 }
 
 function resultLabel(key) { const labels={experience:"Experience",prestige:"Prestige",health:"Health",morale:"Morale",readiness:"Readiness",fatigue:"Fatigue",unitReadiness:"Unit Readiness",unitCohesion:"Unit Cohesion"}; return labels[key] ?? key; }
@@ -532,9 +563,9 @@ function auditNpcProgression(days){
 }
 
 function getNoticesByIds(ids) { const state = store.getState(); return ids.map(id => state.entities.notificationRecords[id]).filter(Boolean); }
-function queueNotifications(ids) { achievementQueue.push(...getNoticesByIds(ids).filter(n => ["qualification_completed", "award_earned", "promotion", "memorial"].includes(n.type))); showNextAchievement(); }
-function showNextAchievement() { if (els.achievementDialog.open || achievementQueue.length === 0) return; const notice = achievementQueue.shift(); els.achievementType.textContent = notice.type.replaceAll("_", " ").toUpperCase(); els.achievementTitle.textContent = notice.title; els.achievementMessage.textContent = notice.message; els.achievementDialog.dataset.notificationId = notice.id; els.achievementDialog.showModal(); }
-els.achievementOk.addEventListener("click", () => { const id = els.achievementDialog.dataset.notificationId; if (id) { try { markNotificationRead(store, id); } catch {} } els.achievementDialog.close(); showNextAchievement(); });
+function queueNotifications(ids) { achievementQueue.push(...getNoticesByIds(ids).filter(n => ["career_opportunity", "qualification_completed", "award_earned", "promotion", "memorial"].includes(n.type))); queueMicrotask(showNextAchievement); }
+function showNextAchievement() { if (els.achievementDialog.open || els.resultDialog.open || els.personDialog.open || els.saveDialog.open || els.confirmDialog.open || achievementQueue.length === 0) return; const notice = achievementQueue.shift(); els.achievementType.textContent = notice.type.replaceAll("_", " ").toUpperCase(); els.achievementTitle.textContent = notice.title; els.achievementMessage.textContent = notice.message; els.achievementDialog.dataset.notificationId = notice.id; els.achievementDialog.dataset.opportunityRecordId = notice.references?.opportunityRecordId ?? ""; els.achievementOk.textContent=notice.references?.opportunityRecordId?"Open Opportunity":"Continue"; els.achievementDialog.showModal(); }
+els.achievementOk.addEventListener("click", () => { const id = els.achievementDialog.dataset.notificationId, opportunityRecordId=els.achievementDialog.dataset.opportunityRecordId; if (id) { try { markNotificationRead(store, id); } catch {} } els.achievementDialog.close(); if(opportunityRecordId)openOpportunityRecord(opportunityRecordId); showNextAchievement(); });
 
 function autosave() { if (!store.getState().playerPersonId) return; const validation = validateWorldState(store.getState(), registries); if (validation.ok) saveToSlot(store.getState(), AUTOSAVE_SLOT); }
 function pulseFeedback(result) {
@@ -574,7 +605,7 @@ els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(
 els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
 els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
 els.save.addEventListener("click", () => openSaveManager("save")); els.load.addEventListener("click", () => openSaveManager("load")); els.loadFromStart.addEventListener("click", () => openSaveManager("load"));
-els.resultClose.addEventListener("click",()=>els.resultDialog.close());
+els.resultClose.addEventListener("click",()=>{els.resultDialog.close();showNextAchievement();});
 els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.saveDialogClose.addEventListener("click", () => els.saveDialog.close());

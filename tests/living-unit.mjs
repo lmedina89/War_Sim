@@ -98,4 +98,4 @@ const needState=needStore.getState();
 for(const record of Object.values(needState.entities.scheduleRecords).filter(r=>r.status==="scheduled")) assert.ok(record.startElapsedDay>needState.world.clock.elapsedDays||record.status==="in_progress","scheduler must not create new scheduled duties in the past");
 assert.equal(validateWorldState(needState,registries).ok,true);
 
-console.log("War Sim v0.4.1.6 living-unit and training-tempo QA passed");
+console.log("War Sim v0.4.1.7 living-unit and training-tempo QA passed");

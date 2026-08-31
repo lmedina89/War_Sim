@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.1.6</title>
+  <title>War Sim v0.4.1.7</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.1.6</p>
+        <p class="eyebrow">WAR SIM · v0.4.1.7</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -58,10 +58,10 @@
 
         <section class="panel opportunity-panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER CHANNEL</p><h2>Opportunities</h2><p class="muted">Eligible schools and career opportunities appear here with response deadlines and generate orders when accepted.</p></div><div id="career-opportunities"></div></section>
 
-        <section class="panel gameplay-panel">
-          <div class="section-heading compact-heading"><p class="section-kicker">DAILY OPERATIONS</p><h2>Activities</h2><p class="muted">Activities follow duty schedules, cooldowns, fatigue, performance, and unit-readiness effects.</p></div>
-          <div id="pending-decisions" class="pending-decisions"></div><div id="activity-options" class="activity-options"></div>
-        </section>
+        <details class="panel gameplay-panel disclosure-panel" data-persist-key="career-activities" open>
+          <summary><span class="summary-kicker">DAILY OPERATIONS</span><strong>Activities</strong></summary>
+          <div class="disclosure-body"><p class="muted compact-intro">Activities follow duty schedules, cooldowns, fatigue, performance, and unit-readiness effects. Collapse this panel when you are reviewing your career record.</p><div id="pending-decisions" class="pending-decisions"></div><div id="activity-options" class="activity-options"></div></div>
+        </details>
 
         <section class="dashboard-grid">
           <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFICIENCY</p><h2>Skills</h2></div><div id="skill-summary"></div></article>
