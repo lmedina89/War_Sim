@@ -609,3 +609,7 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
   .persistent-world-context { right: 6px; top:-23px; font-size:.54rem; max-width:calc(100vw - 28px); overflow:hidden; text-overflow:ellipsis; }
   .objective-history-row { grid-template-columns:1fr; gap:.25rem; }
 }
+
+.routine-duty-summary{margin:0 0 .85rem;padding:.75rem .85rem;border:1px dashed var(--line,#465767);border-radius:.7rem;background:rgba(255,255,255,.02)}
+.routine-duty-summary strong{display:block;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#9aa9b8)}
+.routine-duty-summary p{margin:.35rem 0 0;color:var(--text,#edf2f7);font-size:.92rem;line-height:1.35}

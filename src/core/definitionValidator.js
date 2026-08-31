@@ -144,6 +144,9 @@ export function validateDefinitions(registries) {
     if (event.defaultChoiceId && !choiceIds.has(event.defaultChoiceId)) errors.push(`${event.id}: invalid defaultChoiceId ${event.defaultChoiceId}.`);
     if (event.decisionDeadlineDays != null && (!Number.isInteger(event.decisionDeadlineDays) || event.decisionDeadlineDays < 1)) errors.push(`${event.id}: invalid decisionDeadlineDays.`);
     if (event.blocksTimeAdvance != null && typeof event.blocksTimeAdvance !== "boolean") errors.push(`${event.id}: blocksTimeAdvance must be boolean.`);
+    if (event.minimumPerformanceScore != null && (!Number.isFinite(event.minimumPerformanceScore) || event.minimumPerformanceScore < 0 || event.minimumPerformanceScore > 100)) errors.push(`${event.id}: invalid minimumPerformanceScore.`);
+    if (event.maximumPerformanceScore != null && (!Number.isFinite(event.maximumPerformanceScore) || event.maximumPerformanceScore < 0 || event.maximumPerformanceScore > 100)) errors.push(`${event.id}: invalid maximumPerformanceScore.`);
+    if (Number.isFinite(event.minimumPerformanceScore) && Number.isFinite(event.maximumPerformanceScore) && event.minimumPerformanceScore > event.maximumPerformanceScore) errors.push(`${event.id}: performance score range is inverted.`);
   }
 
 
@@ -151,6 +154,7 @@ export function validateDefinitions(registries) {
   for (const duty of registries.duties.values()) {
     if (!Number.isInteger(duty.durationDays) || duty.durationDays <= 0) errors.push(`${duty.id}: invalid durationDays.`);
     if (duty.eventTableId && !registries.eventTables.has(duty.eventTableId)) errors.push(`${duty.id}: invalid eventTableId ${duty.eventTableId}.`);
+    if (duty.blocksFocusedActivities != null && typeof duty.blocksFocusedActivities !== "boolean") errors.push(`${duty.id}: blocksFocusedActivities must be boolean.`);
     for (const effect of duty.playerEffects ?? []) validateEffect(errors, duty.id, effect, registries);
     for (const [key, value] of Object.entries(duty.trainingEffects ?? {})) {
       if (!["physical","weapons","tactical","cohesion","discipline","equipmentReadiness"].includes(key)) errors.push(`${duty.id}: invalid unit-training field ${key}.`);

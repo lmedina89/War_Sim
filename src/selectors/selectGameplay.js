@@ -1,5 +1,6 @@
 import { calculateUnitReadiness } from "../services/unitReadiness.js";
 import { readinessTrendFromSnapshots } from "../services/livingUnit.js";
+import { describeScheduleConflict, scheduleConflictForActivity } from "../services/scheduleRules.js";
 
 function overlaps(startA, endA, startB, endB) { return startA <= endB && startB <= endA; }
 
@@ -32,8 +33,8 @@ export function selectGameplay(state, indexes, registries, personId) {
     if (e.requiresAssignedUnit && !person.affiliation.unitId) { reasons.push("unit assignment required"); availabilityState = "locked"; }
     if (activity.category !== "recovery" && person.condition.fatigue >= 85) { reasons.push("recovery required: fatigue too high"); availabilityState = "recovering"; }
     const activityStart = currentElapsedDay + 1, activityEnd = currentElapsedDay + activity.durationDays;
-    const conflict = scheduleRecords.find(record => record.mandatory && ["scheduled","in_progress"].includes(record.status) && overlaps(activityStart, activityEnd, record.startElapsedDay, record.endElapsedDay));
-    if (conflict) { const duty = registries.duties.get(conflict.dutyDefinitionId); reasons.push(`conflicts with scheduled ${duty.name}`); availabilityState = "scheduled"; }
+    const conflict = scheduleConflictForActivity(scheduleRecords, registries, activityStart, activityEnd);
+    if (conflict) { reasons.push(`conflicts with ${describeScheduleConflict(conflict, registries)}`); availabilityState = "scheduled"; }
     const opportunityConflict = (indexes.opportunityRecordsByPersonId?.get(personId) ?? []).map(id => state.entities.opportunityRecords[id]).find(record => record && ["accepted","in_progress"].includes(record.status) && Number.isInteger(record.reportElapsedDay) && overlaps(activityStart, activityEnd, record.reportElapsedDay, record.completeElapsedDay));
     if (opportunityConflict) { reasons.push("conflicts with accepted school/orders window"); availabilityState = "scheduled"; }
     const lastSame = recentRecords.filter(record => record.activityDefinitionId === activity.id).sort((a,b) => (b.endElapsedDay ?? 0) - (a.endElapsedDay ?? 0))[0];
@@ -55,6 +56,11 @@ export function selectGameplay(state, indexes, registries, personId) {
   const activeSchedule = scheduleRecords.filter(record => ["scheduled","in_progress"].includes(record.status) && record.endElapsedDay >= currentElapsedDay).sort((a,b) => a.startElapsedDay - b.startElapsedDay);
   const currentRaw = activeSchedule.find(record => record.status === "in_progress" || (record.startElapsedDay <= currentElapsedDay && record.endElapsedDay >= currentElapsedDay)) ?? null;
   const visibleSchedule = activeSchedule.filter(record => record.calendarVisibility !== "background" || record === currentRaw).slice(0, 8);
+  const routineBackground = activeSchedule.filter(record => record.calendarVisibility === "background");
+  const routineSchedule = routineBackground.slice(0, 5).map(record => {
+    const duty = registries.duties.get(record.dutyDefinitionId);
+    return { ...record, name: duty.name, shortName: duty.shortName, blocksFocusedActivities: duty.blocksFocusedActivities !== false && record.blocksFocusedActivities !== false };
+  });
   const upcomingSchedule = visibleSchedule.map(record => {
     const duty = registries.duties.get(record.dutyDefinitionId);
     return { ...record, name: duty.name, shortName: duty.shortName, category: duty.category, description: duty.description, planningStatus:record.planningStatus ?? "firm" };
@@ -107,5 +113,5 @@ export function selectGameplay(state, indexes, registries, personId) {
 
   const simulationTier=person.simulationTier ?? 2;
   const simulationTierDefinition=registries.simulationTiers.values().find(def=>def.tier===simulationTier) ?? null;
-  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, currentDuty, opportunities, objectives, activeObjectives, objectiveHistory, onboardingComplete, authorityIds, commandDuties, readiness, readinessTrend, performanceIndex, trainingPhase, unitHistory, recentCareerActivity, simulationTier, simulationTierLabel:simulationTierDefinition?.playerLabel ?? simulationTierDefinition?.name ?? `Simulation Tier ${simulationTier}`, simulationTierDescription:simulationTierDefinition?.description ?? "" };
+  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, routineSchedule, currentDuty, opportunities, objectives, activeObjectives, objectiveHistory, onboardingComplete, authorityIds, commandDuties, readiness, readinessTrend, performanceIndex, trainingPhase, unitHistory, recentCareerActivity, simulationTier, simulationTierLabel:simulationTierDefinition?.playerLabel ?? simulationTierDefinition?.name ?? `Simulation Tier ${simulationTier}`, simulationTierDescription:simulationTierDefinition?.description ?? "" };
 }

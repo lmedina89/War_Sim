@@ -1,7 +1,7 @@
 export const dutyDefinitions = [
   {
     id: "duty_pt", schemaVersion: 2, name: "Unit Physical Training", shortName: "PT", category: "training", durationDays: 1,
-    statusWhileActive: "training", mandatory: true, eventTableId: "event_table_training_light", defaultVisibility: "background", priority: 20,
+    statusWhileActive: "training", mandatory: true, eventTableId: "event_table_training_light", defaultVisibility: "background", priority: 20, blocksFocusedActivities: false, timeSlice: "routine",
     description: "Routine unit physical training builds fitness and supports physical readiness without normally occupying the major-event calendar.",
     playerEffects: [
       { target: "skill", skillId: "skill_fitness", operation: "add", value: 1 },
@@ -83,7 +83,7 @@ export const scheduleTemplateDefinitions = [
   {
     id: "schedule_garrison_cycle", schemaVersion: 2, name: "Garrison Training Cycle", horizonDays: 70,
     entries: [
-      { dutyDefinitionId: "duty_pt", offsetDays: 3, repeatEveryDays: 7, visibility: "background", weekdayOnly: true },
+      { dutyDefinitionId: "duty_pt", offsetDays: 1, repeatEveryDays: 1, visibility: "background", weekdayOnly: true },
       { dutyDefinitionId: "duty_maintenance", offsetDays: 20, repeatEveryDays: 60, visibility: "significant", weekdayOnly: true, need: { component: "equipmentReadiness", below: 93 } },
       { dutyDefinitionId: "duty_range", offsetDays: 45, repeatEveryDays: 120, visibility: "significant", weekdayOnly: true, qualificationDueWithinDays: 75 },
       { dutyDefinitionId: "duty_squad_drills", offsetDays: 70, repeatEveryDays: 75, visibility: "significant", weekdayOnly: true, need: { component: "tactical", below: 91 } },
@@ -93,7 +93,7 @@ export const scheduleTemplateDefinitions = [
   {
     id: "schedule_elevated_cycle", schemaVersion: 2, name: "Elevated Readiness Cycle", horizonDays: 56,
     entries: [
-      { dutyDefinitionId: "duty_pt", offsetDays: 2, repeatEveryDays: 6, visibility: "background", weekdayOnly: true },
+      { dutyDefinitionId: "duty_pt", offsetDays: 1, repeatEveryDays: 1, visibility: "background", weekdayOnly: true },
       { dutyDefinitionId: "duty_maintenance", offsetDays: 12, repeatEveryDays: 28, visibility: "significant", weekdayOnly: true },
       { dutyDefinitionId: "duty_squad_drills", offsetDays: 18, repeatEveryDays: 35, visibility: "significant", weekdayOnly: true },
       { dutyDefinitionId: "duty_range", offsetDays: 28, repeatEveryDays: 75, visibility: "significant", weekdayOnly: true, qualificationDueWithinDays: 75 },
@@ -103,7 +103,7 @@ export const scheduleTemplateDefinitions = [
   {
     id: "schedule_predeployment_cycle", schemaVersion: 2, name: "Pre-Deployment Train-Up", horizonDays: 42,
     entries: [
-      { dutyDefinitionId: "duty_pt", offsetDays: 3, repeatEveryDays: 7, visibility: "background", weekdayOnly: true },
+      { dutyDefinitionId: "duty_pt", offsetDays: 1, repeatEveryDays: 1, visibility: "background", weekdayOnly: true },
       { dutyDefinitionId: "duty_maintenance", offsetDays: 6, repeatEveryDays: 21, visibility: "significant", weekdayOnly: true },
       { dutyDefinitionId: "duty_range", offsetDays: 10, repeatEveryDays: 42, visibility: "significant", weekdayOnly: true },
       { dutyDefinitionId: "duty_squad_drills", offsetDays: 17, repeatEveryDays: 28, visibility: "significant", allowWeekend: true },

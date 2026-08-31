@@ -6,6 +6,12 @@ import { registries } from "../data/registries.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
 export const CURRENT_WORLD_SCHEMA_VERSION = 14;
 
+
+function normalizeScheduleAvailabilityFlags(worldState) {
+  for (const record of Object.values(worldState.entities?.scheduleRecords ?? {})) {
+    if (typeof record.blocksFocusedActivities !== "boolean") record.blocksFocusedActivities = record.calendarVisibility !== "background";
+  }
+}
 function repairLegacyScheduleTemplateIds(worldState) {
   const scheduler = worldState.world?.scheduler ?? null;
   const fallbackPhaseId = registries.trainingPhases.has(scheduler?.trainingPhaseId) ? scheduler.trainingPhaseId : "training_phase_garrison";
@@ -409,7 +415,8 @@ export function migratePayload(payload) {
   repairLegacyAffiliationFields(next.worldState);
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
-  next.gameVersion = "0.4.1.5";
-  next.worldState.gameVersion = "0.4.1.5";
+  normalizeScheduleAvailabilityFlags(next.worldState);
+  next.gameVersion = "0.4.1.6";
+  next.worldState.gameVersion = "0.4.1.6";
   return next;
 }

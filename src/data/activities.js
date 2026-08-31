@@ -1,8 +1,8 @@
 export const activityDefinitions = [
   {
-    id: "activity_pt", schemaVersion: 1, name: "Physical Training", shortName: "PT", category: "individual", durationDays: 1,
+    id: "activity_pt", schemaVersion: 2, name: "Physical Training", shortName: "PT", category: "individual", durationDays: 1, participantScope: "individual",
     description: "Structured physical training improves fitness and general readiness.",
-    cooldownDays: 1, repetitionWindowDays: 7, performanceSkillIds: ["skill_fitness"], unitTrainingEffects: { physical: 2 },
+    cooldownDays: 1, repetitionWindowDays: 7, performanceSkillIds: ["skill_fitness"],
     presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 60 },
     effects: [
@@ -17,7 +17,7 @@ export const activityDefinitions = [
     id: "activity_range", schemaVersion: 2, name: "Weapons Qualification Range", shortName: "Range", category: "individual", durationDays: 2,
     qualificationDutyDefinitionId: "duty_range", participantScope: "individual",
     description: "Live-fire range time improves marksmanship and weapons proficiency.",
-    cooldownDays: 3, repetitionWindowDays: 10, performanceSkillIds: ["skill_marksmanship","skill_fieldcraft"], unitTrainingEffects: { weapons: 3, equipmentReadiness: -1 },
+    cooldownDays: 3, repetitionWindowDays: 10, performanceSkillIds: ["skill_marksmanship","skill_fieldcraft"],
     presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 70 },
     effects: [
@@ -29,9 +29,9 @@ export const activityDefinitions = [
     eventTableId: "event_table_training_range"
   },
   {
-    id: "activity_mos_training", schemaVersion: 1, name: "MOS Training", shortName: "MOS", category: "individual", durationDays: 3,
+    id: "activity_mos_training", schemaVersion: 2, name: "MOS Training", shortName: "MOS", category: "individual", durationDays: 3, participantScope: "individual",
     description: "Job-specific training develops specialty proficiency.",
-    cooldownDays: 2, repetitionWindowDays: 7, performanceSkillIds: ["skill_mos_proficiency"], unitTrainingEffects: { discipline: 1 },
+    cooldownDays: 2, repetitionWindowDays: 7, performanceSkillIds: ["skill_mos_proficiency"],
     presentationId: "feedback_routine",
     eligibility: { allowedStatuses: ["active"], minimumHealth: 60 },
     effects: [
@@ -57,7 +57,7 @@ export const activityDefinitions = [
     eventTableId: "event_table_training_field"
   },
   {
-    id: "activity_leadership_development", schemaVersion: 1, name: "Leadership Development", shortName: "Leadership", category: "individual", durationDays: 2,
+    id: "activity_leadership_development", schemaVersion: 2, name: "Leadership Development", shortName: "Leadership", category: "individual", durationDays: 2, participantScope: "individual",
     description: "Leader development builds judgment and leadership proficiency.",
     cooldownDays: 4, repetitionWindowDays: 10, performanceSkillIds: ["skill_leadership"],
     presentationId: "feedback_routine",
@@ -72,7 +72,7 @@ export const activityDefinitions = [
   }
 ,
   {
-    id: "activity_recovery", schemaVersion: 1, name: "Recovery Period", shortName: "Recovery", category: "recovery", durationDays: 1,
+    id: "activity_recovery", schemaVersion: 1, name: "Recovery Period", shortName: "Recovery", category: "recovery", durationDays: 1, participantScope: "individual",
     description: "A deliberate recovery period reduces fatigue and restores readiness after sustained training.",
     presentationId: "feedback_routine", cooldownDays: 0, repetitionWindowDays: 1, performanceSkillIds: [],
     eligibility: { allowedStatuses: ["active"], minimumHealth: 1 },

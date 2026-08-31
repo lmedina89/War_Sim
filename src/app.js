@@ -372,7 +372,15 @@ function renderGameplay(state, indexes, personId) {
 
   if(els.trainingPhaseSummary) els.trainingPhaseSummary.textContent=view.trainingPhase ? `${view.trainingPhase.name} · ${view.trainingPhase.description}` : "Training phase unavailable.";
   els.dutySchedule.replaceChildren();
-  if (!view.upcomingSchedule.length) { const p=document.createElement("p"); p.className="empty-state military-empty"; p.textContent="NO SCHEDULED UNIT DUTIES"; els.dutySchedule.appendChild(p); }
+  if (view.routineSchedule?.length) {
+    const routine=document.createElement("div"); routine.className="routine-duty-summary";
+    const heading=document.createElement("strong"); heading.textContent="Routine Background Duties";
+    const details=document.createElement("p");
+    const next=view.routineSchedule[0];
+    details.textContent=`${next.name} next ${next.startDate}${next.blocksFocusedActivities ? " · may restrict conflicting activities" : " · non-blocking routine duty"}`;
+    routine.append(heading,details); els.dutySchedule.appendChild(routine);
+  }
+  if (!view.upcomingSchedule.length) { const p=document.createElement("p"); p.className="empty-state military-empty"; p.textContent="NO SIGNIFICANT UNIT DUTIES SCHEDULED"; els.dutySchedule.appendChild(p); }
   else for (const item of view.upcomingSchedule) {
     const row=document.createElement("article"); row.className=`schedule-row ${item.status}`;
     const date=document.createElement("time"); date.textContent=item.startDate === item.endDate ? item.startDate : `${item.startDate} → ${item.endDate}`;
@@ -416,7 +424,7 @@ function renderGameplay(state, indexes, personId) {
 
   els.activityHistory.replaceChildren();
   if (!view.recentActivities.length) { const p=document.createElement("p"); p.className="muted"; p.textContent="No focused training activities completed yet."; els.activityHistory.appendChild(p); }
-  else for (const record of view.recentActivities) { const def=registries.activities.get(record.activityDefinitionId), item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); text.textContent=`${def.name} · ${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>showActivityResult(record.id)); els.activityHistory.appendChild(item); }
+  else for (const record of view.recentActivities) { const def=registries.activities.get(record.activityDefinitionId), item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); const outcome=record.qualificationResult?`${record.qualificationResult.label.toUpperCase()} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`:`${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""}`; text.textContent=`${def.name} · ${outcome} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>showActivityResult(record.id)); els.activityHistory.appendChild(item); }
 }
 
 function resultLabel(key) { const labels={experience:"Experience",prestige:"Prestige",health:"Health",morale:"Morale",readiness:"Readiness",fatigue:"Fatigue",unitReadiness:"Unit Readiness",unitCohesion:"Unit Cohesion"}; return labels[key] ?? key; }
@@ -425,8 +433,15 @@ function appendChangeRow(container,{label,before,after,delta,key=""}){ const row
 function showActivityResult(activityRecordId) {
   const state=store.getState(), record=state.entities.activityRecords[activityRecordId]; if(!record)return; const def=registries.activities.get(record.activityDefinitionId); const perf=performanceProfile(record.performanceRating??"satisfactory");
   els.resultDialog.dataset.tone=perf.tone; els.resultReference.textContent=recordReference("aar",record.id); els.resultKicker.textContent="AFTER ACTION REPORT"; els.resultTitle.textContent=def.name; els.resultBody.replaceChildren();
-  const header=document.createElement("div"); header.className="aar-header"; const grade=document.createElement("span"); grade.className=`performance-badge tone-${perf.tone}`; grade.textContent=record.performanceScore!=null?`${perf.label} · ${record.performanceScore}/100`:perf.label; const date=document.createElement("span"); date.className="aar-date"; date.textContent=`${record.startDate} → ${record.endDate}`; header.append(grade,date); const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=perf.description; els.resultBody.append(header,desc);
-  if(record.qualificationResult){const q=record.qualificationResult;const box=document.createElement("div");box.className="aar-performance";box.append(statusStamp(q.qualified?"filled":"blocked"),metricBlock("WEAPON QUALIFICATION",q.label),metricBlock("SCORE",`${q.score}/${q.maxScore}`));els.resultBody.appendChild(box);}
+  const header=document.createElement("div"); header.className="aar-header"; const date=document.createElement("span"); date.className="aar-date"; date.textContent=`${record.startDate} → ${record.endDate}`;
+  if(record.qualificationResult){
+    const q=record.qualificationResult;
+    const grade=document.createElement("span"); grade.className=`performance-badge tone-${q.qualified?"good":"warning"}`; grade.textContent=`${q.label} · ${q.score}/${q.maxScore}`; header.append(grade,date); els.resultBody.appendChild(header);
+    const box=document.createElement("div");box.className="aar-performance";box.append(statusStamp(q.qualified?"filled":"blocked"),metricBlock("QUALIFICATION RESULT",q.qualified?"QUALIFIED":"UNQUALIFIED"),metricBlock("TRAINING PERFORMANCE",record.performanceScore!=null?`${perf.label} · ${record.performanceScore}/100`:perf.label));els.resultBody.appendChild(box);
+    const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=q.qualified?"Weapon qualification standard met. The 0–100 training score is supporting performance context.":"Weapon qualification standard was not met. The 0–100 training score does not override the qualification result."; els.resultBody.appendChild(desc);
+  } else {
+    const grade=document.createElement("span"); grade.className=`performance-badge tone-${perf.tone}`; grade.textContent=record.performanceScore!=null?`${perf.label} · ${record.performanceScore}/100`:perf.label; header.append(grade,date); const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=perf.description; els.resultBody.append(header,desc);
+  }
   const changes=document.createElement("div"); changes.className="aar-change-grid";
   for(const [key,delta] of Object.entries(record.deltas??{})){ if(key==="skills" || !delta) continue; const before=record.before?.[key],after=record.after?.[key]; if(before!=null && after!=null) appendChangeRow(changes,{label:resultLabel(key),before,after,delta,key}); }
   for(const [id,delta] of Object.entries(record.deltas?.skills??{})){ if(!delta) continue; const before=record.before?.skills?.[id],after=record.after?.skills?.[id]; if(before!=null && after!=null) appendChangeRow(changes,{label:registries.skills.get(id)?.name??id,before,after,delta,key:"skill"}); }
@@ -438,7 +453,10 @@ function showActivityResult(activityRecordId) {
 function showDutyResult(scheduleRecordId) {
   const state=store.getState(), record=state.entities.scheduleRecords[scheduleRecordId]; if(!record)return; const duty=registries.duties.get(record.dutyDefinitionId); const perf=performanceProfile(record.performanceRating??"satisfactory");
   els.resultDialog.dataset.tone=perf.tone; els.resultReference.textContent=compactReference("DUTY",record.id); els.resultKicker.textContent="UNIT TRAINING AAR"; els.resultTitle.textContent=duty.name; els.resultBody.replaceChildren();
-  const header=document.createElement("div");header.className="aar-performance";header.append(statusStamp(record.performanceRating??"completed"),metricBlock("SCORE",record.performanceScore!=null?`${record.performanceScore}/100`:"—"),metricBlock("PERIOD",record.startDate===record.endDate?record.startDate:`${record.startDate} → ${record.endDate}`));els.resultBody.appendChild(header);
+  const header=document.createElement("div");header.className="aar-performance";
+  if(record.qualificationResult && typeof record.qualificationResult === "object") { const q=record.qualificationResult; header.append(statusStamp(q.qualified?"filled":"blocked"),metricBlock("QUALIFICATION",`${q.label} · ${q.score}/${q.maxScore}`),metricBlock("TRAINING PERFORMANCE",record.performanceScore!=null?`${registries.performanceRatings.get(record.performanceRating)?.label ?? record.performanceRating} · ${record.performanceScore}/100`:"—")); }
+  else header.append(statusStamp(record.performanceRating??"completed"),metricBlock("SCORE",record.performanceScore!=null?`${record.performanceScore}/100`:"—"),metricBlock("PERIOD",record.startDate===record.endDate?record.startDate:`${record.startDate} → ${record.endDate}`));
+  els.resultBody.appendChild(header);
   const changes=document.createElement("div");changes.className="aar-change-grid";for(const key of ["readiness","morale","fatigue","unitReadiness","unitCohesion"]){const before=record.before?.[key],after=record.after?.[key];if(before!=null&&after!=null&&before!==after)appendChangeRow(changes,{label:resultLabel(key),before,after,delta:after-before,key});}
   for(const [key,after] of Object.entries(record.after?.training??{})){const before=record.before?.training?.[key];if(before!=null&&after!==before)appendChangeRow(changes,{label:`Unit ${key.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase())}`,before,after,delta:after-before,key:"skill"});}
   if(changes.childElementCount){const heading=document.createElement("h3");heading.className="aar-subheading";heading.textContent="Recorded Changes";els.resultBody.append(heading,changes);}

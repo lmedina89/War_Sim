@@ -1,6 +1,6 @@
 export const gameplayEventDefinitions = [
   {
-    id: "event_training_breakthrough", schemaVersion: 1, name: "Training Breakthrough", type: "activity", priority: "normal",
+    id: "event_training_breakthrough", schemaVersion: 2, minimumPerformanceScore: 55, name: "Training Breakthrough", type: "activity", priority: "normal",
     presentationId: "feedback_routine",
     title: "Training Breakthrough", message: "The training period clicked. Your performance noticeably improved.",
     effects: [{ target: "skill", skillId: "skill_mos_proficiency", operation: "add", value: 1 }, { target: "person", field: "career.experience", operation: "add", value: 25 }]
@@ -12,7 +12,7 @@ export const gameplayEventDefinitions = [
     effects: [{ target: "person", field: "condition.health", operation: "add", value: -4, clamp: [0,100] }, { target: "person", field: "condition.readiness", operation: "add", value: -3, clamp: [0,100] }]
   },
   {
-    id: "event_squad_cohesion_gain", schemaVersion: 1, name: "Squad Cohesion Gain", type: "activity", priority: "normal",
+    id: "event_squad_cohesion_gain", schemaVersion: 2, minimumPerformanceScore: 50, name: "Squad Cohesion Gain", type: "activity", priority: "normal",
     presentationId: "feedback_routine",
     title: "Squad Working Better Together", message: "The squad's repetitions are paying off. Coordination and trust improve.",
     effects: [{ target: "unitTraining", field: "cohesion", operation: "add", value: 2, clamp: [0,100] }, { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }]
@@ -27,7 +27,7 @@ export const gameplayEventDefinitions = [
     ]
   },
   {
-    id: "event_training_recognition", schemaVersion: 1, name: "Training Recognition", type: "activity", priority: "normal",
+    id: "event_training_recognition", schemaVersion: 2, minimumPerformanceScore: 70, name: "Training Recognition", type: "activity", priority: "normal",
     presentationId: "feedback_routine",
     title: "Performance Recognized", message: "Your performance is singled out as a positive example during the training period.",
     effects: [{ target: "person", field: "career.prestige", operation: "add", value: 2 }, { target: "person", field: "condition.morale", operation: "add", value: 3, clamp: [0,100] }]

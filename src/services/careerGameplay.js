@@ -5,13 +5,15 @@ import { applyUnitTrainingEffects, syncUnitReadiness, ensureUnitTrainingProfile 
 import { resolveActivityEvent } from "./gameplayEvents.js";
 import { completeSchoolInDraft } from "./schoolCompletion.js";
 import { recordNotification } from "./recordServices.js";
+import { dutyBlocksFocusedActivities, scheduleRecordBlocksFocusedActivities } from "./scheduleRules.js";
 import { calculateDutyPerformanceScore, resolvePerformanceRating } from "./performance.js";
 import { applyNpcParticipationForDuty, recordUnitEvent, recordReadinessSnapshot, recordDutyQualification } from "./livingUnit.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
 
-function findOpenStart(draft, personId, requestedStart, durationDays) {
-  const existing=Object.values(draft.entities.scheduleRecords ?? {}).filter(r=>r.personId===personId && ["scheduled","in_progress"].includes(r.status)).map(r=>({start:r.startElapsedDay,end:r.endElapsedDay}));
+function findOpenStart(draft, personId, requestedStart, durationDays, { blocksFocusedActivities = true } = {}) {
+  if (!blocksFocusedActivities) return requestedStart;
+  const existing=Object.values(draft.entities.scheduleRecords ?? {}).filter(r=>r.personId===personId && ["scheduled","in_progress"].includes(r.status) && scheduleRecordBlocksFocusedActivities(r)).map(r=>({start:r.startElapsedDay,end:r.endElapsedDay}));
   for(const opportunity of Object.values(draft.entities.opportunityRecords ?? {})) if(opportunity.personId===personId && ["accepted","in_progress"].includes(opportunity.status) && Number.isInteger(opportunity.reportElapsedDay)) existing.push({start:opportunity.reportElapsedDay,end:opportunity.completeElapsedDay});
   for(let start=requestedStart,attempts=0;attempts<180;attempts++,start++) { const end=start+durationDays-1; if(!existing.some(r=>intervalsOverlap(start,end,r.start,r.end))) return start; }
   throw new Error("Unable to find a conflict-free schedule window.");
@@ -60,10 +62,11 @@ function alignEntryStart(draft,nominal,entry,duty){
   return alignToPreferredWeekday(draft,nominal,duty.preferredWeekdays);
 }
 function findOpenStartForEntry(draft,personId,requestedStart,durationDays,entry,duty){
+  const blocksFocusedActivities=dutyBlocksFocusedActivities(duty);
   for(let offset=0;offset<180;offset++){
     const candidate=alignEntryStart(draft,requestedStart+offset,entry,duty);
     if(candidate<draft.world.clock.elapsedDays) continue;
-    const open=findOpenStart(draft,personId,candidate,durationDays);
+    const open=findOpenStart(draft,personId,candidate,durationDays,{blocksFocusedActivities});
     if(open!==candidate) continue;
     return candidate;
   }
@@ -93,9 +96,9 @@ export function seedCareerGameplayRecords(draft,registries,personId,unitId){
 
 export function scheduleAdditionalDutyInDraft(draft,registries,{personId,unitId,dutyDefinitionId,requestedStartElapsedDay=null,sourceTemplateId=null}={}){
   draft.entities.scheduleRecords??={}; const duty=registries.duties.get(dutyDefinitionId); if(!duty)throw new Error(`Unknown duty definition ${dutyDefinitionId}.`); if(!draft.entities.people[personId])throw new Error(`Unknown person ${personId}.`); if(!unitId||!draft.entities.units[unitId])throw new Error(`Unknown unit ${unitId}.`);
-  const requested=Number.isInteger(requestedStartElapsedDay)?requestedStartElapsedDay:draft.world.clock.elapsedDays+1; const aligned=alignToPreferredWeekday(draft,requested,duty.preferredWeekdays); const actualStart=findOpenStart(draft,personId,aligned,duty.durationDays); const id=createEntityId(draft,"schedule");
+  const requested=Number.isInteger(requestedStartElapsedDay)?requestedStartElapsedDay:draft.world.clock.elapsedDays+1; const aligned=alignToPreferredWeekday(draft,requested,duty.preferredWeekdays); const blocksFocusedActivities=dutyBlocksFocusedActivities(duty); const actualStart=findOpenStart(draft,personId,aligned,duty.durationDays,{blocksFocusedActivities}); const id=createEntityId(draft,"schedule");
   const templateId=sourceTemplateId??draft.world.scheduler?.scheduleTemplateId??registries.scheduleTemplates.values()[0]?.id;
-  draft.entities.scheduleRecords[id]={id,schemaVersion:2,kind:"unit_duty",dutyDefinitionId:duty.id,personId,unitId,sourceTemplateId:templateId,sourceType:sourceTemplateId?"template":"command",trainingPhaseId:draft.world.scheduler?.trainingPhaseId??null,mandatory:Boolean(duty.mandatory),significance:duty.significance??(duty.defaultVisibility==="significant"?"major":"routine"),calendarVisibility:duty.calendarVisibility??duty.defaultVisibility??"visible",priority:duty.priority??50,planningStatus:"firm",status:"scheduled",nominalStartElapsedDay:requested,startElapsedDay:actualStart,endElapsedDay:actualStart+duty.durationDays-1,startDate:addDaysIso(draft.world.date,actualStart-draft.world.clock.elapsedDays),endDate:addDaysIso(draft.world.date,actualStart+duty.durationDays-1-draft.world.clock.elapsedDays),startedDate:null,completedDate:null,outcomeEventRecordId:null};
+  draft.entities.scheduleRecords[id]={id,schemaVersion:2,kind:"unit_duty",dutyDefinitionId:duty.id,personId,unitId,sourceTemplateId:templateId,sourceType:sourceTemplateId?"template":"command",trainingPhaseId:draft.world.scheduler?.trainingPhaseId??null,mandatory:Boolean(duty.mandatory),significance:duty.significance??(duty.defaultVisibility==="significant"?"major":"routine"),calendarVisibility:duty.calendarVisibility??duty.defaultVisibility??"visible",priority:duty.priority??50,blocksFocusedActivities,planningStatus:"firm",status:"scheduled",nominalStartElapsedDay:requested,startElapsedDay:actualStart,endElapsedDay:actualStart+duty.durationDays-1,startDate:addDaysIso(draft.world.date,actualStart-draft.world.clock.elapsedDays),endDate:addDaysIso(draft.world.date,actualStart+duty.durationDays-1-draft.world.clock.elapsedDays),startedDate:null,completedDate:null,outcomeEventRecordId:null};
   return draft.entities.scheduleRecords[id];
 }
 
@@ -103,10 +106,10 @@ export function seedScheduleThrough(draft,registries,personId,unitId,templateId,
   const template=registries.scheduleTemplates.get(templateId),phase=activeTrainingPhase(draft,registries); draft.entities.scheduleRecords??={};
   const existingKeys=new Set(Object.values(draft.entities.scheduleRecords).filter(r=>r.personId===personId&&r.sourceTemplateId===templateId&&r.status!=="cancelled").map(r=>`${r.dutyDefinitionId}:${r.nominalStartElapsedDay??r.startElapsedDay}`));
   const generatedThrough=Math.max(draft.world.scheduler?.generatedThroughElapsedDay??0,draft.world.clock.elapsedDays),base=draft.world.scheduler?.scheduleOriginElapsedDay??draft.world.clock.elapsedDays,candidates=[];
-  for(const entry of template.entries){const duty=registries.duties.get(entry.dutyDefinitionId);for(let nominal=base+entry.offsetDays;nominal<=throughElapsedDay;nominal+=entry.repeatEveryDays){if(nominal<=draft.world.clock.elapsedDays||existingKeys.has(`${duty.id}:${nominal}`)||!entryNeeded(draft,unitId,entry,nominal))continue;candidates.push({entry,duty,nominal});}}
+  for(const entry of template.entries){const duty=registries.duties.get(entry.dutyDefinitionId);for(let nominal=base+entry.offsetDays;nominal<=throughElapsedDay;nominal+=entry.repeatEveryDays){if(nominal<=draft.world.clock.elapsedDays||existingKeys.has(`${duty.id}:${nominal}`)||!entryNeeded(draft,unitId,entry,nominal))continue;if(entry.weekdayOnly&&entry.repeatEveryDays===1){const weekday=weekdayForElapsedDay(draft,nominal);if(weekday===0||weekday===6)continue;}candidates.push({entry,duty,nominal});}}
   candidates.sort((a,b)=>a.nominal-b.nominal||(b.duty.priority??50)-(a.duty.priority??50)||a.duty.id.localeCompare(b.duty.id));
   for(const {entry,duty,nominal} of candidates){const key=`${duty.id}:${nominal}`;if(existingKeys.has(key))continue;let requested=alignEntryStart(draft,nominal,entry,duty);let actualStart=findOpenStartForEntry(draft,personId,requested,duty.durationDays,entry,duty);const id=createEntityId(draft,"schedule"),firmWindow=phase.firmWindowDays??21;
-    draft.entities.scheduleRecords[id]={id,schemaVersion:2,kind:"unit_duty",dutyDefinitionId:duty.id,personId,unitId,sourceTemplateId:template.id,sourceType:"template",trainingPhaseId:phase.id,mandatory:Boolean(duty.mandatory),significance:duty.significance??((entry?.visibility??duty.defaultVisibility)==="significant"?"major":"routine"),calendarVisibility:entry.visibility??(entry.background?"background":(duty.calendarVisibility??duty.defaultVisibility??"visible")),priority:duty.priority??50,planningStatus:actualStart-draft.world.clock.elapsedDays<=firmWindow?"firm":"tentative",status:"scheduled",nominalStartElapsedDay:nominal,startElapsedDay:actualStart,endElapsedDay:actualStart+duty.durationDays-1,startDate:addDaysIso(draft.world.date,actualStart-draft.world.clock.elapsedDays),endDate:addDaysIso(draft.world.date,actualStart+duty.durationDays-1-draft.world.clock.elapsedDays),startedDate:null,completedDate:null,outcomeEventRecordId:null}; existingKeys.add(key);}
+    draft.entities.scheduleRecords[id]={id,schemaVersion:2,kind:"unit_duty",dutyDefinitionId:duty.id,personId,unitId,sourceTemplateId:template.id,sourceType:"template",trainingPhaseId:phase.id,mandatory:Boolean(duty.mandatory),significance:duty.significance??((entry?.visibility??duty.defaultVisibility)==="significant"?"major":"routine"),calendarVisibility:entry.visibility??(entry.background?"background":(duty.calendarVisibility??duty.defaultVisibility??"visible")),priority:duty.priority??50,blocksFocusedActivities:dutyBlocksFocusedActivities(duty),planningStatus:actualStart-draft.world.clock.elapsedDays<=firmWindow?"firm":"tentative",status:"scheduled",nominalStartElapsedDay:nominal,startElapsedDay:actualStart,endElapsedDay:actualStart+duty.durationDays-1,startDate:addDaysIso(draft.world.date,actualStart-draft.world.clock.elapsedDays),endDate:addDaysIso(draft.world.date,actualStart+duty.durationDays-1-draft.world.clock.elapsedDays),startedDate:null,completedDate:null,outcomeEventRecordId:null}; existingKeys.add(key);}
   draft.world.scheduler={...(draft.world.scheduler??{}),trainingPhaseId:phase.id,scheduleTemplateId:template.id,scheduleOriginElapsedDay:base,generatedThroughElapsedDay:Math.max(generatedThrough,throughElapsedDay),planningHorizonDays:phase.planningHorizonDays};
 }
 
@@ -177,6 +180,7 @@ function cancelScheduleConflictsForOpportunity(draft, personId, startElapsedDay,
   for (const schedule of Object.values(draft.entities.scheduleRecords ?? {})) {
     if (schedule.personId !== personId || schedule.status !== "scheduled") continue;
     if (!intervalsOverlap(schedule.startElapsedDay, schedule.endElapsedDay, startElapsedDay, endElapsedDay)) continue;
+    if (!scheduleRecordBlocksFocusedActivities(schedule)) continue;
     schedule.status = "cancelled";
     schedule.cancelledDate = draft.world.date;
     schedule.cancellationReason = "career_opportunity_orders";
@@ -382,12 +386,13 @@ export function processScheduledDutyForDay(draft, registries, scheduleIds, { per
       };
       if (playerParticipated) applyEffects(draft, registries, { personId, unitId: record.unitId, relationshipIds, effects: duty.playerEffects ?? [] });
       applyUnitTrainingEffects(draft, record.unitId, duty.trainingEffects ?? {});
-      let event = null;
-      if (playerParticipated && duty.eventTableId) event = resolveActivityEvent(draft, registries, { personId, unitId: record.unitId, relationshipIds, activityId: duty.id, eventTableId: duty.eventTableId });
       const currentPersonIds = billetIds.length ? billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean) : personIds;
       const readinessResult = syncUnitReadiness(draft, registries, record.unitId, { billetIds, personIds: currentPersonIds });
       const score = calculateDutyPerformanceScore(draft, person, readinessResult, trainingProfile.values);
       const rating = resolvePerformanceRating(registries, score);
+      let event = null;
+      if (playerParticipated && duty.eventTableId) event = resolveActivityEvent(draft, registries, { personId, unitId: record.unitId, relationshipIds, activityId: duty.id, eventTableId: duty.eventTableId, performanceScore: score });
+      const finalReadinessResult = event ? syncUnitReadiness(draft, registries, record.unitId, { billetIds, personIds: currentPersonIds }) : readinessResult;
       const after = {
         readiness: person.condition.readiness, morale: person.condition.morale, fatigue: person.condition.fatigue,
         unitReadiness: unit?.condition?.readiness ?? null, unitCohesion: unit?.condition?.cohesion ?? null, training: { ...trainingProfile.values }
@@ -396,7 +401,7 @@ export function processScheduledDutyForDay(draft, registries, scheduleIds, { per
       if (event?.eventRecordId) { eventRecordIds.push(event.eventRecordId); record.outcomeEventRecordId = event.eventRecordId; }
       record.performanceScore = score; record.performanceRating = rating.id; record.before = before; record.after = after;
       const qualificationResult = playerParticipated && duty.qualificationId ? recordDutyQualification(draft,registries,personId,duty,score) : null;
-      if (qualificationResult) record.qualificationResult = qualificationResult.result;
+      if (qualificationResult) record.qualificationResult = { ...qualificationResult };
       record.status = "completed"; record.completedDate = draft.world.date; completedDutyIds.push(record.id);
       if (playerParticipated) {
         const perfId = createEntityId(draft, "perf");
@@ -405,7 +410,7 @@ export function processScheduledDutyForDay(draft, registries, scheduleIds, { per
       const npcResult=applyNpcParticipationForDuty(draft,registries,{unitId:record.unitId,duty,playerPersonId:personId,performanceScore:score,participantPersonIds:currentPersonIds});
       record.participantPersonIds=playerParticipated ? [personId,...npcResult.participantIds] : [...npcResult.participantIds];
       if (record.calendarVisibility !== "background") recordUnitEvent(draft,{unitId:record.unitId,type:"training_completed",title:`${duty.name} completed`,summary:`${record.participantPersonIds.length} personnel participated · ${rating.label} ${score}/100.`,personId,sourceType:"schedule",sourceId:record.id,importance:record.significance === "major" ? "significant" : "routine"});
-      recordReadinessSnapshot(draft,record.unitId,readinessResult,{force:duty.id === "duty_field_exercise"});
+      recordReadinessSnapshot(draft,record.unitId,finalReadinessResult,{force:duty.id === "duty_field_exercise"});
       if (playerParticipated && person.condition.status === (duty.statusWhileActive ?? "active")) person.condition.status = "active";
     }
   }

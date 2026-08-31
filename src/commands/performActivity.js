@@ -12,6 +12,7 @@ import { calculateIndividualPerformanceScore, resolvePerformanceRating } from ".
 import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEvents.js";
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { applyNpcParticipationForDuty, recordDutyQualification, recordUnitEvent } from "../services/livingUnit.js";
+import { describeScheduleConflict, scheduleConflictForActivity } from "../services/scheduleRules.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
 function clamp(value, min=0, max=100) { return Math.max(min, Math.min(max, Math.round(value))); }
@@ -44,8 +45,9 @@ export function performActivity(store, registries, personId, activityId) {
 
   const startElapsedDay = state.world.clock.elapsedDays + 1, endElapsedDay = state.world.clock.elapsedDays + activity.durationDays;
   const scheduleIds = indexes.scheduleRecordsByPersonId?.get(personId) ?? [];
-  const conflict = scheduleIds.map(id => state.entities.scheduleRecords[id]).find(record => record?.mandatory && ["scheduled","in_progress"].includes(record.status) && intervalsOverlap(startElapsedDay, endElapsedDay, record.startElapsedDay, record.endElapsedDay));
-  if (conflict) throw new Error(`${activity.name} conflicts with scheduled ${registries.duties.get(conflict.dutyDefinitionId).name} (${conflict.startDate}).`);
+  const scheduleRecords = scheduleIds.map(id => state.entities.scheduleRecords[id]).filter(Boolean);
+  const conflict = scheduleConflictForActivity(scheduleRecords, registries, startElapsedDay, endElapsedDay);
+  if (conflict) throw new Error(`${activity.name} conflicts with ${describeScheduleConflict(conflict, registries)}.`);
   const opportunityConflict = (indexes.opportunityRecordsByPersonId?.get(personId) ?? []).map(id => state.entities.opportunityRecords[id]).find(record => record && ["accepted","in_progress"].includes(record.status) && Number.isInteger(record.reportElapsedDay) && intervalsOverlap(startElapsedDay, endElapsedDay, record.reportElapsedDay, record.completeElapsedDay));
   if (opportunityConflict) throw new Error(`${activity.name} conflicts with accepted school/orders dates.`);
 
@@ -86,13 +88,14 @@ export function performActivity(store, registries, personId, activityId) {
     processPersonnelAdministration(draft, registries);
     const scaledEffects = (activity.effects ?? []).map(effect => scaleBenefitEffect(effect, effectMultiplier));
     applyEffects(draft, registries, { personId, unitId: person.affiliation.unitId, relationshipIds, effects: scaledEffects });
-    if (unit && activity.unitTrainingEffects) applyUnitTrainingEffects(draft, unit.id, Object.fromEntries(Object.entries(activity.unitTrainingEffects).map(([key,value]) => [key, Math.round(value * effectMultiplier)])));
+    const collectiveActivity = activity.participantScope && activity.participantScope !== "individual";
+    if (unit && collectiveActivity && activity.unitTrainingEffects) applyUnitTrainingEffects(draft, unit.id, Object.fromEntries(Object.entries(activity.unitTrainingEffects).map(([key,value]) => [key, Math.round(value * effectMultiplier)])));
     if (unit) {
       const monthlyCycles = Math.floor(draft.world.clock.elapsedDays / 30) - Math.floor(elapsedBefore / 30);
       if (monthlyCycles > 0) applyUnitTrainingEffects(draft, unit.id, { physical:-monthlyCycles, weapons:-monthlyCycles, tactical:-monthlyCycles, equipmentReadiness:-monthlyCycles });
     }
 
-    const event = resolveActivityEvent(draft, registries, { personId, unitId: person.affiliation.unitId, relationshipIds, activityId: activity.id, eventTableId: activity.eventTableId });
+    const event = resolveActivityEvent(draft, registries, { personId, unitId: person.affiliation.unitId, relationshipIds, activityId: activity.id, eventTableId: activity.eventTableId, performanceScore: score });
     if (event?.notificationId) notifications.push(event.notificationId);
 
     const currentPersonIds = unit ? billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean) : [];
@@ -109,15 +112,21 @@ export function performActivity(store, registries, personId, activityId) {
     if (unit) syncUnitReadiness(draft, registries, unit.id, { billetIds, personIds: currentPersonIds.length ? currentPersonIds : unitPersonIds });
     const afterSnapshot = snapshot();
     const deltas = {};
-    for (const key of ["experience","prestige","health","morale","readiness","fatigue","unitReadiness","unitCohesion"]) if (beforeSnapshot[key] != null && afterSnapshot[key] !== beforeSnapshot[key]) deltas[key] = afterSnapshot[key] - beforeSnapshot[key];
+    for (const key of ["experience","prestige","health","morale","readiness","fatigue"]) if (beforeSnapshot[key] != null && afterSnapshot[key] !== beforeSnapshot[key]) deltas[key] = afterSnapshot[key] - beforeSnapshot[key];
+    if (collectiveActivity) for (const key of ["unitReadiness","unitCohesion"]) if (beforeSnapshot[key] != null && afterSnapshot[key] !== beforeSnapshot[key]) deltas[key] = afterSnapshot[key] - beforeSnapshot[key];
     deltas.skills = Object.fromEntries(Object.keys(afterSnapshot.skills).filter(key => afterSnapshot.skills[key] !== beforeSnapshot.skills[key]).map(key => [key, afterSnapshot.skills[key] - beforeSnapshot.skills[key]]));
 
     activityRecordId = createEntityId(draft, "activity");
-    draft.entities.activityRecords[activityRecordId] = { id: activityRecordId, schemaVersion: 3, activityDefinitionId: activity.id, personId, unitId: person.affiliation.unitId, startDate, endDate: draft.world.date, durationDays: activity.durationDays, endElapsedDay: draft.world.clock.elapsedDays, repetitionMultiplier, performanceScore: score, status: "completed", eventRecordId: event?.eventRecordId ?? null, performanceRating: ratingDef.id, participantPersonIds, qualificationResult: qualificationResult ? { ...qualificationResult } : null, before: beforeSnapshot, after: afterSnapshot, deltas };
+    draft.entities.activityRecords[activityRecordId] = { id: activityRecordId, schemaVersion: 4, activityDefinitionId: activity.id, personId, unitId: person.affiliation.unitId, startDate, endDate: draft.world.date, durationDays: activity.durationDays, endElapsedDay: draft.world.clock.elapsedDays, repetitionMultiplier, performanceScore: score, status: "completed", eventRecordId: event?.eventRecordId ?? null, performanceRating: ratingDef.id, participantPersonIds, qualificationResult: qualificationResult ? { ...qualificationResult } : null, before: beforeSnapshot, after: afterSnapshot, deltas };
     const perfId = createEntityId(draft, "perf");
-    draft.entities.performanceRecords[perfId] = { id: perfId, schemaVersion: 2, personId, sourceType: "activity", sourceId: activityRecordId, gameDate: draft.world.date, rating: ratingDef.id, score, notes: `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance.`, deltas };
-    const qualificationText = qualificationResult ? ` Qualification: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}.` : "";
-    const completionNoticeId = recordNotification(draft, { personId, type: "activity_completed", title: `${activity.name} Complete`, message: `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance after ${activity.durationDays} day${activity.durationDays === 1 ? "" : "s"}.${qualificationText}`, priority: "normal", references: { activityRecordId } });
+    const performanceNote = qualificationResult
+      ? `${activity.name}: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}; training performance ${ratingDef.label} ${score}/100.`
+      : `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance.`;
+    draft.entities.performanceRecords[perfId] = { id: perfId, schemaVersion: 3, personId, sourceType: "activity", sourceId: activityRecordId, gameDate: draft.world.date, rating: ratingDef.id, score, notes: performanceNote, deltas };
+    const completionMessage = qualificationResult
+      ? `${activity.name} result: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}. Training performance: ${ratingDef.label} ${score}/100.`
+      : `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance after ${activity.durationDays} day${activity.durationDays === 1 ? "" : "s"}.`;
+    const completionNoticeId = recordNotification(draft, { personId, type: "activity_completed", title: `${activity.name} Complete`, message: completionMessage, priority: "normal", references: { activityRecordId } });
     notifications.unshift(completionNoticeId);
     const newOpportunities = evaluateCareerOpportunitiesInDraft(draft, registries, personId);
     notifications.push(...newOpportunities.map(item => item.notificationId));

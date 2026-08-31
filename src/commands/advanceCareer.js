@@ -9,6 +9,7 @@ import { applyUnitTrainingEffects, syncUnitReadiness } from "../services/unitRea
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEvents.js";
 import { recordReadinessSnapshot } from "../services/livingUnit.js";
+import { scheduleRecordBlocksFocusedActivities } from "../services/scheduleRules.js";
 
 function indexedCount(indexes, indexName, personId) { return indexes[indexName]?.get(personId)?.length ?? 0; }
 function unitSnapshot(state, personId) {
@@ -94,7 +95,7 @@ export function advanceWorldDays(store, requestedDays) {
       const dutyResult = processScheduledDutyForDay(draft, registries, dayScheduleIds, { personId: actorPersonId, relationshipIds, billetIds, personIds: currentUnitPersonIds });
       notificationIds.push(...dutyResult.notifications);
       completedDuties.push(...dutyResult.completedDutyIds);
-      const onDuty = dayScheduleIds.length > 0;
+      const onDuty = dayScheduleIds.some(id => scheduleRecordBlocksFocusedActivities(draft.entities.scheduleRecords[id]));
       applyPassiveRecoveryForDay(draft, actorPersonId, { onDuty });
 
       if (unitId && draft.world.clock.elapsedDays % 30 === 0) {

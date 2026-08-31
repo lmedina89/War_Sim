@@ -1,15 +1,23 @@
-# War Sim v0.4.1.5 — Software Quality Report
+# War Sim v0.4.1.6 — Software Quality Report
 
-- Runtime version: **0.4.1.5**
+- Runtime version: **0.4.1.6**
 - Save format: **3**
 - World schema: **14**
-- Scope: availability, qualification history, school effects, activity-scope integrity
+- Scope: training-result consistency, schedule clarity, non-blocking routine PT, causal readiness presentation
 
-## Release checks
+## Dedicated v0.4.1.6 release gates
 
-v0.4.1.5 adds a dedicated regression suite for: (1) preserving every weapons qualification attempt while retaining a better still-current active credential, (2) definition-driven school skill effects, and (3) preventing a Soldier attending military school from simultaneously receiving home-unit scheduled-duty credit while allowing the home unit/NPCs to continue training.
+The new `tests/training-consolidation.mjs` verifies:
 
-The existing migration, qualification, collective-training, living-unit, career-continuity, smoke, stability, and full quality suites remain release gates. The package must also pass syntax checks, forbidden runtime-pattern checks, a deterministic multi-seed generated-world validation sweep, and exact extracted-ZIP retesting.
+- regular weekday background PT generation without duplicate Monday stacking
+- routine PT is explicitly non-blocking and does not grey out unrelated focused training
+- significant mandatory training still blocks overlapping activities and exposes the exact conflict date
+- solo PT does not directly alter collective unit-training proficiency or claim causal unit-readiness/cohesion deltas
+- poor training cannot independently receive positive breakthrough/recognition feedback
+- qualification activity records/notifications lead with the actual native weapon qualification result
+- UI source contains separate qualification-result and training-performance presentation
+
+All prior migration, qualification-history, school-availability, collective-training, living-unit, career-continuity, smoke, stability, and full quality suites remain release gates.
 
 ## Visual limitation
 

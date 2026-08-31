@@ -10,10 +10,17 @@ function chooseWeighted(draft, entries) {
   return entries.at(-1);
 }
 
-export function resolveActivityEvent(draft, registries, { personId, unitId, relationshipIds = null, activityId, eventTableId }) {
+export function resolveActivityEvent(draft, registries, { personId, unitId, relationshipIds = null, activityId, eventTableId, performanceScore = null }) {
   if (!eventTableId) return null;
   const table = registries.eventTables.get(eventTableId);
-  const selected = chooseWeighted(draft, table.entries);
+  const eligibleEntries = table.entries.filter(entry => {
+    if (!entry.eventId) return true;
+    const event = registries.gameplayEvents.get(entry.eventId);
+    if (Number.isFinite(event.minimumPerformanceScore) && Number.isFinite(performanceScore) && performanceScore < event.minimumPerformanceScore) return false;
+    if (Number.isFinite(event.maximumPerformanceScore) && Number.isFinite(performanceScore) && performanceScore > event.maximumPerformanceScore) return false;
+    return true;
+  });
+  const selected = chooseWeighted(draft, eligibleEntries.length ? eligibleEntries : [{ eventId: null, weight: 1 }]);
   if (!selected.eventId) return null;
   const def = registries.gameplayEvents.get(selected.eventId);
   const isDecision = Array.isArray(def.choices) && def.choices.length > 0;
