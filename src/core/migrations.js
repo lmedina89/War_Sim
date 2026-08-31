@@ -306,7 +306,7 @@ function migrateWorldV14ToV15(worldState) {
   // The player is deliberately excluded by the seeding service.
   seedPriorServiceHistories(next,registries);
   next.schemaVersion=15;
-  next.gameVersion="0.4.2";
+  next.gameVersion="0.4.2.1";
   return next;
 }
 
@@ -442,7 +442,7 @@ export function migratePayload(payload) {
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.2";
-  next.worldState.gameVersion = "0.4.2";
+  next.gameVersion = "0.4.2.1";
+  next.worldState.gameVersion = "0.4.2.1";
   return next;
 }

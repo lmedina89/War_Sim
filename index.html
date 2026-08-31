@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.2</title>
+  <title>War Sim v0.4.2.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.2</p>
+        <p class="eyebrow">WAR SIM · v0.4.2.1</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -96,6 +96,8 @@
           <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">ASSIGNMENT</p><h2>My Unit</h2></div><div id="assignment-card"></div></article>
           <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">CHAIN OF COMMAND</p><h2>Organization</h2></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article>
         </section>
+
+        <section class="panel capability-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">COMBAT CAPABILITY FOUNDATION</p><h2>Unit Capability Inventory</h2><p class="muted">Derived from actual assigned personnel and equipment. Supply, vehicles, explosives, aviation, maritime platforms, and battle resolution will expand from this foundation.</p></div><div id="unit-capability"></div></section>
 
         <section class="panel selected-unit-panel command-panel">
           <div class="panel-head"><div><p class="section-kicker">TACTICAL PERSONNEL DISPLAY</p><h2>Selected Unit Roster</h2><p id="squad-meta" class="muted">Loading…</p></div><div class="browse-actions"><button id="return-my-unit" type="button" class="secondary compact-button">Return to My Unit</button><button id="view-selected-personnel" type="button" class="compact-button">View in Personnel</button></div></div>

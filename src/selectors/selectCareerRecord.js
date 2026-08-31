@@ -23,7 +23,9 @@ export function selectCareerRecord(state, indexes, registries, personId) {
       maxScore: record.maxScore ?? null,
       expiresDate: record.expiresDate ?? null,
       weaponDefinitionId: record.weaponDefinitionId ?? definition.weaponDefinitionId ?? null,
-      badgeClasp: record.badgeClasp ?? definition.badgeClasp ?? null
+      badgeClasp: record.badgeClasp ?? definition.badgeClasp ?? null,
+      schoolId: record.schoolId ?? null,
+      sourceId: record.sourceId ?? null
     };
   });
 
@@ -38,7 +40,7 @@ export function selectCareerRecord(state, indexes, registries, personId) {
   const awards = awardIds.map(id => {
     const record = state.entities.awardRecords[id];
     const award = registries.awards.get(record.awardId);
-    return { id, awardId:record.awardId, name: award.name, category: award.category, awardGroup:award.awardGroup ?? award.category, earnedDate: record.earnedDate, sourceType:record.sourceType ?? null };
+    return { id, awardId:record.awardId, name: award.name, category: award.category, awardGroup:award.awardGroup ?? award.category, earnedDate: record.earnedDate, sourceType:record.sourceType ?? null, sourceId:record.sourceId ?? null };
   }).sort((a,b)=>String(b.earnedDate??"").localeCompare(String(a.earnedDate??""))||a.name.localeCompare(b.name));
 
   const relationshipIds = indexes.relationshipsByPersonId.get(personId) ?? [];

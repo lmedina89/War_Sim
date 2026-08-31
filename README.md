@@ -1,21 +1,19 @@
-# War Sim v0.4.2 — Army Service Record & Career Achievement Foundation
+# War Sim v0.4.2.1 — School Availability, Service Record Consolidation & Combat-Capability Foundation
 
-War Sim v0.4.2 begins the next major gameplay layer after the v0.4.1.x soldier/unit foundation: a durable, definition-driven Army career record that can eventually feed unit capability and conflict simulation. The stable v0.4.1.8 controller/UI architecture is preserved; this release extends it rather than replacing it.
+War Sim v0.4.2.1 begins the next major gameplay layer after the v0.4.1.x soldier/unit foundation: a durable, definition-driven Army career record that can eventually feed unit capability and conflict simulation. The stable v0.4.1.8 controller/UI architecture is preserved; this release extends it rather than replacing it.
 
-## v0.4.2 changes
+## v0.4.2.1 changes
 
-- World schema advances to **15** while save format remains **3**. Fresh-world generator advances to **v3**.
-- Adds canonical `militaryEducationRecords`, separate from qualifications and awards, so school attendance/graduation has its own durable history.
-- School completion now records military education, associated qualifications, awards/badges, dates, source opportunity, and career history without collapsing those concepts into one generic record.
-- School definitions now carry reusable, data-driven eligibility rules, opportunity sources, completion effects, and future-facing capability-contribution metadata.
-- Adds a **Career Development / Military Schools** catalog showing available, locked, completed, and active schools with prerequisite reasons.
-- Eligible players can **Request Volunteer Slot** for a school. Requests enter the same canonical opportunity → orders → attendance → outcome → credential/history pipeline as other opportunity sources.
-- Existing random school opportunities remain supported, but now record/explain their opportunity source instead of being the only conceptual path.
-- The Career Service Record is reorganized into Military Education, Qualifications, Badges & Tabs, and Ribbons/Medals/Decorations with summary counts.
-- NPCs receive deterministic prior-service histories derived from rank, time in service, specialty context, and the world seed. Experienced NCOs no longer universally appear with empty service records.
-- Prior-service generation can seed appropriate Army Service Ribbon, service-rifle qualification, Basic Leader Course history, NCO Professional Development Ribbon, Army Good Conduct Medal, and rarer Airborne/Parachutist records while preserving deterministic generation and eligibility constraints.
-- Existing schema-14 careers migrate to schema 15, backfill school education history from legacy school-linked qualifications where possible, and deterministically seed plausible NPC prior-service history. The player’s earned history is not fabricated.
-- Qualification, school, and award definitions now include stable record-group/capability metadata intended for the future capability engine; v0.4.2 does **not** yet implement combat bonuses from badges.
+- Preserves **world schema 15**, **save format 3**, and **generator v3**; this is a same-schema feature/stability update.
+- Blocks player-selected home-station activities whenever the player is actively attending military school; selector and command paths both enforce it.
+- Groups school graduation with linked qualifications and badges in personnel/service-record presentation while keeping each canonical record separate underneath.
+- Makes personnel-profile Recent Career Activity compact, archiveable, restorable, and presentation-only so durable career history is never deleted.
+- Hardens Current Situation text wrapping for long MOS/unit chains on narrow mobile screens.
+- Adds definition-driven capability, platform-class, and light-infantry doctrine registries for future land/air/sea combat modeling.
+- Adds a derived **Unit Capability Inventory** selector and Unit-view panel. Current small-arms effectiveness is traced to real equipment instances, equipment condition, assigned personnel, and operator marksmanship skill.
+- Capability output preserves provenance back to contributing Soldier/equipment records and distinguishes assigned, operational, and crewed equipment.
+- Supply beyond the current unit condition model, explosives, ground vehicles, armored vehicles, aviation, maritime platforms, mission matching, opposing forces, casualty generation, and battle resolution are intentionally **not** implemented yet; the new foundation is designed for those extensions.
+- Retains the full v0.4.2 Army Service Record foundation: military education, school requests/opportunities/orders, deterministic NPC prior-service histories, and schema-14 → 15 migration/backfill.
 
 ## Current content represented by the foundation
 
@@ -35,11 +33,11 @@ Unit type, doctrine, personnel mix, leadership, qualifications, collective profi
 
 ## Compatibility
 
-- Runtime: **0.4.2**
+- Runtime: **0.4.2.1**
 - World schema: **15**
 - Save format: **3**
 - Generator: **v3**
 
-Schema-versioned migration remains authoritative. v0.4.2 preserves the deterministic scheduler, qualification history, school absence rules, activity scope, Unit view, save/checksum pipeline, and other verified v0.4.1.8 systems.
+Schema-versioned migration remains authoritative. v0.4.2.1 preserves the deterministic scheduler, qualification history, school absence rules, activity scope, Unit view, save/checksum pipeline, and other verified v0.4.1.8 systems.
 
 See `SOFTWARE_QUALITY_REPORT.md` for exact release-gate results.

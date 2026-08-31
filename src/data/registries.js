@@ -23,6 +23,7 @@ import { feedbackPresentationDefinitions, performanceRatingDefinitions, relation
 import { dutyDefinitions, trainingPhaseDefinitions, scheduleTemplateDefinitions, readinessModelDefinitions } from "./duties.js";
 import { opportunityDefinitions, careerObjectiveDefinitions } from "./opportunities.js";
 import { authorityDefinitions } from "./authorities.js";
+import { capabilityDefinitions, platformClassDefinitions, unitDoctrineDefinitions } from "./capabilities.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -57,5 +58,8 @@ export const registries = Object.freeze({
   readinessModels: createRegistry(readinessModelDefinitions, "readinessModels"),
   opportunities: createRegistry(opportunityDefinitions, "opportunities"),
   careerObjectives: createRegistry(careerObjectiveDefinitions, "careerObjectives"),
-  authorities: createRegistry(authorityDefinitions, "authorities")
+  authorities: createRegistry(authorityDefinitions, "authorities"),
+  capabilities: createRegistry(capabilityDefinitions, "capabilities"),
+  platformClasses: createRegistry(platformClassDefinitions, "platformClasses"),
+  unitDoctrines: createRegistry(unitDoctrineDefinitions, "unitDoctrines")
 });

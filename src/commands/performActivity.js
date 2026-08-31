@@ -36,6 +36,8 @@ export function performActivity(store, registries, personId, activityId) {
   const before = state.entities.people[personId];
   if (!before) throw new Error(`Unknown person ${personId}.`);
   const rank = registries.ranks.get(before.affiliation.rankId);
+  const activeSchool = (indexes.opportunityRecordsByPersonId?.get(personId) ?? []).map(id=>state.entities.opportunityRecords[id]).find(record=>record && record.status==="in_progress" && Number.isInteger(record.reportElapsedDay) && Number.isInteger(record.completeElapsedDay) && state.world.clock.elapsedDays>=record.reportElapsedDay && state.world.clock.elapsedDays<=record.completeElapsedDay);
+  if (activeSchool && activity.allowedDuringSchool !== true) throw new Error(`${activity.name} is unavailable while attending military school.`);
   const eligibility = activity.eligibility ?? {};
   if (eligibility.allowedStatuses && !eligibility.allowedStatuses.includes(before.condition.status)) throw new Error(`${activity.name} is unavailable while status is ${before.condition.status}.`);
   if (before.condition.health < (eligibility.minimumHealth ?? 0)) throw new Error(`${activity.name} requires at least ${eligibility.minimumHealth}% health.`);

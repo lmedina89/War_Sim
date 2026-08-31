@@ -114,4 +114,4 @@ function advanceResolving(store,days){
   assert.equal(seniorBlank,0,"experienced NCOs should not be blank service records");
 }
 
-console.log("War Sim v0.4.2 Army Service Record and Career Achievement foundation QA passed");
+console.log("War Sim v0.4.2.1 Army Service Record and Career Achievement foundation QA passed");

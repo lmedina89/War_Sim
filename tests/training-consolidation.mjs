@@ -82,4 +82,4 @@ function careerStore(seed=416001){
   assert.match(ui,/QUALIFICATION RESULT/); assert.match(ui,/TRAINING PERFORMANCE/);
 }
 
-console.log("War Sim v0.4.2 training results and schedule-clarity QA passed");
+console.log("War Sim v0.4.2.1 training results and schedule-clarity QA passed");

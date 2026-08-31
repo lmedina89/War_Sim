@@ -1,39 +1,27 @@
-# War Sim v0.4.2 — Software Quality Report
+# War Sim v0.4.2.1 — Software Quality Report
 
-## Release scope
+Release focus: school-availability integrity, service-record consolidation, personnel-history/mobile cleanup, and the first derived unit combat-capability inventory foundation. Runtime 0.4.2.1; world schema 15; save format 3; generator v3.
 
-v0.4.2 is the Army Service Record & Career Achievement Foundation. It advances the world schema to 15 and generator to v3 while keeping save format 3. The stable v0.4.1.8 controller/UI foundation is extended, not replaced.
+## Implemented and audited
 
-## Major implementation checks
+- Active military-school attendance blocks player-selected home-station activities in both selector and command layers.
+- School graduation, linked qualification, and linked badge are consolidated in presentation while remaining separate canonical records.
+- Personnel-profile Recent Career Activity is bounded, archiveable, and restorable without deleting durable history.
+- Current Situation long-text wrapping is hardened for narrow mobile screens.
+- New immutable registries define capability categories, platform classes across land/air/sea domains, and a light-infantry doctrine profile.
+- Unit capability is derived by selector/service logic rather than UI-owned state. Current small-arms capability traces to real equipment instances, equipment condition, assigned/available operators, and operator skill.
+- Capability output keeps provenance to the contributing person/equipment records and reports assigned/operational/crewed counts.
+- Battle outcomes, casualties, opposing-force resolution, detailed supply, vehicles, explosives, aviation, and maritime equipment are intentionally not simulated in this release.
 
-- Canonical military education records are separate from qualifications and awards.
-- School eligibility and opportunity sources are definition-driven.
-- Player school requests use the existing opportunity/orders/school-completion pipeline.
-- NPC prior-service generation is deterministic and excludes the player.
-- Schema-14 migration backfills school-linked education and seeds deterministic NPC prior history.
-- Career and personnel service records expose categorized education, qualifications, badges, ribbons/medals, and counts.
-- Capability-contribution metadata is data only in this release; no combat system or arbitrary badge combat bonus was added.
+## Release gates
 
-## Pre-package automated QA
+- All regression suites pass.
+- All JS/MJS files pass `node --check`.
+- Runtime forbidden-pattern audit passes for `Math.random`, `eval`, `new Function`, `document.write`, and `.innerHTML =` assignment.
+- Standard quality suite validates 300 generated worlds and a 10,000-person index stress case.
+- Dedicated capability QA verifies school blocking, provenance, and degraded-equipment effectiveness.
+- 5,000 deterministic generated worlds / 450,000 NPCs validate with zero capability-foundation failures.
+- A 365-day career simulation completes with zero world-validation errors.
+- Existing save/migration, training, qualification, Unit, Career, service-record, and mobile regressions remain green.
 
-All JS/MJS syntax checks passed. The complete test set passed:
-
-- availability / qualification-history / school-effects
-- career continuity
-- living unit / training tempo
-- migration / qualification / collective activity
-- mobile UX consolidation
-- quality suite
-- Army Service Record foundation
-- smoke suite
-- stability regression
-- training consolidation
-- Unit interaction integrity
-
-Quality suite result: PASS; 84 runtime source modules; 300 generated worlds validated; 10,000-person index stress passed; deterministic RNG, import graph, DOM integrity, render containment, scheduler, readiness, migration, indexing, and presentation audits passed. Pre-package index build observed: 12.78 ms.
-
-Additional pre-package generation sweep: 5,000 deterministic worlds / 450,000 NPCs, 0 validation failures. Airborne prior-service incidence was approximately 7.65% in the generated conventional infantry population. A 365-day career simulation also completed with 0 world-validation errors.
-
-## Static QA limitation
-
-Automated/static QA cannot certify iPhone Safari pixel layout, touch behavior, or the subjective realism of every generated career. Live device validation remains required.
+Static QA cannot certify exact Safari pixel rendering or touch behavior; live iPhone Safari validation remains required.

@@ -4,6 +4,7 @@ import { describeScheduleConflict, scheduleConflictForActivity } from "../servic
 import { schoolOpportunitySourceLabel } from "../services/schoolEligibility.js";
 
 function overlaps(startA, endA, startB, endB) { return startA <= endB && startB <= endA; }
+function activeSchoolAttendance(state, indexes, personId) { const day=state.world.clock.elapsedDays; return (indexes.opportunityRecordsByPersonId?.get(personId)??[]).map(id=>state.entities.opportunityRecords[id]).find(r=>r && r.status==="in_progress" && Number.isInteger(r.reportElapsedDay) && Number.isInteger(r.completeElapsedDay) && day>=r.reportElapsedDay && day<=r.completeElapsedDay) ?? null; }
 
 export function selectGameplay(state, indexes, registries, personId) {
   const person = state.entities.people[personId];
@@ -22,12 +23,14 @@ export function selectGameplay(state, indexes, registries, personId) {
   });
   const recentIds = indexes.activityRecordsByPersonId?.get(personId) ?? [];
   const recentRecords = recentIds.map(id => state.entities.activityRecords[id]).filter(Boolean);
+  const schoolAttendance = activeSchoolAttendance(state,indexes,personId);
 
   const activities = registries.activities.values().map(activity => {
     const e = activity.eligibility ?? {};
     const reasons = [];
     let availabilityState = "available";
     if (blockingDecision) { reasons.push("resolve pending decision"); availabilityState = "locked"; }
+    if (schoolAttendance && activity.allowedDuringSchool !== true) { reasons.push("away at military school"); availabilityState = "locked"; }
     if (e.allowedStatuses && !e.allowedStatuses.includes(person.condition.status)) { reasons.push(`status ${person.condition.status}`); availabilityState = "locked"; }
     if (person.condition.health < (e.minimumHealth ?? 0)) { reasons.push(`health ${e.minimumHealth}% required`); availabilityState = "locked"; }
     if (e.minimumRankLevel && rank.hierarchyLevel < e.minimumRankLevel) { reasons.push("higher rank required"); availabilityState = "locked"; }
