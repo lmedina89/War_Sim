@@ -1,4 +1,5 @@
 import { calculateUnitReadiness } from "../services/unitReadiness.js";
+import { readinessTrendFromSnapshots } from "../services/livingUnit.js";
 
 function overlaps(startA, endA, startB, endB) { return startA <= endB && startB <= endA; }
 
@@ -51,11 +52,14 @@ export function selectGameplay(state, indexes, registries, personId) {
     return { id: record.id, title: def.title, message: def.message, deadlineElapsedDay: record.expiresElapsedDay, daysRemaining: record.expiresElapsedDay == null ? null : Math.max(0, record.expiresElapsedDay - currentElapsedDay), choices: (def.choices ?? []).map(choice => ({ id: choice.id, label: choice.label })) };
   });
 
-  const upcomingSchedule = scheduleRecords.filter(record => ["scheduled","in_progress"].includes(record.status) && record.endElapsedDay >= currentElapsedDay).sort((a,b) => a.startElapsedDay - b.startElapsedDay).slice(0, 8).map(record => {
+  const activeSchedule = scheduleRecords.filter(record => ["scheduled","in_progress"].includes(record.status) && record.endElapsedDay >= currentElapsedDay).sort((a,b) => a.startElapsedDay - b.startElapsedDay);
+  const currentRaw = activeSchedule.find(record => record.status === "in_progress" || (record.startElapsedDay <= currentElapsedDay && record.endElapsedDay >= currentElapsedDay)) ?? null;
+  const visibleSchedule = activeSchedule.filter(record => record.calendarVisibility !== "background" || record === currentRaw).slice(0, 8);
+  const upcomingSchedule = visibleSchedule.map(record => {
     const duty = registries.duties.get(record.dutyDefinitionId);
-    return { ...record, name: duty.name, shortName: duty.shortName, category: duty.category, description: duty.description };
+    return { ...record, name: duty.name, shortName: duty.shortName, category: duty.category, description: duty.description, planningStatus:record.planningStatus ?? "firm" };
   });
-  const currentDuty = upcomingSchedule.find(record => record.status === "in_progress" || (record.startElapsedDay <= currentElapsedDay && record.endElapsedDay >= currentElapsedDay)) ?? null;
+  const currentDuty = currentRaw ? (()=>{ const duty=registries.duties.get(currentRaw.dutyDefinitionId); return {...currentRaw,name:duty.name,shortName:duty.shortName,category:duty.category,description:duty.description}; })() : null;
   const recentDuties = scheduleRecords.filter(record => record.status === "completed").sort((a,b) => (b.endElapsedDay ?? 0) - (a.endElapsedDay ?? 0)).slice(0,5).map(record => {
     const duty = registries.duties.get(record.dutyDefinitionId);
     return { ...record, name:duty.name, shortName:duty.shortName, category:duty.category };
@@ -83,6 +87,16 @@ export function selectGameplay(state, indexes, registries, personId) {
     ? registries.duties.values().filter(duty => ["training","maintenance","field","recovery"].includes(duty.category)).map(duty => ({ id:duty.id, name:duty.name, shortName:duty.shortName, durationDays:duty.durationDays, category:duty.category }))
     : [];
   const readiness = person.affiliation.unitId ? calculateUnitReadiness(state, indexes, registries, person.affiliation.unitId) : null;
+  const phaseId=state.world.scheduler?.trainingPhaseId ?? "training_phase_garrison";
+  const trainingPhase=registries.trainingPhases.has(phaseId)?registries.trainingPhases.get(phaseId):null;
+  const readinessTrend=person.affiliation.unitId ? readinessTrendFromSnapshots(state,person.affiliation.unitId) : {direction:"stable",delta:0};
+  const unitEventIds=person.affiliation.unitId ? (indexes.unitEventRecordsByUnitId?.get(person.affiliation.unitId) ?? []) : [];
+  const unitHistory=unitEventIds.map(id=>state.entities.unitEventRecords[id]).filter(Boolean).sort((a,b)=>(b.elapsedDay??0)-(a.elapsedDay??0) || b.id.localeCompare(a.id)).slice(0,12);
+  const recentCareerActivity=[
+    ...(indexes.promotionsByPersonId?.get(personId) ?? []).map(id=>{const r=state.entities.promotionRecords[id]; const rank=r?registries.ranks.get(r.rankId):null; return r?{id,type:"promotion",date:r.effectiveDate,title:`Promoted to ${rank?.abbreviation??"next grade"}`}:null;}),
+    ...(indexes.performanceRecordsByPersonId?.get(personId) ?? []).map(id=>{const r=state.entities.performanceRecords[id]; return r?{id,type:"training",date:r.gameDate,title:r.notes??"Training completed"}:null;}),
+    ...(indexes.assignmentsByPersonId?.get(personId) ?? []).map(id=>{const r=state.entities.assignmentRecords[id]; return r?{id,type:"assignment",date:r.startDate,title:`Assigned to ${state.entities.units[r.unitId]?.name??"unit"}`}:null;})
+  ].filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date)) || b.id.localeCompare(a.id)).slice(0,8);
 
-  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, currentDuty, opportunities, objectives, authorityIds, commandDuties, readiness, performanceIndex };
+  return { skills, activities, recentActivities, recentDuties, pendingDecisions, upcomingSchedule, currentDuty, opportunities, objectives, authorityIds, commandDuties, readiness, readinessTrend, performanceIndex, trainingPhase, unitHistory, recentCareerActivity, simulationTier:person.simulationTier ?? 2 };
 }

@@ -4,6 +4,7 @@ import { addMonthsIso } from "../services/dateMath.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
 import { createInitialWorldState } from "../state/initialState.js";
 import { seedCareerGameplayRecords } from "../services/careerGameplay.js";
+import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
 
 function normalizeName(value, label) {
   const normalized = String(value ?? "").normalize("NFC").trim().replace(/\s+/g, " ");
@@ -59,6 +60,7 @@ export function createPlayerCareer(store, registries, input) {
     draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: "initial_assignment", status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId, billetId: billet.id, title: "Initial Assignment Orders", summary: `Assigned to ${unit.name} as ${registries.billets.get(billet.definitionId).name}.` };
     draft.entities.careerEvents[enlistmentEventId] = { id: enlistmentEventId, schemaVersion: 1, personId, type: "enlistment", date: draft.world.date, references: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractId, rankId: rank.id, unitId, billetId: billet.id } };
     for (const npcId of startingSquadMateIds) { const npc = draft.entities.people[npcId]; if (!npc) continue; const relationshipId = createEntityId(draft, "rel"); draft.entities.relationshipRecords[relationshipId] = { id: relationshipId, schemaVersion: 1, personAId: personId, personBId: npc.id, familiarity: 5, trust: 0, respect: 0, bond: 0, relationshipType: "squadmate", lastInteractionDate: draft.world.date }; }
+    syncSimulationTiersForPlayerUnit(draft, personId);
     seedCareerGameplayRecords(draft, registries, personId, unitId);
     noticeId = recordNotification(draft, { personId, type: "career_started", title: "Career Started", message: `${firstName} ${lastName} enlisted as a ${specialty.code} ${specialty.name} on a ${contractDef.termMonths / 12}-year ${component.name} contract. Bonus: $${bonus.toLocaleString()}.`, priority: "normal", references: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractId, rankId: rank.id, unitId, billetId: billet.id } });
     recordAction(draft, { actorPersonId: personId, commandType: "create_player_career", payload: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractDefinitionId: contractDef.id, billetId: billet.id }, resultCode: "career_created" });

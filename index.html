@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.1</title>
+  <title>War Sim v0.4.1.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.1</p>
+        <p class="eyebrow">WAR SIM · v0.4.1.1</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -54,7 +54,7 @@
           <article class="panel duty-panel"><div class="section-heading compact-heading"><p class="section-kicker">DUTY STATUS</p><h2>Current Duty</h2></div><div id="current-duty"></div></article>
         </section>
 
-        <section class="panel schedule-panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT TRAINING CYCLE</p><h2>Duty Schedule</h2><p class="muted">Scheduled duties, recovery windows, and unit training are processed by the canonical world scheduler.</p></div><div id="duty-schedule"></div></section>
+        <section class="panel schedule-panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT TRAINING CYCLE</p><h2>Duty Schedule</h2><p id="training-phase-summary" class="muted">Loading training phase…</p><p class="muted">Routine background duties are processed without crowding the major-event calendar; significant events remain visible and are planned through the canonical world scheduler.</p></div><div id="duty-schedule"></div></section>
 
         <section class="panel opportunity-panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER CHANNEL</p><h2>Opportunities</h2><p class="muted">Eligible schools and career opportunities appear here with response deadlines and generate orders when accepted.</p></div><div id="career-opportunities"></div></section>
 
@@ -103,6 +103,8 @@
 
         <section class="panel readiness-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT READINESS</p><h2>Readiness Breakdown</h2><p class="muted">Readiness is derived from personnel fill, individual readiness, training, cohesion, equipment, and fatigue.</p></div><div id="readiness-breakdown"></div><div class="section-heading compact-heading subheading"><p class="section-kicker">BILLET AUTHORITY</p><h3>Command Authority</h3></div><div id="command-authority"></div></section>
 
+        <section class="panel unit-history-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">LIVING UNIT</p><h2>Recent Unit Activity</h2><p class="muted">Significant training, personnel, qualification, and readiness events are recorded as durable unit history.</p></div><div id="unit-history"></div></section>
+
         <section id="administration-section" class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PERSONNEL ADMINISTRATION</p><h2>Unit Manpower</h2><p class="muted">Vacancies, replacements, ETS, and personnel actions are durable simulation records.</p></div><div id="administration-summary" class="admin-summary"></div><div class="dashboard-grid admin-grid"><article class="subpanel"><h3>Open Vacancies / Replacements</h3><div id="replacement-requests"></div></article><article class="subpanel"><h3>Recent Personnel Actions</h3><div id="personnel-actions"></div></article></div></section>
       </section>
 
@@ -118,7 +120,7 @@
       <section class="game-view" data-view="more" hidden>
         <section class="panel admin-terminal-panel"><div class="section-heading compact-heading"><p class="section-kicker">ADMINISTRATIVE TERMINAL</p><h2>Service History</h2></div><div id="career-framework"></div></section>
         <section class="panel admin-terminal-panel"><div class="section-heading compact-heading"><p class="section-kicker">CAREER FILES</p><h2>Save & Session</h2></div><div class="actions utility-actions"><button id="save-game" type="button">Save Career</button><button id="load-game" type="button" class="secondary">Load Career</button><button id="new-career" type="button" class="danger-button">New Career</button></div></section>
-        <details id="more-section" class="panel diagnostics-panel disclosure-panel" data-persist-key="developer-diagnostics"><summary><span class="summary-kicker">SYSTEM</span><strong>Developer Diagnostics</strong></summary><p class="muted">Technical state, schema, generation, registry, and index information.</p><pre id="diagnostics">Loading…</pre></details>
+        <details id="more-section" class="panel diagnostics-panel disclosure-panel" data-persist-key="developer-diagnostics"><summary><span class="summary-kicker">SYSTEM</span><strong>Developer Diagnostics</strong></summary><p class="muted">Technical state, schema, generation, registry, index information, and non-destructive NPC progression audits.</p><div class="actions diagnostic-actions"><button id="audit-npc-30" type="button" class="secondary compact-button">Audit NPC +30 Days</button><button id="audit-npc-90" type="button" class="secondary compact-button">Audit NPC +90 Days</button><button id="audit-npc-365" type="button" class="secondary compact-button">Audit NPC +365 Days</button></div><pre id="diagnostics">Loading…</pre></details>
       </section>
 
       <nav id="bottom-nav" class="bottom-nav" aria-label="Primary navigation">

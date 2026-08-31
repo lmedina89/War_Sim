@@ -104,8 +104,8 @@ assert.equal(registries.generationProfiles.size, 1);
 const sameA = createInitialWorldState({ seed: 123456789 });
 const sameB = createInitialWorldState({ seed: 123456789 });
 assert.deepEqual(sameA, sameB, "same seed must reproduce the same generated world");
-assert.equal(sameA.schemaVersion, 13);
-assert.equal(sameA.gameVersion, "0.4.1");
+assert.equal(sameA.schemaVersion, 14);
+assert.equal(sameA.gameVersion, "0.4.1.1");
 assert.equal(sameA.world.generation.generatorVersion, 2);
 assert.equal(Object.keys(sameA.entities.units).length, 13);
 assert.equal(Object.keys(sameA.entities.billets).length, 91);
@@ -177,8 +177,8 @@ assert.deepEqual(npcNamesA, npcNamesB);
   delete legacy.world.generation;
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema10", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2", worldState:legacy });
-  assert.equal(payload.worldState.schemaVersion, 13);
-  assert.equal(payload.worldState.gameVersion, "0.4.1");
+  assert.equal(payload.worldState.schemaVersion, 14);
+  assert.equal(payload.worldState.gameVersion, "0.4.1.1");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(payload.worldState.world.generation.legacyWorld, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -323,7 +323,7 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
 
 
 
-// v0.4.1 career-gameplay foundation: schedule, objectives, cooldowns, readiness, opportunities, deadlines, and billet authority.
+// v0.4.1.1 career-gameplay foundation: schedule, objectives, cooldowns, readiness, opportunities, deadlines, and billet authority.
 {
   const seed = 410001;
   const gameStore = createStateStore(createInitialWorldState({ seed }));
@@ -332,9 +332,11 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   let gameplay = selectGameplay(gameStore.getState(), gameStore.getIndexes(), registries, personId);
   assert.equal(gameplay.objectives.length, registries.careerObjectives.size);
   assert.ok(gameplay.objectives.some(item => item.definitionId === "objective_report_unit" && item.status === "completed"));
-  assert.ok(gameplay.upcomingSchedule.length >= 6, "new careers must receive a meaningful unit duty schedule");
+  assert.ok(gameplay.upcomingSchedule.length >= 2, "new careers must expose meaningful significant duties without showing every routine background event");
   assert.equal(Object.keys(gameStore.getState().entities.unitTrainingProfiles).length, Object.keys(gameStore.getState().entities.units).length);
   const activeSchedule = (gameStore.getIndexes().scheduleRecordsByPersonId.get(personId) ?? []).map(id => gameStore.getState().entities.scheduleRecords[id]).filter(r => ["scheduled","in_progress"].includes(r.status)).sort((a,b)=>a.startElapsedDay-b.startElapsedDay);
+  assert.ok(activeSchedule.length >= 6, "canonical schedule must still contain routine background duties");
+  assert.ok(activeSchedule.some(record => record.calendarVisibility === "background"), "canonical schedule must retain background duties");
   for (let i=1;i<activeSchedule.length;i++) assert.ok(activeSchedule[i-1].endElapsedDay < activeSchedule[i].startElapsedDay, `schedule overlap ${activeSchedule[i-1].id}/${activeSchedule[i].id}`);
 
   const readinessBefore = calculateUnitReadiness(gameStore.getState(), gameStore.getIndexes(), registries, gameStore.getState().entities.people[personId].affiliation.unitId);
@@ -419,7 +421,7 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   assert.equal(validateWorldState(authorityStore.getState(), registries).ok, true);
 }
 
-// Schema-12 careers migrate into v0.4.1 without moving the player, and receive the new gameplay scaffolding.
+// Schema-12 careers migrate into v0.4.1.1 without moving the player, and receive the new gameplay scaffolding.
 {
   const seed = 410005;
   const sourceStore = createStateStore(createInitialWorldState({ seed }));
@@ -430,8 +432,8 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   for (const unit of Object.values(legacy.entities.units)) delete unit.readinessModelId;
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema12-v041", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
-  assert.equal(payload.worldState.schemaVersion, 13);
-  assert.equal(payload.worldState.gameVersion, "0.4.1");
+  assert.equal(payload.worldState.schemaVersion, 14);
+  assert.equal(payload.worldState.gameVersion, "0.4.1.1");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(Object.keys(payload.worldState.entities.unitTrainingProfiles).length, Object.keys(payload.worldState.entities.units).length);
   assert.ok(Object.values(payload.worldState.entities.scheduleRecords).some(record => record.personId === payload.worldState.playerPersonId));
@@ -439,4 +441,4 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
 }
 
-console.log("War Sim v0.4.1 soldier and unit gameplay smoke test passed");
+console.log("War Sim v0.4.1.1 soldier and unit gameplay smoke test passed");

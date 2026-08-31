@@ -1,6 +1,7 @@
 import { createEntityId } from "../core/ids.js";
 import { daysBetweenIso } from "./dateMath.js";
 import { findNextRank } from "./careerRules.js";
+import { recordUnitEvent } from "./livingUnit.js";
 
 function qualificationSetsByPerson(draft) {
   const byPerson = new Map();
@@ -25,14 +26,18 @@ function latestPromotionDate(draft, personId) {
 export function simulatePersonnelLifecycle(draft, days, registries, { excludePersonId = null } = {}) {
   const elapsedAfter = draft.world.clock?.elapsedDays ?? 0;
   const elapsedBefore = Math.max(0, elapsedAfter - days);
-  const cycles = Math.max(0, Math.floor(elapsedAfter / 30) - Math.floor(elapsedBefore / 30));
   const qualificationsByPerson = qualificationSetsByPerson(draft);
   for (const person of Object.values(draft.entities.people)) {
     if (person.id === excludePersonId || person.condition.status !== "active") continue;
+    const cadence=(person.simulationTier ?? 2) <= 1 ? 7 : (person.simulationTier ?? 2) === 2 ? 30 : 90;
+    const cycles=Math.max(0,Math.floor(elapsedAfter/cadence)-Math.floor(elapsedBefore/cadence));
     if (cycles > 0) {
-      person.career.experience += cycles * (12 + (person.id.length % 7));
+      const detailMultiplier=(person.simulationTier ?? 2) <= 1 ? 1 : 0.8;
+      person.career.experience += Math.round(cycles * (12 + (person.id.length % 7)) * detailMultiplier);
       person.condition.fatigue = Math.max(0, Math.min(100, person.condition.fatigue - cycles));
-      person.condition.readiness = Math.max(40, Math.min(100, 75 + Math.floor(person.career.experience / 500) - Math.floor(person.condition.fatigue / 8)));
+      const target=Math.max(45, Math.min(98, 74 + Math.floor(person.career.experience / 550) - Math.floor(person.condition.fatigue / 8)));
+      person.condition.readiness=Math.round((person.condition.readiness*2+target)/3);
+      if ((person.simulationTier ?? 2) <= 1) person.condition.morale=Math.max(45,Math.min(100,person.condition.morale + ((elapsedAfter + person.id.length) % 3) - 1));
     }
 
     const currentRank = registries.ranks.get(person.affiliation.rankId);
@@ -57,5 +62,6 @@ export function simulatePersonnelLifecycle(draft, days, registries, { excludePer
       id: recordId, schemaVersion: 1, personId: person.id, previousRankId, rankId: nextRank.id,
       effectiveDate: draft.world.date, authority: "npc_career_progression"
     };
+    if (person.affiliation.unitId) recordUnitEvent(draft,{unitId:person.affiliation.unitId,type:"promotion",title:`${person.identity.displayName} promoted`,summary:`Promoted from ${currentRank.abbreviation} to ${nextRank.abbreviation}.`,personId:person.id,sourceType:"promotion",sourceId:recordId,importance:"significant"});
   }
 }

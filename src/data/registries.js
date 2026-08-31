@@ -20,7 +20,7 @@ import { skillDefinitions } from "./skills.js";
 import { activityDefinitions } from "./activities.js";
 import { gameplayEventDefinitions, eventTableDefinitions } from "./gameplayEvents.js";
 import { feedbackPresentationDefinitions, performanceRatingDefinitions, relationshipBandDefinitions, statusPresentationDefinitions, documentPresentationDefinitions } from "./presentation.js";
-import { dutyDefinitions, scheduleTemplateDefinitions, readinessModelDefinitions } from "./duties.js";
+import { dutyDefinitions, trainingPhaseDefinitions, scheduleTemplateDefinitions, readinessModelDefinitions } from "./duties.js";
 import { opportunityDefinitions, careerObjectiveDefinitions } from "./opportunities.js";
 import { authorityDefinitions } from "./authorities.js";
 
@@ -52,6 +52,7 @@ export const registries = Object.freeze({
   statusPresentations: createRegistry(statusPresentationDefinitions, "statusPresentations"),
   documentPresentations: createRegistry(documentPresentationDefinitions, "documentPresentations"),
   duties: createRegistry(dutyDefinitions, "duties"),
+  trainingPhases: createRegistry(trainingPhaseDefinitions, "trainingPhases"),
   scheduleTemplates: createRegistry(scheduleTemplateDefinitions, "scheduleTemplates"),
   readinessModels: createRegistry(readinessModelDefinitions, "readinessModels"),
   opportunities: createRegistry(opportunityDefinitions, "opportunities"),

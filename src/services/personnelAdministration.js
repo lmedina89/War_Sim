@@ -3,6 +3,7 @@ import { randomInt } from "../core/rng.js";
 import { daysBetweenIso } from "./dateMath.js";
 import { recordNotification } from "./recordServices.js";
 import { personnelGenerationDefinition as personnelData } from "../data/personnelGeneration.js";
+import { recordUnitEvent } from "./livingUnit.js";
 
 export const PERSONNEL_STATUSES = Object.freeze([
   "active", "training", "leave", "tdy", "deployed", "hospitalized", "wounded", "missing", "pow", "separated", "retired", "deceased"
@@ -70,6 +71,7 @@ export function separatePersonAdministrative(draft, personId, reason = "ets") {
   const actionId = recordPersonnelAction(draft, { personId, type: person.condition.status, reason, fromUnitId: oldUnitId, fromBilletId: oldBilletId });
   const orderId = createEntityId(draft, "order");
   draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: person.condition.status, status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId: null, billetId: null, title: person.condition.status === "retired" ? "Retirement Orders" : "Separation Orders", summary: reason === "ets" ? "Separated at expiration of term of service." : `Separated: ${reason.replaceAll("_", " ")}.` };
+  if (oldUnitId) recordUnitEvent(draft,{unitId:oldUnitId,type:"personnel_departure",title:`${person.identity.displayName} departed`,summary:person.condition.status === "retired" ? "Retired from service." : "Separated from service.",personId,sourceType:"personnel_action",sourceId:actionId,importance:"significant"});
   if (personId === draft.playerPersonId) recordNotification(draft, { personId, type: "service_separation", title: "Service Complete", message: "Your active contract expired without a reenlistment. You have separated from active service.", priority: "high", references: { orderId } });
   return { actionId, orderId, vacatedBilletId: oldBilletId };
 }
@@ -121,7 +123,8 @@ function fillReplacement(draft, registries, request) {
   billet.assignedPersonId = personId; billet.status = "filled";
   const assignmentId = createEntityId(draft, "assign");
   draft.entities.assignmentRecords[assignmentId] = { id: assignmentId, schemaVersion: 2, personId, unitId: billet.unitId, billetId: billet.id, startDate: draft.world.date, endDate: null, reason: "replacement_arrival" };
-  recordPersonnelAction(draft, { personId, type: "replacement_arrival", reason: "fill_vacancy", toUnitId: billet.unitId, toBilletId: billet.id });
+  const actionId=recordPersonnelAction(draft, { personId, type: "replacement_arrival", reason: "fill_vacancy", toUnitId: billet.unitId, toBilletId: billet.id });
+  recordUnitEvent(draft,{unitId:billet.unitId,type:"replacement_arrival",title:`${identity.displayName} assigned`,summary:`Replacement arrived and filled ${context.billetDef.name}.`,personId,sourceType:"personnel_action",sourceId:actionId,importance:"significant"});
   request.status = "filled"; request.filledDate = draft.world.date; request.replacementPersonId = personId;
   return personId;
 }

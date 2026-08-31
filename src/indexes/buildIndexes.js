@@ -112,7 +112,7 @@ function activitiesGroup(state) {
 
 
 function careerGameplayGroup(state) {
-  const unitTrainingProfileByUnitId = new Map(), scheduleRecordsByPersonId = new Map(), scheduleRecordsByUnitId = new Map(), scheduleRecordsByStartElapsedDay = new Map(), scheduleRecordsByStatus = new Map(), opportunityRecordsByPersonId = new Map(), opportunityRecordsByStatus = new Map(), objectiveRecordsByPersonId = new Map();
+  const unitTrainingProfileByUnitId = new Map(), scheduleRecordsByPersonId = new Map(), scheduleRecordsByUnitId = new Map(), scheduleRecordsByStartElapsedDay = new Map(), scheduleRecordsByStatus = new Map(), opportunityRecordsByPersonId = new Map(), opportunityRecordsByStatus = new Map(), objectiveRecordsByPersonId = new Map(), unitEventRecordsByUnitId = new Map(), readinessSnapshotsByUnitId = new Map();
   for (const profile of Object.values(state.entities.unitTrainingProfiles ?? {})) unitTrainingProfileByUnitId.set(profile.unitId, profile.id);
   for (const record of Object.values(state.entities.scheduleRecords ?? {})) {
     addToIndex(scheduleRecordsByPersonId, record.personId, record.id);
@@ -122,7 +122,9 @@ function careerGameplayGroup(state) {
   }
   for (const record of Object.values(state.entities.opportunityRecords ?? {})) { addToIndex(opportunityRecordsByPersonId, record.personId, record.id); addToIndex(opportunityRecordsByStatus, record.status, record.id); }
   for (const record of Object.values(state.entities.objectiveRecords ?? {})) addToIndex(objectiveRecordsByPersonId, record.personId, record.id);
-  return { unitTrainingProfileByUnitId, scheduleRecordsByPersonId, scheduleRecordsByUnitId, scheduleRecordsByStartElapsedDay, scheduleRecordsByStatus, opportunityRecordsByPersonId, opportunityRecordsByStatus, objectiveRecordsByPersonId };
+  for (const record of Object.values(state.entities.unitEventRecords ?? {})) addToIndex(unitEventRecordsByUnitId, record.unitId, record.id);
+  for (const record of Object.values(state.entities.unitReadinessSnapshots ?? {})) addToIndex(readinessSnapshotsByUnitId, record.unitId, record.id);
+  return { unitTrainingProfileByUnitId, scheduleRecordsByPersonId, scheduleRecordsByUnitId, scheduleRecordsByStartElapsedDay, scheduleRecordsByStatus, opportunityRecordsByPersonId, opportunityRecordsByStatus, objectiveRecordsByPersonId, unitEventRecordsByUnitId, readinessSnapshotsByUnitId };
 }
 
 function actionGroup(state) {

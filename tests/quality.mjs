@@ -158,7 +158,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
 }
 
 
-// v0.4.1 soldier/unit gameplay: scheduler, readiness, objectives, opportunities, conflicts, recovery, and authority definitions.
+// v0.4.1.1 soldier/unit gameplay: scheduler, readiness, objectives, opportunities, conflicts, recovery, and authority definitions.
 {
   assert.ok(registries.duties.size >= 6, "duty definitions must drive the unit training cycle");
   assert.ok(registries.scheduleTemplates.size >= 1, "schedule templates must be registry driven");
@@ -221,7 +221,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   assert.equal(validateWorldState(gameStore.getState(), registries).ok, true);
 }
 
-// Direct v0.4.0.3 schema-12 migration preserves the career and layers in v0.4.1 gameplay records.
+// Direct v0.4.0.3 schema-12 migration preserves the career and layers in v0.4.1.1 gameplay records.
 {
   const seed = 404003;
   const old = createStateStore(createInitialWorldState({ seed }));
@@ -237,8 +237,8 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   for (const storeName of ["unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords"]) delete legacy.entities[storeName];
   for (const unit of Object.values(legacy.entities.units)) delete unit.readinessModelId;
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"schema12-visual", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
-  assert.equal(migrated.worldState.schemaVersion, 13);
-  assert.equal(migrated.worldState.gameVersion, "0.4.1");
+  assert.equal(migrated.worldState.schemaVersion, 14);
+  assert.equal(migrated.worldState.gameVersion, "0.4.1.1");
   assert.equal(migrated.worldState.entities.people[personId].identity.displayName, name);
   assert.equal(migrated.worldState.entities.people[personId].affiliation.unitId, unitId);
   assert.ok(migrated.worldState.entities.contractRecords[contractId], "active contract must survive schema-12 migration");
@@ -255,8 +255,8 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   delete legacy.entities.skillProfiles; delete legacy.entities.activityRecords; delete legacy.entities.performanceRecords; delete legacy.entities.gameplayEventRecords;
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
-  assert.equal(payload.worldState.schemaVersion, 13);
-  assert.equal(payload.worldState.gameVersion, "0.4.1");
+  assert.equal(payload.worldState.schemaVersion, 14);
+  assert.equal(payload.worldState.gameVersion, "0.4.1.1");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -285,8 +285,8 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const current = createInitialWorldState({ seed: 909090 });
   current.gameVersion = "0.4.0.2";
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.2", worldState:current });
-  assert.equal(migrated.worldState.schemaVersion, 13);
-  assert.equal(migrated.worldState.gameVersion, "0.4.1");
+  assert.equal(migrated.worldState.schemaVersion, 14);
+  assert.equal(migrated.worldState.gameVersion, "0.4.1.1");
 }
 
 // Notification clearing archives records, uses indexed scope, and keeps canonical history intact.

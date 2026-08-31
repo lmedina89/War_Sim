@@ -17,7 +17,8 @@ export function createUnitTrainingProfile(unit, readinessModelId = unit?.readine
       discipline: clamp(base - 2),
       equipmentReadiness: clamp(unit?.condition?.supply ?? base)
     },
-    lastUpdatedDate: null
+    lastUpdatedDate: null,
+    readinessHistory: []
   };
 }
 
@@ -28,7 +29,9 @@ export function ensureUnitTrainingProfile(draft, unitId, readinessModelId = null
     if (!unit) throw new Error(`Unknown unit ${unitId}.`);
     draft.entities.unitTrainingProfiles[id] = createUnitTrainingProfile(unit, readinessModelId ?? unit.readinessModelId);
   }
-  return draft.entities.unitTrainingProfiles[id];
+  const profile = draft.entities.unitTrainingProfiles[id];
+  profile.readinessHistory ??= [];
+  return profile;
 }
 
 export function initializeUnitTrainingProfiles(state, readinessModelId = null) {
@@ -50,6 +53,24 @@ export function applyUnitTrainingEffects(draft, unitId, effects = {}) {
   return profile;
 }
 
+
+function recordReadinessSnapshot(profile, unit, date) {
+  profile.readinessHistory ??= [];
+  const latest = profile.readinessHistory.at(-1);
+  const snapshot = { date, readiness: clamp(unit?.condition?.readiness ?? 0), cohesion: clamp(unit?.condition?.cohesion ?? 0), equipment: clamp(profile.values.equipmentReadiness) };
+  if (latest?.date === date) profile.readinessHistory[profile.readinessHistory.length - 1] = snapshot;
+  else profile.readinessHistory.push(snapshot);
+  if (profile.readinessHistory.length > 16) profile.readinessHistory.splice(0, profile.readinessHistory.length - 16);
+}
+
+export function readinessTrend(profile) {
+  const history = profile?.readinessHistory ?? [];
+  if (history.length < 2) return { direction: "stable", delta: 0 };
+  const current = history.at(-1)?.readiness ?? 0, previous = history.at(-2)?.readiness ?? current;
+  const delta = current - previous;
+  return { direction: delta >= 2 ? "improving" : delta <= -2 ? "declining" : "stable", delta };
+}
+
 export function calculateUnitReadiness(state, indexes, registries, unitId) {
   const unit = state.entities.units[unitId];
   if (!unit) return null;
@@ -69,7 +90,7 @@ export function calculateUnitReadiness(state, indexes, registries, unitId) {
   const equipment = clamp(profile.values.equipmentReadiness);
   const components = { personnelFill, individualReadiness, training, cohesion, equipment, fatigue };
   const total = Object.entries(model.weights).reduce((sum, [key, weight]) => sum + (components[key] ?? 0) * weight, 0);
-  return { unitId, overall: clamp(total), components, trainingValues: { ...profile.values }, modelId: model.id };
+  return { unitId, overall: clamp(total), components, trainingValues: { ...profile.values }, modelId: model.id, trend: readinessTrend(profile), history: [...(profile.readinessHistory ?? [])] };
 }
 
 export function syncUnitReadiness(draft, registries, unitId, { billetIds = null, personIds = null } = {}) {
@@ -94,5 +115,6 @@ export function syncUnitReadiness(draft, registries, unitId, { billetIds = null,
   unit.condition.readiness = clamp(Object.entries(model.weights).reduce((sum,[key,weight]) => sum + (components[key] ?? 0) * weight,0));
   unit.condition.cohesion = clamp(profile.values.cohesion);
   unit.condition.supply = clamp(profile.values.equipmentReadiness);
-  return { overall: unit.condition.readiness, components };
+  recordReadinessSnapshot(profile, unit, draft.world.date);
+  return { overall: unit.condition.readiness, components, trend: readinessTrend(profile) };
 }

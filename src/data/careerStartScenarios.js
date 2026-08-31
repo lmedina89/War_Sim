@@ -1,13 +1,14 @@
 export const careerStartScenarioDefinitions = [
   {
     id: "career_start_army_active_11b_new_enlistee",
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "Active Army · 11B · New Enlistee",
     branchId: "branch_army",
     componentId: "component_active",
     specialtyId: "specialty_army_11b",
     generationProfileId: "generation_profile_army_infantry_company_v1",
-    scheduleTemplateId: "schedule_standard_training_cycle",
+    trainingPhaseId: "training_phase_garrison",
+    scheduleTemplateId: "schedule_garrison_cycle",
     readinessModelId: "readiness_standard_unit",
     defaultStartingSkillValue: 25,
     startingSkillValues: { skill_fitness: 35 },

@@ -565,3 +565,8 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .command-duty-grid button{min-width:0}
 .schedule-history-heading{margin:1rem 0 .5rem;font-size:.84rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .duty-history{display:grid;gap:.45rem}.duty-history-row{width:100%;display:flex;justify-content:space-between;gap:.75rem;align-items:center;text-align:left;padding:.7rem .8rem;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--radius-sm)}.duty-history-row span{min-width:0;color:var(--muted)}.duty-history-row strong{white-space:nowrap;font-size:.78rem;letter-spacing:.05em}
+/* v0.4.1.1 living-unit polish */
+.unit-history-row{display:grid;grid-template-columns:7rem 1fr;gap:.8rem;padding:.8rem 0;border-bottom:1px solid var(--mil-line)}
+.unit-history-row:last-child{border-bottom:0}.unit-history-row time{font-family:var(--doc-font);color:var(--text-muted)}.unit-history-row div{display:grid;gap:.2rem}.unit-history-row span{color:var(--text-muted)}
+.diagnostic-actions{margin:.75rem 0;flex-wrap:wrap}.schedule-row .mil-status-stamp{align-self:center}
+@media(max-width:520px){.unit-history-row{grid-template-columns:1fr;gap:.25rem}}

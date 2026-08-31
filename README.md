@@ -1,12 +1,27 @@
-# War Sim v0.4.1 — Soldier & Unit Gameplay
+# War Sim v0.4.1.1 — Living Unit & Training Tempo Polish
 
-War Sim v0.4.1 is the first gameplay-heavy release built on the stable v0.4.0.3 military UI foundation. It keeps the existing career, organization, personnel, orders, saves, deterministic generation, and military presentation systems while making time, training, readiness, relationships, opportunities, and orders interact as a living military career.
+War Sim v0.4.1.1 is a focused living-unit and training-tempo update built on v0.4.1. It preserves the soldier/unit gameplay foundation while making normal garrison life less compressed, NPC participation more visible, qualifications durable, readiness trends inspectable, and the training scheduler explicitly phase-driven.
 
 ## Release goal
 
-v0.4.1 answers the question: **what are the soldier and unit actually doing?**
+v0.4.1.1 answers two follow-up questions: **is the training rhythm believable, and can the player see that NPC careers continue around them?**
 
 The release deliberately stops before deployment/combat. Instead it builds the reusable systems that deployment and future operations will consume.
+
+## v0.4.1.1 living-unit additions
+
+- data-driven training phases: Garrison, Elevated Readiness, Pre-Deployment Train-Up, Post-Deployment / Reset, and Operational
+- Garrison is the default phase; dense recurring training is reserved for higher-tempo phases
+- routine PT is processed as background duty rather than filling the visible major-event calendar
+- need-aware scheduling can react to equipment/tactical readiness and expiring qualifications
+- finite planning horizons with firm/tentative schedule status
+- weekday/weekend-aware schedule placement and priority-based conflict resolution
+- renewable service-rifle qualification records with qualification date, expiry date, and performance result
+- detailed NPC participation for immediate-unit personnel, including performance, fatigue, skills, readiness, equipment wear/repair, and selected relationship effects
+- durable significant unit-event history and readiness snapshots/trends
+- explicit player-proximity simulation tiers, refreshed when the player's unit context is established
+- non-destructive 30/90/365-day NPC progression audit controls in Developer Diagnostics
+
 
 ## Major gameplay systems
 
@@ -62,7 +77,7 @@ The Unit screen exposes the breakdown instead of showing only a decorative readi
 - decision resolution remains deterministic and recorded
 
 ### Career opportunities and actionable orders
-Initial v0.4.1 opportunity definitions include:
+Existing v0.4.1 opportunity definitions remain:
 - Airborne School volunteer slot
 - Basic Leader Course seat
 
@@ -167,14 +182,14 @@ The v0.4.0.3 military visual identity remains intact.
 ## Compatibility
 
 - Save format: **3**
-- World schema: **13**
-- Runtime version: **0.4.1**
-- v0.4.0.3 schema-12 careers migrate to schema 13 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
+- World schema: **14**
+- Runtime version: **0.4.1.1**
+- v0.4.0.3 schema-12 careers migrate through schema 13 to schema 14 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
 - older supported saves continue through the existing migration chain
 
 ## Deliberately not included
 
-v0.4.1 does **not** add:
+v0.4.1.1 does **not** add:
 - deployment simulation
 - combat
 - enemy forces
@@ -183,7 +198,7 @@ v0.4.1 does **not** add:
 - new playable branches
 - a broad MOS expansion
 
-Those remain later milestones. v0.4.1 establishes the soldier/unit gameplay systems they will use.
+Those remain later milestones. v0.4.1.1 strengthens the living-unit and scheduler foundation they will use.
 
 ## Architecture rules preserved
 

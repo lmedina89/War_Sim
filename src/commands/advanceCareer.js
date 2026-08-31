@@ -8,6 +8,7 @@ import { ensureScheduleCoverageInDraft, processScheduledDutyForDay, applyPassive
 import { applyUnitTrainingEffects, syncUnitReadiness } from "../services/unitReadiness.js";
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEvents.js";
+import { recordReadinessSnapshot } from "../services/livingUnit.js";
 
 function indexedCount(indexes, indexName, personId) { return indexes[indexName]?.get(personId)?.length ?? 0; }
 function unitSnapshot(state, personId) {
@@ -28,6 +29,15 @@ function scheduleMapForRange(state, indexes, personId, startExclusive, endInclus
   return map;
 }
 
+function scheduleIdsForDayInDraft(draft, personId, elapsedDay) {
+  const ids=[];
+  for (const record of Object.values(draft.entities.scheduleRecords ?? {})) {
+    if (record.personId !== personId || !["scheduled","in_progress"].includes(record.status)) continue;
+    if (record.startElapsedDay <= elapsedDay && record.endElapsedDay >= elapsedDay) ids.push(record.id);
+  }
+  return ids.sort();
+}
+
 function hasBlockingPendingDecision(state, indexes, personId) {
   return (indexes.gameplayEventsByPersonId?.get(personId) ?? []).map(id => state.entities.gameplayEventRecords[id]).find(record => {
     if (record?.status !== "pending") return false;
@@ -46,7 +56,7 @@ export function advanceWorldDays(store, requestedDays) {
   if (!player) throw new Error("Player personnel record is missing.");
 
   store.mutate(draft => {
-    if (player.affiliation.unitId) ensureScheduleCoverageInDraft(draft, registries, actorPersonId, player.affiliation.unitId, requestedDays + 70);
+    if (player.affiliation.unitId) ensureScheduleCoverageInDraft(draft, registries, actorPersonId, player.affiliation.unitId);
   }, ["careerGameplay"]);
   state = store.getState(); indexes = store.getIndexes();
 
@@ -55,7 +65,7 @@ export function advanceWorldDays(store, requestedDays) {
   const relationshipIds = [...(indexes.relationshipsByPersonId?.get(actorPersonId) ?? [])];
   const billetIds = unitId ? [...(indexes.billetsByUnitId?.get(unitId) ?? [])] : [];
   const unitPersonIds = unitId ? [...(indexes.peopleByUnitId?.get(unitId) ?? [])] : [];
-  const schedulesByDay = scheduleMapForRange(state, indexes, actorPersonId, startElapsedDay, startElapsedDay + requestedDays);
+  const unitEventCountBefore = unitId ? (indexes.unitEventRecordsByUnitId?.get(unitId)?.length ?? 0) : 0;
   const statusBefore = state.entities.people[actorPersonId]?.condition.status ?? null;
   const unitBefore = unitSnapshot(state, actorPersonId);
   const playerCountsBefore = {
@@ -69,6 +79,7 @@ export function advanceWorldDays(store, requestedDays) {
   store.mutate(draft => {
     for (let i = 0; i < requestedDays; i++) {
       advanceClock(draft, 1); actualDays += 1;
+      if (unitId && ((draft.world.scheduler?.generatedThroughElapsedDay ?? 0) - draft.world.clock.elapsedDays < 14)) ensureScheduleCoverageInDraft(draft, registries, actorPersonId, unitId);
       const expiredDecisions = resolveExpiredGameplayDecisionsInDraft(draft, registries, actorPersonId);
       notificationIds.push(...expiredDecisions.notificationIds);
       simulatePersonnelLifecycle(draft, 1, registries, { excludePersonId: actorPersonId });
@@ -78,8 +89,9 @@ export function advanceWorldDays(store, requestedDays) {
 
       const opportunityNotifications = processOpportunityLifecycleForDay(draft, registries, actorPersonId);
       notificationIds.push(...opportunityNotifications);
-      const dayScheduleIds = schedulesByDay.get(draft.world.clock.elapsedDays) ?? [];
-      const dutyResult = processScheduledDutyForDay(draft, registries, dayScheduleIds, { personId: actorPersonId, relationshipIds, billetIds, personIds: unitPersonIds });
+      const dayScheduleIds = scheduleIdsForDayInDraft(draft, actorPersonId, draft.world.clock.elapsedDays);
+      const currentUnitPersonIds = unitId ? billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean) : [];
+      const dutyResult = processScheduledDutyForDay(draft, registries, dayScheduleIds, { personId: actorPersonId, relationshipIds, billetIds, personIds: currentUnitPersonIds });
       notificationIds.push(...dutyResult.notifications);
       completedDuties.push(...dutyResult.completedDutyIds);
       const onDuty = dayScheduleIds.length > 0;
@@ -87,7 +99,9 @@ export function advanceWorldDays(store, requestedDays) {
 
       if (unitId && draft.world.clock.elapsedDays % 30 === 0) {
         applyUnitTrainingEffects(draft, unitId, { physical: -1, weapons: -1, tactical: -1, equipmentReadiness: -1 });
-        syncUnitReadiness(draft, registries, unitId, { billetIds, personIds: unitPersonIds });
+        const currentUnitPersonIds = billetIds.map(billetId => draft.entities.billets[billetId]?.assignedPersonId).filter(Boolean);
+        const monthlyReadiness=syncUnitReadiness(draft, registries, unitId, { billetIds, personIds: currentUnitPersonIds });
+        recordReadinessSnapshot(draft,unitId,monthlyReadiness,{force:false});
       }
 
       const created = evaluateCareerOpportunitiesInDraft(draft, registries, actorPersonId);
@@ -120,6 +134,7 @@ export function advanceWorldDays(store, requestedDays) {
   const summaryItems = [{ id: "service_time", label: `${actualDays} day${actualDays === 1 ? "" : "s"} of service time accrued`, tone: "routine" }];
   const countLabels = { notifications: "new notification", orders: "new order", promotions: "promotion recorded", qualifications: "qualification earned", awards: "award earned", personnelActions: "personnel action affecting you" };
   for (const [key, label] of Object.entries(countLabels)) { const delta = playerCountsAfter[key] - playerCountsBefore[key]; if (delta > 0) summaryItems.push({ id:key, label:`${delta} ${label}${delta === 1 ? "" : "s"}`, tone:key === "notifications" || key === "orders" ? "attention" : "good" }); }
+  if (unitId) { const unitEventDelta=(afterIndexes.unitEventRecordsByUnitId?.get(unitId)?.length ?? 0)-unitEventCountBefore; if(unitEventDelta>0) summaryItems.push({id:"unit_activity",label:`${unitEventDelta} significant unit event${unitEventDelta===1?"":"s"} recorded`,tone:"routine"}); }
   if (completedDuties.length) {
     const names = [...new Set(completedDuties.map(id => after.entities.scheduleRecords[id]).filter(Boolean).map(record => registries.duties.get(record.dutyDefinitionId).shortName))];
     summaryItems.push({ id:"scheduled_duties", label:`Scheduled duties completed: ${names.join(", ")}`, tone:"good" });
