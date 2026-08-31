@@ -39,7 +39,7 @@ function personHistoryGroup(state) {
   const maps = {
     careerEventsByPersonId: new Map(), qualificationsByPersonId: new Map(), awardsByPersonId: new Map(), militaryEducationByPersonId: new Map(),
     assignmentsByPersonId: new Map(), promotionsByPersonId: new Map(), deploymentsByPersonId: new Map(),
-    casualtiesByPersonId: new Map(), relationshipsByPersonId: new Map()
+    casualtiesByPersonId: new Map(), relationshipsByPersonId: new Map(), relationshipMemoriesByPersonId: new Map(), personalityProfileByPersonId: new Map()
   };
   for (const record of Object.values(state.entities.careerEvents)) addToIndex(maps.careerEventsByPersonId, record.personId, record.id);
   for (const record of Object.values(state.entities.qualificationRecords)) addToIndex(maps.qualificationsByPersonId, record.personId, record.id);
@@ -53,6 +53,11 @@ function personHistoryGroup(state) {
     addToIndex(maps.relationshipsByPersonId, record.personAId, record.id);
     addToIndex(maps.relationshipsByPersonId, record.personBId, record.id);
   }
+  for (const record of Object.values(state.entities.relationshipMemoryRecords ?? {})) {
+    addToIndex(maps.relationshipMemoriesByPersonId, record.personId, record.id);
+    addToIndex(maps.relationshipMemoriesByPersonId, record.otherPersonId, record.id);
+  }
+  for (const profile of Object.values(state.entities.personalityProfiles ?? {})) maps.personalityProfileByPersonId.set(profile.personId,profile.id);
   return maps;
 }
 

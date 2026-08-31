@@ -63,7 +63,10 @@ export function selectCareerRecord(state, indexes, registries, personId) {
       familiarity: record.familiarity,
       trust: record.trust,
       respect: record.respect,
-      bond: record.bond
+      rapport: record.rapport ?? 0,
+      bond: record.bond,
+      personalityTraits: (()=>{ const profileId=indexes.personalityProfileByPersonId?.get(otherId); const profile=profileId?state.entities.personalityProfiles?.[profileId]:null; return (profile?.traitIds??[]).map(id=>registries.personalities.has(id)?registries.personalities.get(id).name:id); })(),
+      memories: (indexes.relationshipMemoriesByPersonId?.get(personId)??[]).map(memoryId=>state.entities.relationshipMemoryRecords?.[memoryId]).filter(memory=>memory && (memory.personId===otherId || memory.otherPersonId===otherId)).sort((a,b)=>(b.elapsedDay??0)-(a.elapsedDay??0)).slice(0,3).map(memory=>({id:memory.id,date:memory.gameDate,summary:memory.summary,type:memory.type}))
     };
   });
 

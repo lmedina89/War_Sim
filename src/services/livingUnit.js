@@ -37,7 +37,7 @@ function ensureRelationship(draft, personAId, personBId) {
     if (ra === a && rb === b) return record;
   }
   const id = createEntityId(draft, "rel");
-  const record = { id, schemaVersion: 1, personAId:a, personBId:b, familiarity:2, trust:0, respect:0, bond:0, relationshipType:"squadmate", lastInteractionDate:draft.world.date };
+  const record = { id, schemaVersion: 1, personAId:a, personBId:b, familiarity:2, trust:0, respect:0, rapport:0, bond:0, relationshipType:"squadmate", lastInteractionDate:draft.world.date };
   draft.entities.relationshipRecords[id] = record;
   return record;
 }

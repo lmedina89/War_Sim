@@ -4,7 +4,7 @@ const REQUIRED_STORES = [
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
   "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords","militaryEducationRecords",
-  "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords","unitEventRecords","unitReadinessSnapshots"
+  "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords","unitEventRecords","unitReadinessSnapshots","personalityProfiles","relationshipMemoryRecords"
 ];
 
 function requireRef(errors, store, id, label) { if (id != null && !store[id]) errors.push(`${label}: missing reference ${id}.`); }
@@ -12,7 +12,7 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 15) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 16) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };
@@ -145,5 +145,11 @@ export function validateWorldState(state, registries) {
   }
 
   if (state.playerPersonId) requireRef(errors, e.people, state.playerPersonId, "playerPersonId");
+  for (const record of Object.values(e.relationshipRecords ?? {})) {
+    requireRef(errors,e.people,record.personAId,`${record.id}.personAId`); requireRef(errors,e.people,record.personBId,`${record.id}.personBId`);
+    for (const field of ["familiarity","trust","respect","rapport","bond"]) if (!Number.isFinite(Number(record[field] ?? 0))) errors.push(`${record.id}: invalid relationship ${field}.`);
+  }
+  for (const profile of Object.values(e.personalityProfiles ?? {})) { requireRef(errors,e.people,profile.personId,`${profile.id}.personId`); for(const traitId of profile.traitIds ?? []) if(!registries.personalities.has(traitId)) errors.push(`${profile.id}: invalid personality ${traitId}.`); }
+  for (const memory of Object.values(e.relationshipMemoryRecords ?? {})) { requireRef(errors,e.people,memory.personId,`${memory.id}.personId`); requireRef(errors,e.people,memory.otherPersonId,`${memory.id}.otherPersonId`); }
   return { ok: errors.length === 0, errors };
 }

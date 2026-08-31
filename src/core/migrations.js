@@ -4,8 +4,9 @@ import { ensureScheduleCoverageInDraft, seedCareerGameplayRecords, seedScheduleT
 import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
 import { registries } from "../data/registries.js";
 import { seedPriorServiceHistories } from "../services/priorServiceHistory.js";
+import { seedPersonalityProfiles } from "../services/livingCareer.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 15;
+export const CURRENT_WORLD_SCHEMA_VERSION = 16;
 
 
 function normalizeScheduleAvailabilityFlags(worldState) {
@@ -310,6 +311,23 @@ function migrateWorldV14ToV15(worldState) {
   return next;
 }
 
+
+function migrateWorldV15ToV16(worldState) {
+  const next=structuredClone(worldState);
+  next.entities.personalityProfiles ??= {};
+  next.entities.relationshipMemoryRecords ??= {};
+  for (const relationship of Object.values(next.entities.relationshipRecords ?? {})) {
+    relationship.schemaVersion=Math.max(2,relationship.schemaVersion??1);
+    relationship.rapport=Number.isFinite(Number(relationship.rapport))?Number(relationship.rapport):0;
+  }
+  seedPersonalityProfiles(next,registries);
+  next.world ??={};
+  next.world.livingCareer ??={version:1,lastPlayerEventElapsedDay:-999};
+  next.schemaVersion=16;
+  next.gameVersion="0.4.2.2";
+  return next;
+}
+
 function migrateWorldV11ToV12(worldState) {
   const next = structuredClone(worldState);
   next.entities.skillProfiles ??= {};
@@ -431,6 +449,7 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 12) next.worldState = migrateWorldV12ToV13(next.worldState);
   if (next.worldState.schemaVersion === 13) next.worldState = migrateWorldV13ToV14(next.worldState);
   if (next.worldState.schemaVersion === 14) next.worldState = migrateWorldV14ToV15(next.worldState);
+  if (next.worldState.schemaVersion === 15) next.worldState = migrateWorldV15ToV16(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
@@ -438,11 +457,15 @@ export function migratePayload(payload) {
 
   next.worldState.entities.qualificationAttemptRecords ??= {};
   next.worldState.entities.militaryEducationRecords ??= {};
+  next.worldState.entities.personalityProfiles ??= {};
+  next.worldState.entities.relationshipMemoryRecords ??= {};
+  for (const relationship of Object.values(next.worldState.entities.relationshipRecords ?? {})) relationship.rapport ??= 0;
+  seedPersonalityProfiles(next.worldState,registries);
   repairLegacyAffiliationFields(next.worldState);
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.2.1";
-  next.worldState.gameVersion = "0.4.2.1";
+  next.gameVersion = "0.4.2.2";
+  next.worldState.gameVersion = "0.4.2.2";
   return next;
 }

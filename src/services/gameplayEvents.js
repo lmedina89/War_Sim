@@ -89,7 +89,7 @@ export function resolveGameplayEventChoice(draft, registries, { personId, eventR
   const targetPerson = record.targetPersonId ? draft.entities.people?.[record.targetPersonId] : null;
   const before = {
     experience: person?.career?.experience ?? null, prestige: person?.career?.prestige ?? null, morale: person?.condition?.morale ?? null,
-    skills: { ...(profile?.values ?? {}) }, trust: targetRelationship?.trust ?? null, familiarity: targetRelationship?.familiarity ?? null, respect: targetRelationship?.respect ?? null, bond: targetRelationship?.bond ?? null
+    skills: { ...(profile?.values ?? {}) }, trust: targetRelationship?.trust ?? null, familiarity: targetRelationship?.familiarity ?? null, respect: targetRelationship?.respect ?? null, rapport: targetRelationship?.rapport ?? null, bond: targetRelationship?.bond ?? null
   };
   const scopedRelationshipIds = targetRelationship ? [targetRelationship.id] : relationshipIds;
   applyEffects(draft, registries, { personId, unitId: record.unitId, relationshipIds: scopedRelationshipIds, effects: choice.effects ?? [] });
@@ -105,6 +105,7 @@ export function resolveGameplayEventChoice(draft, registries, { personId, eventR
   pushChange(targetPerson ? `Trust with ${targetPerson.identity.displayName}` : "Trust", before.trust, afterRelationship?.trust);
   pushChange(targetPerson ? `Familiarity with ${targetPerson.identity.displayName}` : "Familiarity", before.familiarity, afterRelationship?.familiarity);
   pushChange(targetPerson ? `Respect with ${targetPerson.identity.displayName}` : "Respect", before.respect, afterRelationship?.respect);
+  pushChange(targetPerson ? `Rapport with ${targetPerson.identity.displayName}` : "Rapport", before.rapport, afterRelationship?.rapport);
   pushChange(targetPerson ? `Bond with ${targetPerson.identity.displayName}` : "Bond", before.bond, afterRelationship?.bond);
   record.status = "resolved";
   record.selectedChoiceId = choice.id;

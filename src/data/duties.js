@@ -30,7 +30,7 @@ export const dutyDefinitions = [
       { target: "skill", skillId: "skill_fieldcraft", operation: "add", value: 2 },
       { target: "person", field: "career.experience", operation: "add", value: 45 },
       { target: "person", field: "condition.fatigue", operation: "add", value: 5, clamp: [0,100] },
-      { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }
+      { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100], scope: "one" }
     ],
     trainingEffects: { tactical: 4, cohesion: 3, discipline: 1 }, npcEffects: { experience: 32, fatigue: 5, readiness: 2, familiarity: 1, trust: 1, skillIds: ["skill_fieldcraft"] }
   },
@@ -54,7 +54,7 @@ export const dutyDefinitions = [
       { target: "skill", skillId: "skill_mos_proficiency", operation: "add", value: 2 },
       { target: "person", field: "career.experience", operation: "add", value: 75 },
       { target: "person", field: "condition.fatigue", operation: "add", value: 10, clamp: [0,100] },
-      { target: "relationships", field: "trust", operation: "add", value: 2, clamp: [-100,100] }
+      { target: "relationships", field: "trust", operation: "add", value: 2, clamp: [-100,100], scope: "one" }
     ],
     trainingEffects: { physical: 2, weapons: 2, tactical: 5, cohesion: 3, equipmentReadiness: -2 }, npcEffects: { experience: 52, fatigue: 9, readiness: 3, equipmentWear: 2, familiarity: 2, trust: 1, skillIds: ["skill_fieldcraft","skill_mos_proficiency"] }
   },

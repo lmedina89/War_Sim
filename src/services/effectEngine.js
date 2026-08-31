@@ -1,3 +1,4 @@
+import { randomInt } from "../core/rng.js";
 import { ensureUnitTrainingProfile } from "./unitReadiness.js";
 function getPath(object, path) {
   const parts = String(path).split(".");
@@ -46,7 +47,13 @@ export function applyEffects(draft, registries, { personId, unitId = null, relat
       numericEffect(training.values, effect.field, effect);
     }
     else if (effect.target === "relationships") {
-      const records = relationshipIds == null ? Object.values(draft.entities.relationshipRecords) : relationshipIds.map(id => draft.entities.relationshipRecords[id]).filter(Boolean);
+      let records = relationshipIds == null ? Object.values(draft.entities.relationshipRecords) : relationshipIds.map(id => draft.entities.relationshipRecords[id]).filter(Boolean);
+      records = records.filter(relationship => {
+        if (relationship.personAId !== personId && relationship.personBId !== personId) return false;
+        const otherId = relationship.personAId === personId ? relationship.personBId : relationship.personAId;
+        return !unitId || draft.entities.people[otherId]?.affiliation.unitId === unitId;
+      }).sort((a,b)=>a.id.localeCompare(b.id));
+      if (effect.scope === "one" && records.length > 1) records = [records[randomInt(draft,0,records.length-1)]];
       for (const relationship of records) {
         if (relationship.personAId !== personId && relationship.personBId !== personId) continue;
         const otherId = relationship.personAId === personId ? relationship.personBId : relationship.personAId;

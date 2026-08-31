@@ -28,7 +28,7 @@ function advanceResolving(store,days){
   const a=createInitialWorldState({seed:420042});
   const b=createInitialWorldState({seed:420042});
   assert.deepEqual(a,b,"prior-service generation must be deterministic for the same seed");
-  assert.equal(a.schemaVersion,15);
+  assert.equal(a.schemaVersion,16);
   const npcs=Object.values(a.entities.people);
   assert.ok(npcs.length>=80);
   assert.ok(Object.keys(a.entities.militaryEducationRecords).length>0,"experienced NPCs should seed military education");
@@ -92,7 +92,7 @@ function advanceResolving(store,days){
   const playerId=legacy.playerPersonId;
   legacy.entities.qualificationRecords.qual_legacy_airborne={id:"qual_legacy_airborne",schemaVersion:1,personId:playerId,schoolId:"school_airborne",qualificationId:"qualification_airborne",completedDate:"2046-02-11",result:"graduate"};
   const migrated=migratePayload({saveFormatVersion:3,saveId:"schema14-service-record",createdAt:"2026-08-31T00:00:00.000Z",savedAt:"2026-08-31T00:00:00.000Z",gameVersion:"0.4.1.8",worldState:legacy});
-  assert.equal(migrated.worldState.schemaVersion,15);
+  assert.equal(migrated.worldState.schemaVersion,16);
   assert.ok(Object.values(migrated.worldState.entities.militaryEducationRecords).some(r=>r.personId===playerId&&r.schoolId==="school_airborne"&&r.status==="graduated"));
   assert.equal(validateWorldState(migrated.worldState,registries).ok,true);
 }
@@ -114,4 +114,4 @@ function advanceResolving(store,days){
   assert.equal(seniorBlank,0,"experienced NCOs should not be blank service records");
 }
 
-console.log("War Sim v0.4.2.1 Army Service Record and Career Achievement foundation QA passed");
+console.log("War Sim v0.4.2.2 Army Service Record and Career Achievement foundation QA passed");

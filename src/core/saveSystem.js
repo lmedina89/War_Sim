@@ -32,15 +32,30 @@ export function listSaveSlots() {
   return [...MANUAL_SAVE_SLOTS, AUTOSAVE_SLOT].map(slotId => index[slotId] ?? { slotId, empty: true });
 }
 
+function isQuotaError(error) {
+  const name=String(error?.name ?? ""), message=String(error?.message ?? "").toLowerCase();
+  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED" || message.includes("quota") || message.includes("storage");
+}
+
 export function saveToSlot(state, slotId) {
   if (![...MANUAL_SAVE_SLOTS, AUTOSAVE_SLOT].includes(slotId)) throw new Error(`Invalid save slot: ${slotId}`);
-  const previous = localStorage.getItem(slotKey(slotId));
-  if (previous) localStorage.setItem(backupKey(slotId), previous);
+  const key=slotKey(slotId), backup=backupKey(slotId), previous=localStorage.getItem(key);
   const savedAt = new Date().toISOString(), saveId = createExternalId("save");
   const payloadBase = { saveFormatVersion: CURRENT_SAVE_FORMAT_VERSION, saveId, createdAt: savedAt, savedAt, gameVersion: state.gameVersion, worldState: state };
   const checksum = fnv1a32(stableStringify(payloadBase));
-  const payload = { ...payloadBase, checksum };
-  localStorage.setItem(slotKey(slotId), JSON.stringify(payload));
+  const serialized=JSON.stringify({ ...payloadBase, checksum });
+  try {
+    // Autosave is already a recovery copy; duplicating it as another full backup wastes scarce mobile localStorage.
+    if (slotId === AUTOSAVE_SLOT) localStorage.removeItem(backup);
+    else if (previous) localStorage.setItem(backup, previous);
+    localStorage.setItem(key, serialized);
+  } catch(error) {
+    // If a same-slot backup consumed the last available space, remove it and retry once without touching other saves.
+    if (isQuotaError(error)) {
+      try { localStorage.removeItem(backup); localStorage.setItem(key, serialized); }
+      catch(retryError) { throw new Error("Save storage is full. Delete an older manual save, then try again.", { cause: retryError }); }
+    } else throw error;
+  }
   const index = readIndex(); index[slotId] = buildMetadata(state, slotId, savedAt, saveId); writeIndex(index);
   return index[slotId];
 }

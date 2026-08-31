@@ -1,7 +1,7 @@
 const EFFECT_FIELDS = Object.freeze({
   person: new Set(["career.experience","career.prestige","condition.health","condition.morale","condition.fatigue","condition.readiness"]),
   unit: new Set(["condition.readiness","condition.morale","condition.cohesion","condition.supply"]),
-  relationships: new Set(["familiarity","trust","respect","bond"]),
+  relationships: new Set(["familiarity","trust","respect","rapport","bond"]),
   unitTraining: new Set(["physical","weapons","tactical","cohesion","discipline","equipmentReadiness"])
 });
 

@@ -15,7 +15,7 @@ export const gameplayEventDefinitions = [
     id: "event_squad_cohesion_gain", schemaVersion: 2, minimumPerformanceScore: 50, name: "Squad Cohesion Gain", type: "activity", priority: "normal",
     presentationId: "feedback_routine",
     title: "Squad Working Better Together", message: "The squad's repetitions are paying off. Coordination and trust improve.",
-    effects: [{ target: "unitTraining", field: "cohesion", operation: "add", value: 2, clamp: [0,100] }, { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }]
+    effects: [{ target: "unitTraining", field: "cohesion", operation: "add", value: 2, clamp: [0,100] }, { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100], scope: "one" }]
   },
   {
     id: "event_training_leadership_moment", schemaVersion: 2, name: "Leadership Moment", type: "decision", priority: "attention",
@@ -37,6 +37,24 @@ export const gameplayEventDefinitions = [
     presentationId: "feedback_attention",
     title: "Equipment Problem", message: "A serviceability problem interrupts part of the training period and reduces unit equipment readiness.",
     effects: [{ target: "unitTraining", field: "equipmentReadiness", operation: "add", value: -4, clamp: [0,100] }, { target: "person", field: "career.experience", operation: "add", value: 10 }]
+  },
+  {
+    id: "event_living_teammate_help", schemaVersion: 1, name: "Teammate Requests Help", type: "decision", priority: "attention",
+    presentationId: "feedback_attention", relationshipTargetMode: "one_unit_relationship", decisionDeadlineDays: 2, defaultChoiceId: "choice_living_teammate_later", blocksTimeAdvance: false,
+    title: "Teammate Requests Help", message: "A squadmate asks if you can help prepare for upcoming training.",
+    choices: [
+      { id: "choice_living_teammate_help", label: "Stay and help", effects: [{ target: "skill", skillId: "skill_leadership", operation: "add", value: 1 }, { target: "relationships", field: "trust", operation: "add", value: 3, clamp: [-100,100] }, { target: "relationships", field: "rapport", operation: "add", value: 2, clamp: [-100,100] }, { target: "person", field: "condition.fatigue", operation: "add", value: 2, clamp: [0,100] }] },
+      { id: "choice_living_teammate_later", label: "Decline and recover", effects: [{ target: "person", field: "condition.fatigue", operation: "add", value: -2, clamp: [0,100] }, { target: "relationships", field: "rapport", operation: "add", value: -1, clamp: [-100,100] }] }
+    ]
+  },
+  {
+    id: "event_living_counseling", schemaVersion: 1, name: "Performance Counseling", type: "decision", priority: "attention",
+    presentationId: "feedback_attention", relationshipTargetMode: "one_unit_relationship", decisionDeadlineDays: 2, defaultChoiceId: "choice_counseling_accept", blocksTimeAdvance: false,
+    title: "Performance Counseling", message: "A leader wants to discuss your recent training performance and what needs improvement.",
+    choices: [
+      { id: "choice_counseling_accept", label: "Take the feedback seriously", effects: [{ target: "skill", skillId: "skill_mos_proficiency", operation: "add", value: 1 }, { target: "relationships", field: "respect", operation: "add", value: 2, clamp: [-100,100] }, { target: "person", field: "career.experience", operation: "add", value: 10 }] },
+      { id: "choice_counseling_pushback", label: "Push back on the criticism", effects: [{ target: "relationships", field: "respect", operation: "add", value: -2, clamp: [-100,100] }, { target: "relationships", field: "rapport", operation: "add", value: -1, clamp: [-100,100] }] }
+    ]
   },
   {
     id: "event_squad_friction", schemaVersion: 1, name: "Squad Friction", type: "decision", priority: "attention",

@@ -52,7 +52,7 @@ export const activityDefinitions = [
       { target: "skill", skillId: "skill_fieldcraft", operation: "add", value: 3 },
       { target: "person", field: "career.experience", operation: "add", value: 100 },
       { target: "person", field: "condition.fatigue", operation: "add", value: 7, clamp: [0,100] },
-      { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100] }
+      { target: "relationships", field: "trust", operation: "add", value: 1, clamp: [-100,100], scope: "one" }
     ],
     eventTableId: "event_table_training_field"
   },
