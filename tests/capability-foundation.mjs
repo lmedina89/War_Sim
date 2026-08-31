@@ -60,4 +60,4 @@ assert.match(app,/Unit Capability Inventory|selectUnitCapabilityInventory/);
 assert.match(app,/achievement-cluster/);
 assert.match(app,/person-career-activity/);
 assert.match(css,/situation-identity>span:last-child\{white-space:normal/);
-console.log("War Sim v0.4.2.2 school availability, service-record consolidation, and capability-foundation QA passed");
+console.log("War Sim v0.4.3 school availability, service-record consolidation, and capability-foundation QA passed");

@@ -35,6 +35,17 @@ export function validateDefinitions(registries) {
     }
   }
 
+  for (const award of registries.awards.values()) {
+    if (!["ribbon","medal","decoration","badge","tab"].includes(award.category)) errors.push(`${award.id}: invalid award category ${award.category}.`);
+    if (!Number.isFinite(award.prestigeValue) || award.prestigeValue < 0) errors.push(`${award.id}: invalid prestigeValue.`);
+    if (!Number.isFinite(award.precedence) || award.precedence < 0) errors.push(`${award.id}: invalid precedence.`);
+    if (!award.display?.kind || !["ribbon","badge","tab"].includes(award.display.kind)) errors.push(`${award.id}: missing or invalid display.kind.`);
+    if (!award.display?.iconId) errors.push(`${award.id}: missing display.iconId.`);
+    if (award.display?.kind === "ribbon" && (!Array.isArray(award.display.ribbonPattern) || award.display.ribbonPattern.length < 1)) errors.push(`${award.id}: ribbon display requires ribbonPattern.`);
+    if (award.repeatDevice && !["oak_leaf_cluster","service_star","numeral","knot"].includes(award.repeatDevice.type)) errors.push(`${award.id}: invalid repeatDevice type.`);
+    if (award.dd214Label != null && typeof award.dd214Label !== "string") errors.push(`${award.id}: invalid dd214Label.`);
+  }
+
   for (const school of registries.schools.values()) {
     if (!Number.isInteger(school.durationDays) || school.durationDays <= 0) errors.push(`${school.id}: invalid durationDays.`);
     for (const id of school.grantsQualificationIds ?? []) {

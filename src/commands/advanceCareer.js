@@ -11,6 +11,7 @@ import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEven
 import { recordReadinessSnapshot } from "../services/livingUnit.js";
 import { processLivingCareerForDay } from "../services/livingCareer.js";
 import { scheduleRecordBlocksFocusedActivities } from "../services/scheduleRules.js";
+import { evaluateServiceAwardsInDraft, evaluateCommendationAwardsInDraft } from "../services/awardProgression.js";
 
 function indexedCount(indexes, indexName, personId) { return indexes[indexName]?.get(personId)?.length ?? 0; }
 function unitSnapshot(state, personId) {
@@ -113,6 +114,9 @@ export function advanceWorldDays(store, requestedDays) {
       updateCareerObjectivesInDraft(draft, registries, actorPersonId);
       const livingResult=processLivingCareerForDay(draft,registries,actorPersonId);
       notificationIds.push(...livingResult.notificationIds);
+      const serviceAwards=evaluateServiceAwardsInDraft(draft,registries,actorPersonId);
+      const commendations=evaluateCommendationAwardsInDraft(draft,registries,actorPersonId);
+      notificationIds.push(...serviceAwards.map(item=>item.notificationId),...commendations.map(item=>item.notificationId));
 
       const pending = Object.values(draft.entities.gameplayEventRecords ?? {}).find(record => {
         if (record.personId !== actorPersonId || record.status !== "pending") return false;

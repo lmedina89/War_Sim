@@ -324,7 +324,7 @@ function migrateWorldV15ToV16(worldState) {
   next.world ??={};
   next.world.livingCareer ??={version:1,lastPlayerEventElapsedDay:-999};
   next.schemaVersion=16;
-  next.gameVersion="0.4.2.2";
+  next.gameVersion="0.4.3";
   return next;
 }
 
@@ -465,7 +465,7 @@ export function migratePayload(payload) {
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.2.2";
-  next.worldState.gameVersion = "0.4.2.2";
+  next.gameVersion = "0.4.3";
+  next.worldState.gameVersion = "0.4.3";
   return next;
 }

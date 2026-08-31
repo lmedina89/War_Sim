@@ -2,6 +2,7 @@ import { createEntityId } from "../core/ids.js";
 import { commandResult } from "../core/commandResult.js";
 import { addMonthsIso } from "../services/dateMath.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { grantAwardInDraft } from "../services/awardProgression.js";
 import { createInitialWorldState } from "../state/initialState.js";
 import { seedCareerGameplayRecords } from "../services/careerGameplay.js";
 import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
@@ -43,7 +44,7 @@ export function createPlayerCareer(store, registries, input) {
   if (!billet) throw new Error(`No vacant ${startingRole.name} billet exists in ${unit.name}.`);
 
   const startingSquadMateIds = [...(store.getIndexes().peopleByUnitId?.get(unitId) ?? [])];
-  let personId, noticeId;
+  let personId, noticeId, initialAwardNoticeId;
   store.mutate(draft => {
     personId = createEntityId(draft, "pers"); const serviceRecordId = createEntityId(draft, "service"), servicePeriodId = createEntityId(draft, "period"), contractId = createEntityId(draft, "contract"), loadoutId = createEntityId(draft, "loadout"), equipmentInstanceId = createEntityId(draft, "eq"), assignmentId = createEntityId(draft, "assign"), enlistmentEventId = createEntityId(draft, "career"), orderId = createEntityId(draft, "order");
     const bonus = Math.round((specialty.enlistmentBonusBase || 0) * contractDef.bonusMultiplier / 500) * 500, contractEndDate = addMonthsIso(draft.world.date, contractDef.termMonths);
@@ -60,6 +61,8 @@ export function createPlayerCareer(store, registries, input) {
     draft.entities.assignmentRecords[assignmentId] = { id: assignmentId, schemaVersion: 2, personId, unitId, billetId: billet.id, startDate: draft.world.date, endDate: null, reason: "initial_assignment" };
     draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: "initial_assignment", status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId, billetId: billet.id, title: "Initial Assignment Orders", summary: `Assigned to ${unit.name} as ${registries.billets.get(billet.definitionId).name}.` };
     draft.entities.careerEvents[enlistmentEventId] = { id: enlistmentEventId, schemaVersion: 1, personId, type: "enlistment", date: draft.world.date, references: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractId, rankId: rank.id, unitId, billetId: billet.id } };
+    const initialAward = grantAwardInDraft(draft, registries, { personId, awardId: "award_army_service_ribbon", sourceType: "initial_entry_training_completion", sourceId: enlistmentEventId, reason: "Initial entry training completed before assignment to the operational unit." });
+    initialAwardNoticeId = initialAward?.notificationId ?? null;
     for (const npcId of startingSquadMateIds) { const npc = draft.entities.people[npcId]; if (!npc) continue; const relationshipId = createEntityId(draft, "rel"); draft.entities.relationshipRecords[relationshipId] = { id: relationshipId, schemaVersion: 1, personAId: personId, personBId: npc.id, familiarity: 5, trust: 0, respect: 0, rapport: 0, bond: 0, relationshipType: "squadmate", lastInteractionDate: draft.world.date }; }
     syncSimulationTiersForPlayerUnit(draft, personId);
     seedPersonalityProfiles(draft, registries);
@@ -67,5 +70,5 @@ export function createPlayerCareer(store, registries, input) {
     noticeId = recordNotification(draft, { personId, type: "career_started", title: "Career Started", message: `${firstName} ${lastName} enlisted as a ${specialty.code} ${specialty.name} on a ${contractDef.termMonths / 12}-year ${component.name} contract. Bonus: $${bonus.toLocaleString()}.`, priority: "normal", references: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractId, rankId: rank.id, unitId, billetId: billet.id } });
     recordAction(draft, { actorPersonId: personId, commandType: "create_player_career", payload: { branchId: branch.id, componentId: component.id, specialtyId: specialty.id, contractDefinitionId: contractDef.id, billetId: billet.id }, resultCode: "career_created" });
   }, ["people", "billets", "history", "equipment", "notifications", "actions", "orders", "career", "activities", "careerGameplay", "units"]);
-  return commandResult({ code: "career_created", message: "Career created.", data: { personId, billetId: billet.id }, notifications: [noticeId] });
+  return commandResult({ code: "career_created", message: "Career created.", data: { personId, billetId: billet.id }, notifications: [noticeId, initialAwardNoticeId].filter(Boolean) });
 }

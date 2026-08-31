@@ -1,38 +1,38 @@
-# War Sim v0.4.2.2 — Living Career & Unit Life
+# War Sim v0.4.3 — Awards & Soldier Identity
 
-War Sim v0.4.2.2 focuses on making the existing career and unit simulation feel less like a button-driven dashboard and more like a living military organization. It preserves the proven v0.4.2.1 controller/UI architecture and capability foundation while adding contextual NPC initiative, relationship differentiation, visible unit life, future-event anticipation, and mobile-save hardening.
+War Sim v0.4.3 expands the existing Army Service Record foundation into a visible soldier-identity layer. It preserves world schema 16, save format 3, generator v3, and the established v0.4.2.2 simulation architecture while extending award definitions, insignia rendering, uniform presentation, loadout-derived combat profiling, mobile disclosure behavior, and a DD214-style service-record preview.
 
-## v0.4.2.2 changes
+## v0.4.3 highlights
 
-- Runtime **0.4.2.2**, world schema **16**, save format **3**, generator **v3**.
-- Adds deterministic, definition-driven NPC personality profiles. Generated personnel receive one or two stable traits such as Dependable, Ambitious, Competitive, Reserved, Sociable, Demanding, Mentor, or Cautious.
-- Personality data is simulation-facing rather than cosmetic only: initiative weighting influences which nearby Soldier is more likely to initiate an interaction.
-- Adds intermittent **NPC-initiated unit-life events** during time progression. Teammates can request help and leaders can initiate performance counseling; strong recent performance can trigger leader recognition.
-- Contextual events query real state first. Performance counseling uses recent performance records; recognition requires strong recent performance; participants come from the actual current unit and chain-of-command context.
-- Adds canonical **relationship memory records** so interpersonal decisions can leave durable context that later systems can reference.
-- Expands relationships with **rapport** while retaining familiarity, trust, respect, and bond. Personnel relationship cards now surface Trust, Respect, Rapport, stable NPC traits, and a recent remembered interaction when available.
-- Fixes uniform squad trust growth. Collective training no longer increments every player relationship in lockstep; relationship effects are deterministically scoped to specific interpersonal connections.
-- Adds a **Next 30 Days** career panel for significant duties, accepted/in-progress school dates, and qualification expirations.
-- Adds a **Situation Feed** showing recent unit-life and training events so background simulation is visible instead of silently accumulating in records.
-- Keeps quiet periods: living-career events are intermittent and have spacing guards instead of firing every day.
-- Fixes the unexplained browser **quota reached** behavior in the save path. Autosave no longer stores a redundant full autosave backup, same-slot backups are dropped and retried if storage is exhausted, and persistent quota failure is converted to a clear in-game message telling the player to delete an older manual save.
-- Preserves v0.4.2.1 school-attendance activity blocking, grouped school achievements, archiveable personnel history, mobile Current Situation wrapping, and the Unit Capability Inventory foundation.
+- Runtime **0.4.3**, world schema **16**, save format **3**, generator **v3**.
+- Existing `awardRecords` remain canonical. No duplicate uniform-only or DD214-only award store was introduced.
+- Award definitions now include precedence, display metadata, eligibility descriptions, DD214 labels, repeatability, and repeat-award device rules.
+- Expanded Army-oriented award catalog includes service ribbons/medals, commendations, campaign/service placeholders, combat/special-skill badges, and a tab foundation.
+- Reusable SVG insignia renderer draws ribbon patterns, Parachutist/Air Assault/infantry-style badges, tabs, and derived marksmanship qualification badges without image downloads or emoji dependencies.
+- Uniform display is generated from canonical awards and current qualification records.
+- Repeat awards collapse into one uniform item with a device/count presentation instead of duplicating ribbon-rack slots.
+- Service Rifle/Carbine qualification derives Marksman, Sharpshooter, or Expert qualification-badge presentation from the latest qualifying record.
+- New Soldier Identity section places **Service Uniform** and **Combat Loadout** together while keeping their semantics separate.
+- Combat profile derives Accuracy, Firepower, Mobility, Reliability, and Overall values from actual equipped-weapon statistics, equipment condition, readiness, fatigue, health, and marksmanship qualification.
+- Award Catalog shows earned/locked state and the modeled eligibility path for every current award definition.
+- DD214-style preview summarizes current service identity, dates, decorations/badges, qualification badge, and military education from canonical state. It is intentionally labeled as a game preview rather than an official DD Form 214 reproduction.
+- New-player operational careers receive the Army Service Ribbon on the assumption that initial entry training was completed before operational-unit assignment.
+- Army Good Conduct Medal progression is evaluated in three-year qualifying active-enlisted-service blocks.
+- AAM/ARCOM commendation foundations can be generated from sustained high performance using deterministic performance-record thresholds.
+- Long Career-page Duty Schedule and Opportunities panels are now collapsible to reduce mobile scrolling while preserving the information.
 
-## Living-career event model
+## Architecture rules retained
 
-The new layer follows a reusable simulation pipeline:
+The release follows an **earn once → record once → display everywhere** rule. School completion can create education, qualification, and award records; the Uniform and Awards displays read those existing records; the DD214-style preview consumes the same canonical records. Renewable weapon qualifications stay in `qualificationRecords` and are rendered as derived qualification insignia rather than being duplicated as permanent awards.
 
-**state trigger → eligibility/context → real participants → situation → player decision → scoped effects → relationship memory → future follow-up potential**
-
-This release deliberately does not use free-form generated dialogue. Events remain deterministic, definition-driven, testable, and tied to canonical simulation state.
+Insignia artwork is presentation-only. Award gameplay logic references metadata such as `display.iconId`, `display.kind`, `precedence`, and `uniformLocation`; the SVG renderer owns the visual geometry. This allows badge/ribbon art to improve later without changing save data.
 
 ## Compatibility
 
-- Runtime: **0.4.2.2**
-- World schema: **16**
-- Save format: **3**
-- Generator: **v3**
+v0.4.3 intentionally keeps **world schema 16** because the new fields are definition/presentation metadata and new award records remain compatible with the existing award-record shape. Save-format version remains **3**. Same-schema loaded saves are normalized to runtime version 0.4.3 by the existing migration pipeline.
 
-Schema-15 v0.4.2/v0.4.2.1 careers migrate to schema 16 without regenerating the player, unit, service history, qualifications, awards, education, schedule, or capability records. Migration initializes rapport, personality profiles, relationship-memory storage, and living-career scheduler metadata.
+The previously audited v0.4.2.2 save-recovery defects are **not fixed in this release by request**. Manual-slot backup copies are still written but do not yet have an automatic recovery path, and corrupted save-index reconstruction remains deferred to a later stability patch.
 
-See `SOFTWARE_QUALITY_REPORT.md` for exact release-gate results.
+## QA
+
+The release passes all 15 test scripts, including the new awards/soldier-identity regression suite, 300 deterministic generated-world validations, a 10,000-person index stress audit, import/DOM integrity checks, migration and save-storage regressions, service-record tests, mobile UX tests, living-career/unit tests, and gameplay smoke tests. All JS/MJS files pass `node --check`, and the source contains no `eval`, `new Function`, `innerHTML` assignment, or `document.write` usage.

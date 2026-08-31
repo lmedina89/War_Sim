@@ -13,6 +13,7 @@ import { resolveExpiredGameplayDecisionsInDraft } from "../services/gameplayEven
 import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { applyNpcParticipationForDuty, recordDutyQualification, recordUnitEvent } from "../services/livingUnit.js";
 import { describeScheduleConflict, scheduleConflictForActivity } from "../services/scheduleRules.js";
+import { evaluateCommendationAwardsInDraft } from "../services/awardProgression.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
 function clamp(value, min=0, max=100) { return Math.max(min, Math.min(max, Math.round(value))); }
@@ -125,6 +126,8 @@ export function performActivity(store, registries, personId, activityId) {
       ? `${activity.name}: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}; training performance ${ratingDef.label} ${score}/100.`
       : `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance.`;
     draft.entities.performanceRecords[perfId] = { id: perfId, schemaVersion: 3, personId, sourceType: "activity", sourceId: activityRecordId, gameDate: draft.world.date, rating: ratingDef.id, score, notes: performanceNote, deltas };
+    const commendations = evaluateCommendationAwardsInDraft(draft, registries, personId);
+    notifications.push(...commendations.map(item => item.notificationId));
     const completionMessage = qualificationResult
       ? `${activity.name} result: ${qualificationResult.label} ${qualificationResult.score}/${qualificationResult.maxScore}. Training performance: ${ratingDef.label} ${score}/100.`
       : `${activity.name} completed with ${ratingDef.label.toLowerCase()} performance after ${activity.durationDays} day${activity.durationDays === 1 ? "" : "s"}.`;

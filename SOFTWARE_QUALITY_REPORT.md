@@ -1,28 +1,57 @@
-# War Sim v0.4.2.2 — Software Quality Report
+# War Sim v0.4.3 — Software Quality Report
 
-Release focus: Living Career & Unit Life, relationship-scope correction, contextual NPC initiative, visible upcoming/unit activity, and mobile localStorage quota hardening. Runtime 0.4.2.2; world schema 16; save format 3; generator v3.
+## Release identity
 
-## Implemented and audited
+Runtime: **0.4.3**  
+World schema: **16**  
+Save format: **3**  
+Generator: **v3**  
+Release focus: **Awards & Soldier Identity**
 
-- Deterministic personality profiles exist for generated people and reference immutable personality definitions.
-- NPC-initiated events use actual unit membership, rank context, relationship records, and recent player performance.
-- Strong performance can produce contextual leader recognition; weaker recent performance can produce counseling; peers can initiate help requests.
-- Relationship effects support deterministic one-relationship scope so squad trust no longer rises uniformly across every relationship.
-- Canonical rapport and relationship-memory records are migrated and validated.
-- Next 30 Days derives significant duties, school windows, and qualification expirations from existing canonical records.
-- Situation Feed derives from durable unit-event records rather than UI-owned state.
-- Autosave no longer creates a redundant full autosave backup. Quota failures retry after removing same-slot backup storage and return a player-readable storage message if space is still exhausted.
-- v0.4.2.1 school availability, service-record grouping, mobile history controls, and unit-capability behavior remain regression-covered.
+## Scope reviewed
 
-## Release gates
+The v0.4.3 release was reviewed across syntax, import integrity, definition validation, deterministic generation, state/index behavior, award progression, qualification-derived insignia, uniform rendering architecture, loadout-derived combat profiling, mobile disclosure changes, service-record/DD214 preview generation, migration compatibility, save-storage regression coverage, and existing living-career/unit behavior.
 
-- **14 automated suites PASS**: availability/qualification history, capability foundation, career continuity, living career polish, living unit, migration/qualification hotfix, mobile UX, quality, save storage, service-record foundation, smoke, stability hotfix, training consolidation, and unit interaction integrity.
-- **102 JS/MJS files** pass `node --check`.
-- Runtime forbidden-pattern audit passes for `Math.random`, `eval`, `new Function`, `document.write`, and `.innerHTML =` assignment.
-- Standard quality suite: **PASS**, 88 runtime source modules, 300 generated worlds validated, 10,000-person index stress case, exact observed index build **24.3 ms** on the exact extracted-package run.
-- Dedicated living-career QA verifies deterministic personality seeding, non-uniform relationship effects, contextual NPC-initiated events, relationship memory, and schema-15 → 16 migration.
-- Dedicated save-storage QA verifies autosave does not retain a duplicate autosave backup and quota errors are converted into a contextual in-game message.
-- Extended deterministic generation sweep: **5,000 worlds / 450,000 NPCs / 0 validation failures**.
-- 365-day career simulation: **2046-02-10 → 2047-02-10**, 365 elapsed days, **0 validation errors**, 27 living-career events, 12 relationship memories, serialized state size about **1.51 MB** in that run.
+## New implementation
 
-Static QA validates DOM references, module imports, data integrity, deterministic behavior, migrations, and state invariants. It cannot certify exact iPhone Safari pixel rendering, touch behavior, or the device-specific localStorage quota, so live mobile validation is still required.
+The existing canonical `awardRecords` system was retained and extended through richer award definitions rather than replaced. Award definitions now carry precedence, repeatability, device rules, DD214 labels, eligibility descriptions, and presentation metadata. The new `awardProgression` service centralizes award creation for service and commendation pathways. The `selectSoldierIdentity` selector groups repeated awards, derives the current weapon qualification badge, and builds the loadout combat profile without mutating canonical state.
+
+The presentation layer adds a reusable SVG insignia module. Ribbon patterns are generated from definition data, while badge/tab families use reusable vector geometry. Uniform, Award Catalog, and DD214-style preview displays consume canonical award/qualification/service/education records.
+
+## QA results
+
+**PASS — 15/15 test scripts.**
+
+The existing test suite remained green after the release version normalization and UI changes. The dedicated `awards-soldier-identity.mjs` regression adds checks for expanded award-definition metadata, initial Army Service Ribbon creation, repeat-award grouping, Expert Rifle derived qualification state, Parachutist Badge identity display, three-year Good Conduct Medal progression, idempotent service-award evaluation, Soldier Identity DOM integration, DD214-style preview integration, and safe DOM construction conventions.
+
+The core quality suite also reports:
+
+- 300 generated-world seeds validated.
+- 10,000-person index stress audit passed.
+- Deterministic RNG audit passed.
+- Import graph integrity passed.
+- DOM integrity passed.
+- Selector/index audit passed.
+- Migration audits passed.
+- Mobile disclosure-state persistence passed.
+- No dynamic-code execution (`eval` / `new Function`).
+- No `innerHTML` assignment or `document.write` in source JS.
+- 106 JS/MJS files passed syntax checking at release QA time.
+
+## Compatibility assessment
+
+No world-schema bump was required. v0.4.3 keeps schema 16 and save format 3 because award visual/eligibility fields are registry-definition metadata, while newly created award records remain compatible with the established canonical award store. Existing saves therefore do not require record duplication or an award migration solely to render the new UI.
+
+## Known deferred issues
+
+The v0.4.2.2 full software-quality audit identified save-recovery weaknesses. Those issues were intentionally **not addressed in v0.4.3** per product direction. In particular, manual-save backups can still be written without a runtime restore/fallback path, and corrupted save-index recovery remains unresolved. Validator-hardening items from that audit also remain future stability work unless already covered by existing validation.
+
+## Design limitations / future expansion
+
+The current award catalog is a deliberately expanded foundation, not an exhaustive implementation of every historical or modern U.S. Army decoration, badge, tab, campaign, device, and component-specific award. Several catalog entries have modeled eligibility descriptions but intentionally wait on future deployment, combat, Air Assault, Ranger, overseas-tour, or expert-testing systems before becoming earnable. This prevents fake award grants unsupported by the simulation.
+
+The Combat Loadout profile in v0.4.3 is a real derived capability profile, but the game does not yet contain a complete battle-resolution engine that consumes every individual profile statistic. Future combat systems should consume this selector rather than invent parallel equipment bonuses.
+
+## Release decision
+
+**Approved for v0.4.3 packaging.** The new feature layer is compatible with the current architecture, covered by dedicated regression tests, and leaves the requested save-recovery work deferred rather than mixing unrelated stability changes into the feature release.

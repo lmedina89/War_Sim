@@ -23,4 +23,4 @@ assert.ok(localStorage.getItem("warSim_save_backup_v3_slot_01"),"manual overwrit
 // Friendly quota failure rather than leaking browser DOMException wording.
 const limited=new FakeStorage(1000); globalThis.localStorage=limited;
 assert.throws(()=>saveToSlot(store.getState(),"slot_02"),/Save storage is full\. Delete an older manual save/);
-console.log("War Sim v0.4.2.2 save-storage quota QA passed");
+console.log("War Sim v0.4.3 save-storage quota QA passed");
