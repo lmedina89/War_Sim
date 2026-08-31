@@ -1,10 +1,10 @@
-# War Sim v0.4.3.2.1 — Software Quality Report
+# War Sim v0.4.3.2.2 — Software Quality Report
 
 ## Scope
 
-v0.4.3.2.1 was built from the exact packaged v0.4.3.2 baseline as a narrow formation-identity, insignia, and uniform-alignment patch. It does not implement the deferred save-recovery work or introduce new combat/gameplay systems.
+v0.4.3.2.2 was built from the exact packaged v0.4.3.2.1 baseline as a narrow rank-insignia and Current Situation formation-patch presentation hotfix. It does not implement the deferred save-recovery work or introduce new combat/gameplay systems.
 
-- Runtime: **0.4.3.2.1**
+- Runtime: **0.4.3.2.2**
 - World schema: **16**
 - Save format: **3**
 - World generator: **v3**
@@ -20,6 +20,9 @@ v0.4.3.2.1 was built from the exact packaged v0.4.3.2 baseline as a narrow forma
 - Added higher-formation context to personnel records and service-record preview.
 - Updated initial assignment order summaries to use the full named assignment chain.
 - Centered badge and ribbon groups beneath their corresponding uniform tapes.
+- Replaced the text-only uniform rank marker with canonical-rank-driven SVG insignia for all Army ranks currently present in the registry.
+- Added a compact current-formation patch beside the player identity block in Current Situation.
+- Added `tests/rank-insignia-situation.mjs` to verify every current rank mapping and the new Situation/Uniform wiring.
 
 ## Formation-start rules
 
@@ -35,7 +38,7 @@ Formation selection is derived from the world seed with a non-RNG-consuming hash
 
 ## Automated test results
 
-**18/18 test scripts PASS**:
+**19/19 test scripts PASS**:
 
 - availability-qualification-history.mjs
 - awards-soldier-identity.mjs
@@ -115,4 +118,12 @@ A Chromium headless 390×844 launch was attempted against a local HTTP server. C
 
 ## Result
 
-Within the requested v0.4.3.2.1 scope, automated regression, generation, stress, syntax, static-source, compatibility, and save-system-containment checks pass. On-device visual verification remains recommended before replacing the currently deployed v0.4.3.2 GitHub Pages build.
+Within the requested v0.4.3.2.2 scope, automated regression, generation, stress, syntax, static-source, compatibility, and save-system-containment checks pass. On-device visual verification remains recommended before replacing the currently deployed v0.4.3.2 GitHub Pages build.
+
+## v0.4.3.2.2 focused verification
+
+- 19/19 test scripts passed after a clean rerun.
+- New focused rank/situation test covers all 11 Army rank IDs currently registered plus the Current Situation formation-insignia wiring.
+- 112 JavaScript/MJS files passed `node --check`.
+- Static source hazard sweep found no `eval`, `new Function`, `innerHTML =`, or `document.write`.
+- `src/core/saveSystem.js` remains SHA-256 `b67d3d64caecbe2cd32f2e8d683fd28174326439485f629be0f7fad2a4eb0c43`, unchanged from v0.4.3.2.1.

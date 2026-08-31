@@ -31,7 +31,7 @@ import { updateCareerObjectivesInDraft } from "./services/careerGameplay.js";
 import { selectSchoolCatalog } from "./selectors/selectSchoolCatalog.js";
 import { requestSchoolOpportunity } from "./commands/requestSchool.js";
 import { selectSoldierIdentity } from "./selectors/selectSoldierIdentity.js";
-import { createInsignia, createNamedInsignia } from "./ui/insignia.js";
+import { createInsignia, createNamedInsignia, createRankInsignia } from "./ui/insignia.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
@@ -257,9 +257,12 @@ function renderSituation(state, indexes, personId) {
   const assignment=selectAssignmentView(state,indexes,registries,personId); const ownUnitId=assignment.chain.at(-1)?.unitId;
   const unit=ownUnitId?selectOrganizationView(state,indexes,registries,ownUnitId):null; const strength=ownUnitId?aggregateStrength(state,indexes,ownUnitId):{assigned:0,authorized:0};
   const identity=document.createElement("div"); identity.className="situation-identity";
+  const copy=document.createElement("div"); copy.className="situation-identity-copy";
   const kicker=document.createElement("span"); kicker.className="situation-kicker"; kicker.textContent="CURRENT SITUATION";
   const title=document.createElement("strong"); title.textContent=`${rank.abbreviation} ${person.identity.displayName}`;
-  const sub=document.createElement("span"); sub.textContent=`${specialty.code} ${specialty.name} · ${assignment.chain.map(x=>x.name).join(" / ")}`; identity.append(kicker,title,sub);
+  const sub=document.createElement("span"); sub.textContent=`${specialty.code} ${specialty.name} · ${assignment.chain.map(x=>x.name).join(" / ")}`; copy.append(kicker,title,sub);
+  const formationView=assignment.chain.find(item=>item.formationInsigniaId)??null;
+  if(formationView?.formationInsigniaId)identity.append(copy,createNamedInsignia(formationView.formationInsigniaId,{title:formationView.formationName}));else identity.append(copy);
   const metrics=document.createElement("div"); metrics.className="situation-metrics";
   const gameplay=selectGameplay(state,indexes,registries,personId); const dutyLabel=gameplay?.currentDuty?.shortName ?? "AVAILABLE";
   metrics.append(statusStamp(person.condition.status),metricBlock("DATE",state.world.date),metricBlock("DUTY",dutyLabel),metricBlock("PERS",`${strength.assigned}/${strength.authorized}`),metricBlock("RDY",unit?`${unit.readiness}%`:"—"),metricBlock("MORALE",unit?`${unit.morale}%`:"—"));
@@ -624,7 +627,7 @@ function renderSoldierIdentity(state,indexes,personId,career) {
   const blouse=document.createElement("div");blouse.className="uniform-blouse";
   const nameTape=document.createElement("div");nameTape.className="uniform-name-tape";nameTape.textContent=identity.name.split(" ").at(-1)?.toUpperCase()??identity.name.toUpperCase();
   const armyTape=document.createElement("div");armyTape.className="uniform-army-tape";armyTape.textContent="U.S. ARMY";
-  const rankMark=document.createElement("div");rankMark.className="uniform-rank-mark";rankMark.textContent=identity.rank;
+  const rankMark=document.createElement("div");rankMark.className="uniform-rank-mark";rankMark.append(createRankInsignia(registries.ranks.get(state.entities.people[personId].affiliation.rankId)));
   const rack=document.createElement("div");rack.className="uniform-ribbon-rack";rack.setAttribute("aria-label","Earned ribbon rack");
   for(const item of identity.ribbons){const slot=document.createElement("span");slot.className="uniform-ribbon-slot";slot.append(createInsignia(item.definition));const device=awardDeviceLabel(item);if(device){const d=document.createElement("small");d.className="insignia-device";d.textContent=device;slot.appendChild(d);}rack.appendChild(slot);}
   if(!identity.ribbons.length){const empty=document.createElement("span");empty.className="uniform-empty-slot";empty.textContent="NO RIBBONS";rack.appendChild(empty);}

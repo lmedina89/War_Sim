@@ -1,10 +1,10 @@
-# War Sim v0.4.3.2.1 — Formation Identity & Insignia Integration
+# War Sim v0.4.3.2.2 — Rank Insignia & Situation Patch Polish
 
-War Sim v0.4.3.2.1 is a narrow follow-up built directly from the packaged v0.4.3.2 Mobile Polish & Legacy Award Compatibility release. It keeps world schema 16, save format 3, generator v3, and preserves the deferred save-recovery scope while adding named higher formations, unit-patch SVG integration, and a small uniform alignment polish.
+War Sim v0.4.3.2.2 is a narrow follow-up built directly from the exact packaged v0.4.3.2.1 Formation Identity & Insignia Integration release. It keeps world schema 16, save format 3, generator v3, and preserves the deferred save-recovery scope while preserving the named-formation work and adding SVG rank insignia plus a compact Current Situation formation-patch treatment.
 
-Runtime **0.4.3.2.1**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.2.2**, world schema **16**, save format **3**, generator **v3**.
 
-## v0.4.3.2.1 changes
+## v0.4.3.2.2 changes
 
 - Army 11B careers no longer exist only inside generic `Alpha Company / Platoon / Squad` context. Every compatible career now receives a deterministic, seed-stable named higher formation.
 - Default conventional starting formation pool: 82d Airborne Division, 7th Infantry Division, 5th Infantry Division, or 193d Infantry Brigade.
@@ -16,6 +16,8 @@ Runtime **0.4.3.2.1**, world schema **16**, save format **3**, generator **v3**.
 - Personnel records now include Formation as distinct assignment context, and personnel/unit metadata includes higher-formation context.
 - DD214-style record preview uses the complete assignment chain instead of only the squad label.
 - Uniform badges are centered beneath the soldier name tape; ribbons are centered beneath the `U.S. ARMY` tape.
+- The text-only uniform rank marker has been replaced by SVG Army rank insignia derived from the canonical `rankId` (PVT through 1SG and 2LT through CPT as currently defined).
+- Current Situation now shows a compact version of the player's current higher-formation insignia beside the identity block.
 
 ## SVG asset integration
 

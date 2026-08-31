@@ -27,6 +27,61 @@ function campaignEmber(){const svg=groupSvg("0 0 120 150");svg.append(el("circle
 function campaignAnvil(){const svg=groupSvg("0 0 120 150");svg.append(el("path",{d:"M60 5 L106 30 L106 91 L60 141 L14 91 L14 30 Z",fill:"#222522",stroke:"#a68c45","stroke-width":5}),el("path",{d:"M32 51 H87 L78 64 H69 V82 H86 L96 95 H24 L34 82 H52 V64 H41 Z",fill:"#b9c0b8"}),el("path",{d:"M60 22 L65 37 L81 37 L68 46 L73 61 L60 52 L47 61 L52 46 L39 37 L55 37 Z",fill:"#c7ad57"}));return svg;}
 function campaignRedHorizon(){const svg=groupSvg("0 0 120 150");svg.append(el("path",{d:"M60 5 L108 24 V81 C108 110 88 131 60 145 C32 131 12 110 12 81 V24 Z",fill:"#302927",stroke:"#a8aa9f","stroke-width":5}),el("circle",{cx:60,cy:63,r:25,fill:"#9f493a"}),el("path",{d:"M23 87 C40 73 80 73 97 87",fill:"none",stroke:"#d0b65d","stroke-width":6}),el("path",{d:"M23 99 H97",stroke:"#727d70","stroke-width":5}),el("path",{d:"M60 28 L65 43 L81 43 L68 52 L73 67 L60 58 L47 67 L52 52 L39 43 L55 43 Z",fill:"#dedfd7"}));return svg;}
 
+
+function enlistedChevronSvg({chevrons=0,rockers=0,center=null}={}){
+  const svg=groupSvg("0 0 120 120");
+  const stroke="#d7c66a";
+  for(let i=0;i<chevrons;i++){
+    const y=20+i*12;
+    svg.append(el("path",{d:`M22 ${y+17} L60 ${y} L98 ${y+17}`,fill:"none",stroke,"stroke-width":9,"stroke-linejoin":"miter","stroke-linecap":"square"}));
+  }
+  for(let i=0;i<rockers;i++){
+    const y=82-i*12;
+    svg.append(el("path",{d:`M25 ${y} Q60 ${y+20} 95 ${y}`,fill:"none",stroke,"stroke-width":8,"stroke-linecap":"square"}));
+  }
+  if(center==="diamond")svg.append(el("path",{d:"M60 52 L73 66 L60 80 L47 66 Z",fill:stroke}));
+  return svg;
+}
+function specialistSvg(){
+  const svg=groupSvg("0 0 120 120");
+  const gold="#d7c66a";
+  svg.append(el("path",{d:"M60 10 L101 37 L88 96 L60 111 L32 96 L19 37 Z",fill:"none",stroke:gold,"stroke-width":7}),el("path",{d:"M60 30 L66 46 L84 46 L70 56 L76 73 L60 63 L44 73 L50 56 L36 46 L54 46 Z",fill:gold}),el("path",{d:"M40 84 Q60 70 80 84",fill:"none",stroke:gold,"stroke-width":6}));
+  return svg;
+}
+function officerBarSvg({count=1,gold=false}={}){
+  const svg=groupSvg("0 0 120 120");
+  const fill=gold?"#d2aa3a":"#d9ddd8", stroke=gold?"#6d5515":"#727872";
+  const w=count===1?30:24, gap=12, total=count*w+(count-1)*gap, start=(120-total)/2;
+  for(let i=0;i<count;i++)svg.append(el("rect",{x:start+i*(w+gap),y:20,width:w,height:80,rx:2,fill,stroke,"stroke-width":3}));
+  return svg;
+}
+function rankSvg(rank){
+  switch(rank?.id){
+    case "rank_army_e1": { const svg=groupSvg("0 0 120 120"); svg.append(el("circle",{cx:60,cy:60,r:26,fill:"none",stroke:"currentColor","stroke-width":3,"stroke-dasharray":"5 6",opacity:.35})); return svg; }
+    case "rank_army_e2": return enlistedChevronSvg({chevrons:1});
+    case "rank_army_e3": return enlistedChevronSvg({chevrons:1,rockers:1});
+    case "rank_army_e4": return specialistSvg();
+    case "rank_army_e5": return enlistedChevronSvg({chevrons:3});
+    case "rank_army_e6": return enlistedChevronSvg({chevrons:3,rockers:1});
+    case "rank_army_e7": return enlistedChevronSvg({chevrons:3,rockers:2});
+    case "rank_army_e8": return enlistedChevronSvg({chevrons:3,rockers:3,center:"diamond"});
+    case "rank_army_o1": return officerBarSvg({count:1,gold:true});
+    case "rank_army_o2": return officerBarSvg({count:1,gold:false});
+    case "rank_army_o3": return officerBarSvg({count:2,gold:false});
+    default: return groupSvg("0 0 120 120");
+  }
+}
+export function createRankInsignia(rank){
+  const wrapper=document.createElement("span");
+  wrapper.className="rank-insignia";
+  wrapper.dataset.rankId=rank?.id??"unknown";
+  wrapper.append(rankSvg(rank));
+  wrapper.title=rank?`${rank.name} (${rank.abbreviation})`:"Rank insignia";
+  wrapper.setAttribute("role","img");
+  wrapper.setAttribute("aria-label",wrapper.title);
+  return wrapper;
+}
+
 export function createNamedInsignia(insigniaId,{title=null}={}){
   const builders={
     ssi_82d_airborne:unitPatch82d,ssi_7th_infantry:unitPatch7th,ssi_5th_infantry:unitPatch5th,ssi_193d_infantry:unitPatch193d,ssi_75th_ranger:unitPatch75th,ssi_7th_special_forces:unitPatch7thSfg,
