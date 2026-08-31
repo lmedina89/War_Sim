@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.3</title>
+  <title>War Sim v0.4.3.1</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.3</p>
+        <p class="eyebrow">WAR SIM · v0.4.3.1</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -45,79 +45,85 @@
     <div id="career-content" hidden>
       <section id="situation-strip" class="situation-strip" aria-label="Current military situation"></section>
       <section class="game-view" data-view="career">
-        <section id="career-home" class="panel career-overview-panel military-record-panel">
-          <div id="career-summary" class="career-summary"></div>
-        </section>
+        <nav class="screen-tabs career-screen-tabs" aria-label="Career sections">
+          <button type="button" data-career-tab="home" aria-current="page">Home</button>
+          <button type="button" data-career-tab="actions">Actions</button>
+          <button type="button" data-career-tab="soldier">Soldier</button>
+          <button type="button" data-career-tab="records">Records</button>
+          <button type="button" data-career-tab="inbox">Inbox <span id="career-tab-inbox-badge" class="tab-badge" hidden></span></button>
+        </nav>
 
-        <section class="dashboard-grid gameplay-command-grid">
-          <article class="panel objective-panel"><div class="section-heading compact-heading"><p class="section-kicker">MISSION FOCUS</p><h2>Career Objectives</h2></div><div id="career-objectives"></div></article>
-          <section class="dashboard-grid living-career-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">LOOK AHEAD</p><h2>Next 30 Days</h2><p class="muted">Upcoming significant duties, school dates, qualification deadlines, and career milestones.</p></div><div id="next-30-days"></div></article><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT LIFE</p><h2>Situation Feed</h2><p class="muted">Recent events involving your unit and the people around you.</p></div><div id="unit-situation-feed"></div></article></section>
-          <article class="panel duty-panel"><div class="section-heading compact-heading"><p class="section-kicker">DUTY STATUS</p><h2>Current Duty</h2></div><div id="current-duty"></div></article>
-        </section>
+        <div class="app-screen" data-career-screen="home">
+          <section id="career-home" class="panel career-overview-panel military-record-panel"><div id="career-summary" class="career-summary"></div></section>
+          <section class="dashboard-grid gameplay-command-grid">
+            <article class="panel objective-panel"><div class="section-heading compact-heading"><p class="section-kicker">MISSION FOCUS</p><h2>Career Objectives</h2></div><div id="career-objectives"></div></article>
+            <article class="panel duty-panel"><div class="section-heading compact-heading"><p class="section-kicker">DUTY STATUS</p><h2>Current Duty</h2></div><div id="current-duty"></div></article>
+          </section>
+          <section class="dashboard-grid living-career-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">LOOK AHEAD</p><h2>Next 30 Days</h2></div><div id="next-30-days"></div></article><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT LIFE</p><h2>Situation Feed</h2></div><div id="unit-situation-feed"></div></article></section>
+        </div>
 
-        <details class="panel schedule-panel disclosure-panel" data-persist-key="duty-schedule"><summary><span class="summary-kicker">UNIT TRAINING CYCLE</span><strong>Duty Schedule</strong></summary><div class="disclosure-body"><div class="section-heading compact-heading"><p class="muted"><span id="training-phase-summary">Loading training phase…</span></p><p class="muted">Routine background duties are processed without crowding the major-event calendar; significant events remain visible and are planned through the canonical world scheduler.</p></div><div id="duty-schedule"></div></div></details>
+        <div class="app-screen" data-career-screen="actions" hidden>
+          <details class="panel schedule-panel disclosure-panel" data-persist-key="duty-schedule"><summary><span class="summary-kicker">UNIT TRAINING CYCLE</span><strong>Duty Schedule</strong></summary><div class="disclosure-body"><div class="section-heading compact-heading"><p class="muted"><span id="training-phase-summary">Loading training phase…</span></p><p class="muted">Significant scheduled events and the current training cycle.</p></div><div id="duty-schedule"></div></div></details>
+          <details class="panel opportunity-panel disclosure-panel" data-persist-key="career-opportunities"><summary><span class="summary-kicker">CAREER CHANNEL</span><strong>Opportunities</strong></summary><div class="disclosure-body"><div id="career-opportunities"></div></div></details>
+          <details class="panel disclosure-panel career-development-panel" data-persist-key="career-development"><summary><span class="summary-kicker">CAREER DEVELOPMENT</span><strong>Military Schools</strong></summary><div class="disclosure-body"><div id="school-catalog"></div></div></details>
+          <details class="panel gameplay-panel disclosure-panel" data-persist-key="career-activities" open><summary><span class="summary-kicker">DAILY OPERATIONS</span><strong>Activities</strong></summary><div class="disclosure-body"><div id="pending-decisions" class="pending-decisions"></div><div id="activity-options" class="activity-options"></div></div></details>
+          <section class="dashboard-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFICIENCY</p><h2>Skills</h2></div><div id="skill-summary"></div></article><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">SIMULATION</p><h2>Advance Time</h2></div><div class="actions time-actions"><button id="advance-1" type="button" class="secondary">1 Day</button><button id="advance-7" type="button" class="secondary">7 Days</button><button id="advance-30" type="button">30 Days</button></div><div class="section-heading compact-heading subheading"><p class="section-kicker">CAREER ACTIONS</p></div><div class="actions action-grid"><button id="promote-player" type="button">Request Promotion</button></div></article></section>
+          <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">AFTER ACTION</p><h2>Activity Log</h2><p class="muted">Tap an entry to review the full after-action report.</p></div><div id="activity-history" class="activity-feed"></div></section>
+        </div>
 
-        <details class="panel opportunity-panel disclosure-panel" data-persist-key="career-opportunities"><summary><span class="summary-kicker">CAREER CHANNEL</span><strong>Opportunities</strong></summary><div class="disclosure-body"><p class="muted compact-intro">Eligible schools and career opportunities appear here with response deadlines and generate orders when accepted.</p><div id="career-opportunities"></div></div></details>
-        <details class="panel disclosure-panel career-development-panel" data-persist-key="career-development" open><summary><span class="summary-kicker">CAREER DEVELOPMENT</span><strong>Military Schools</strong></summary><div class="disclosure-body"><p class="muted compact-intro">Review available and locked schools, see why you qualify or do not qualify, and request supported volunteer opportunities.</p><div id="school-catalog"></div></div></details>
+        <div class="app-screen" data-career-screen="soldier" hidden>
+          <section class="panel soldier-identity-panel"><div class="section-heading compact-heading"><p class="section-kicker">SOLDIER IDENTITY</p><h2>Uniform & Loadout</h2></div><div id="soldier-identity"></div></section>
+        </div>
 
-        <details class="panel gameplay-panel disclosure-panel" data-persist-key="career-activities" open>
-          <summary><span class="summary-kicker">DAILY OPERATIONS</span><strong>Activities</strong></summary>
-          <div class="disclosure-body"><p class="muted compact-intro">Activities follow duty schedules, cooldowns, fatigue, performance, and unit-readiness effects. Collapse this panel when you are reviewing your career record.</p><div id="pending-decisions" class="pending-decisions"></div><div id="activity-options" class="activity-options"></div></div>
-        </details>
+        <div class="app-screen" data-career-screen="records" hidden>
+          <section class="dashboard-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFILE</p><h2>Career</h2></div><div id="career-card"></div></article><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">ADVANCEMENT</p><h2>Promotion</h2></div><div id="promotion-card"></div></article></section>
+          <section class="dashboard-grid"><details class="panel disclosure-panel" data-persist-key="career-contract"><summary><span class="summary-kicker">SERVICE</span><strong>Contract</strong></summary><div class="disclosure-body"><div id="service-career"></div></div></details><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RETENTION</p><h2>Reenlistment</h2></div><button id="review-reenlistment" type="button">Review Reenlistment Options</button><div id="reenlistment-offers"></div></article></section>
+          <details class="panel record-panel disclosure-panel" data-persist-key="career-awards"><summary><span class="summary-kicker">SERVICE RECORD</span><strong>Education, Qualifications & Awards</strong></summary><div class="disclosure-body"><div id="schools-awards"></div></div></details>
+          <details class="panel service-record-panel disclosure-panel" data-persist-key="service-record"><summary><span class="summary-kicker">PERMANENT RECORD</span><strong>Service Record</strong></summary><div class="disclosure-body"><p class="muted">Permanent career milestones only.</p><ol id="career-events" class="timeline"></ol></div></details>
+        </div>
 
-        <section class="dashboard-grid">
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFICIENCY</p><h2>Skills</h2></div><div id="skill-summary"></div></article>
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">SIMULATION</p><h2>Advance Time</h2><p class="muted">Advance the world without performing a focused activity.</p></div><div class="actions time-actions"><button id="advance-1" type="button" class="secondary">1 Day</button><button id="advance-7" type="button" class="secondary">7 Days</button><button id="advance-30" type="button">30 Days</button></div><div class="section-heading compact-heading subheading"><p class="section-kicker">CAREER ACTIONS</p></div><div class="actions action-grid"><button id="promote-player" type="button">Request Promotion</button></div></article>
-        </section>
-
-        <section class="panel"><div class="section-heading compact-heading"><p class="section-kicker">AFTER ACTION</p><h2>Activity Log</h2><p class="muted">Tap an entry to review the full after-action report.</p></div><div id="activity-history" class="activity-feed"></div></section>
-
-        <section class="dashboard-grid">
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PROFILE</p><h2>Career</h2></div><div id="career-card"></div></article>
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">ADVANCEMENT</p><h2>Promotion</h2></div><div id="promotion-card"></div></article>
-        </section>
-
-        <section class="dashboard-grid">
-          <details class="panel disclosure-panel" data-persist-key="career-contract" open><summary><span class="summary-kicker">SERVICE</span><strong>Contract</strong></summary><div class="disclosure-body"><div id="service-career"></div></div></details>
-          <article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">RETENTION</p><h2>Reenlistment</h2><p class="muted">Options open during the final 180 days of your active contract.</p></div><button id="review-reenlistment" type="button">Review Reenlistment Options</button><div id="reenlistment-offers"></div></article>
-        </section>
-
-        
-
-
-        <details class="panel disclosure-panel soldier-identity-panel" data-persist-key="soldier-identity" open><summary><span class="summary-kicker">SOLDIER IDENTITY</span><strong>Uniform & Loadout</strong></summary><div class="disclosure-body"><p class="muted compact-intro">Your uniform reflects permanent service achievements. Your loadout drives the individual combat profile from actual assigned equipment and qualification state.</p><div id="soldier-identity"></div></div></details>
-
-        <section class="dashboard-grid">
-          <details class="panel record-panel disclosure-panel" data-persist-key="career-awards" open><summary><span class="summary-kicker">SERVICE RECORD</span><strong>Education, Qualifications & Awards</strong></summary><div class="disclosure-body"><div id="schools-awards"></div></div></details>
-          <article class="panel dispatch-panel"><div class="panel-head"><div><p class="section-kicker">MESSAGE CENTER</p><h2>Personnel Dispatches</h2></div><span id="unread-badge" class="badge" hidden></span></div><div class="inbox-actions"><button id="mark-all-read" type="button" class="secondary compact-button">Mark All Read</button><button id="clear-read" type="button" class="secondary compact-button">Clear Read</button></div><div id="career-inbox"></div></article>
-        </section>
-
-        <details class="panel service-record-panel disclosure-panel" data-persist-key="service-record"><summary><span class="summary-kicker">PERMANENT RECORD</span><strong>Service Record</strong></summary><p class="muted">Permanent career milestones only.</p><ol id="career-events" class="timeline"></ol></details>
+        <div class="app-screen" data-career-screen="inbox" hidden>
+          <section class="panel dispatch-panel"><div class="panel-head"><div><p class="section-kicker">MESSAGE CENTER</p><h2>Personnel Dispatches</h2></div><span id="unread-badge" class="badge" hidden></span></div><div class="inbox-actions"><button id="mark-all-read" type="button" class="secondary compact-button">Mark All Read</button><button id="clear-read" type="button" class="secondary compact-button">Clear Read</button></div><div id="career-inbox"></div></section>
+        </div>
       </section>
 
       <section class="game-view" data-view="unit" hidden>
+        <nav class="screen-tabs unit-screen-tabs" aria-label="Unit sections"><button type="button" data-unit-tab="overview" aria-current="page">Unit</button><button type="button" data-unit-tab="roster">Roster</button><button type="button" data-unit-tab="readiness">Ready</button><button type="button" data-unit-tab="admin">Admin</button></nav>
+        <div class="app-screen" data-unit-screen="overview">
         <section id="unit-section" class="dashboard-grid organization-grid">
           <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">ASSIGNMENT</p><h2>My Unit</h2></div><div id="assignment-card"></div></article>
           <article class="panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">CHAIN OF COMMAND</p><h2>Organization</h2></div><nav id="unit-breadcrumbs" class="breadcrumbs" aria-label="Unit hierarchy"></nav><div id="organization-browser"></div></article>
         </section>
 
-        <section class="panel capability-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">COMBAT CAPABILITY FOUNDATION</p><h2>Unit Capability Inventory</h2><p class="muted">Derived from actual assigned personnel and equipment. Supply, vehicles, explosives, aviation, maritime platforms, and battle resolution will expand from this foundation.</p></div><div id="unit-capability"></div></section>
+        <section class="panel capability-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">COMBAT CAPABILITY FOUNDATION</p><h2>Unit Capability Inventory</h2><p class="muted">Derived from actual assigned personnel and equipment.</p></div><div id="unit-capability"></div></section>
+        </div>
 
+        <div class="app-screen" data-unit-screen="roster" hidden>
         <section class="panel selected-unit-panel command-panel">
           <div class="panel-head"><div><p class="section-kicker">TACTICAL PERSONNEL DISPLAY</p><h2>Selected Unit Roster</h2><p id="squad-meta" class="muted">Loading…</p></div><div class="browse-actions"><button id="return-my-unit" type="button" class="secondary compact-button">Return to My Unit</button><button id="view-selected-personnel" type="button" class="compact-button">View in Personnel</button></div></div>
           <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Role</th><th>Health</th><th>Morale</th><th>Weapon</th><th>Status</th></tr></thead><tbody id="squad-body"></tbody></table></div>
         </section>
+        <section class="panel unit-history-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">LIVING UNIT</p><h2>Recent Unit Activity</h2></div><div id="unit-history"></div></section>
+        </div>
 
+        <div class="app-screen" data-unit-screen="readiness" hidden>
         <section class="panel readiness-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT READINESS</p><h2>Readiness Breakdown</h2><p class="muted">Readiness is derived from personnel fill, individual readiness, training, cohesion, equipment, and fatigue.</p></div><div id="readiness-breakdown"></div><div class="section-heading compact-heading subheading"><p class="section-kicker">BILLET AUTHORITY</p><h3>Command Authority</h3></div><div id="command-authority"></div></section>
 
-        <section class="panel unit-history-panel command-panel"><div class="section-heading compact-heading"><p class="section-kicker">LIVING UNIT</p><h2>Recent Unit Activity</h2><p class="muted">Significant training, personnel, qualification, and readiness events are recorded as durable unit history.</p></div><div id="unit-history"></div></section>
+        </div>
 
+        <div class="app-screen" data-unit-screen="admin" hidden>
         <section id="administration-section" class="panel"><div class="section-heading compact-heading"><p class="section-kicker">PERSONNEL ADMINISTRATION</p><h2>Unit Manpower</h2><p class="muted">Vacancies, replacements, ETS, and personnel actions are durable simulation records.</p></div><div id="administration-summary" class="admin-summary"></div><div class="dashboard-grid admin-grid"><article class="subpanel"><h3>Open Vacancies / Replacements</h3><div id="replacement-requests"></div></article><article class="subpanel"><h3>Recent Personnel Actions</h3><div id="personnel-actions"></div></article></div></section>
+        </div>
       </section>
 
       <section class="game-view" data-view="personnel" hidden>
+        <nav class="screen-tabs personnel-screen-tabs" aria-label="Personnel sections"><button type="button" data-personnel-tab="roster" aria-current="page">Roster</button><button type="button" data-personnel-tab="relationships">Bonds</button></nav>
+        <div class="app-screen" data-personnel-screen="roster">
         <section id="personnel-section" class="panel"><div class="panel-head"><div><p class="section-kicker">UNIT PERSONNEL</p><h2>Roster & Service Files</h2><p id="unit-personnel-meta" class="muted"></p></div><button id="personnel-my-unit" type="button" class="secondary compact-button">My Unit</button></div><div id="unit-personnel" class="personnel-grid"></div></section>
+        </div>
+        <div class="app-screen" data-personnel-screen="relationships" hidden>
         <details class="panel disclosure-panel" data-persist-key="personnel-relationships" open><summary><span class="summary-kicker">RELATIONSHIPS</span><strong>Squad Connections</strong></summary><div class="disclosure-body"><p class="muted">Trust and familiarity develop through shared activities and future events.</p><div id="relationships" class="relationship-grid"></div></div></details>
+        </div>
       </section>
 
       <section class="game-view" data-view="orders" hidden>

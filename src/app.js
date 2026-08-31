@@ -39,6 +39,7 @@ if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${d
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
 let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career", statusTimer = null, personProfileActivityExpanded = false;
+let activeCareerScreen = "home", activeUnitScreen = "overview", activePersonnelScreen = "roster", activeSoldierTab = "uniform";
 const CAREER_HISTORY_PREVIEW_LIMIT = 5;
 const UNIT_TRAINING_PREVIEW_LIMIT = 4;
 const UNIT_HISTORY_PREVIEW_LIMIT = 5;
@@ -51,7 +52,7 @@ const els = {
   advance1: $("#advance-1"), advance7: $("#advance-7"), advance30: $("#advance-30"), promote: $("#promote-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
   achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
   saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
-  confirmDialog: $("#confirm-dialog"), confirmTitle: $("#confirm-title"), confirmMessage: $("#confirm-message"), confirmOk: $("#confirm-ok")
+  confirmDialog: $("#confirm-dialog"), confirmTitle: $("#confirm-title"), confirmMessage: $("#confirm-message"), confirmOk: $("#confirm-ok"), careerTabInboxBadge: $("#career-tab-inbox-badge")
 };
 
 function freshWorldSeed() {
@@ -92,6 +93,26 @@ function progressRow(label, value, max) {
   const track = document.createElement("div"); track.className = "progress-track"; track.setAttribute("role", "progressbar"); track.setAttribute("aria-label", label); track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", String(safeMax)); track.setAttribute("aria-valuenow", String(safeValue));
   const fill = document.createElement("div"); fill.className = "progress-fill"; fill.style.setProperty("--progress", `${percent}%`); track.appendChild(fill); wrapper.append(head, track); return wrapper;
 }
+function setSubscreen(kind, value, { scroll = true } = {}) {
+  const config = {
+    career: { allowed:["home","actions","soldier","records","inbox"], selector:"[data-career-screen]", button:"[data-career-tab]" },
+    unit: { allowed:["overview","roster","readiness","admin"], selector:"[data-unit-screen]", button:"[data-unit-tab]" },
+    personnel: { allowed:["roster","relationships"], selector:"[data-personnel-screen]", button:"[data-personnel-tab]" }
+  }[kind];
+  if (!config) return;
+  const next=config.allowed.includes(value)?value:config.allowed[0];
+  if(kind==="career") activeCareerScreen=next; else if(kind==="unit") activeUnitScreen=next; else activePersonnelScreen=next;
+  document.querySelectorAll(config.selector).forEach(section=>{section.hidden=section.dataset[`${kind}Screen`]!==next;});
+  document.querySelectorAll(config.button).forEach(button=>{const selected=button.dataset[`${kind}Tab`]===next;if(selected)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");});
+  try { localStorage.setItem(`war-sim:ui:screen:${kind}`,next); } catch {}
+  if(scroll) window.scrollTo({top:0,behavior:"auto"});
+}
+function restoreSubscreens() {
+  for (const [kind,fallback] of [["career","home"],["unit","overview"],["personnel","roster"]]) {
+    let value=fallback; try { value=localStorage.getItem(`war-sim:ui:screen:${kind}`)??fallback; } catch {}
+    setSubscreen(kind,value,{scroll:false});
+  }
+}
 function setActiveView(view, { scroll = true } = {}) {
   activeView = ["career", "unit", "personnel", "orders", "more"].includes(view) ? view : "career";
   document.querySelectorAll(".game-view[data-view]").forEach(section => { section.hidden = section.dataset.view !== activeView; });
@@ -115,7 +136,10 @@ function createHistoryControls({ kind, personId, hiddenCount=0, archivedCount=0,
 }
 function scrollToCareerTarget(targetId) {
   setActiveView("career", { scroll:false });
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const target=document.getElementById(targetId); if(target){ const top=Math.max(0,window.scrollY+target.getBoundingClientRect().top-110); window.scrollTo({top,behavior:"smooth"}); target.classList.add("attention-flash"); setTimeout(()=>target.classList.remove("attention-flash"),1400); } }));
+  const target=document.getElementById(targetId);
+  const screen=target?.closest("[data-career-screen]")?.dataset.careerScreen;
+  if(screen) setSubscreen("career",screen,{scroll:false});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const current=document.getElementById(targetId); if(current){ const top=Math.max(0,window.scrollY+current.getBoundingClientRect().top-150); window.scrollTo({top,behavior:"smooth"}); current.classList.add("attention-flash"); setTimeout(()=>current.classList.remove("attention-flash"),1400); } }));
 }
 function openOpportunityRecord(opportunityRecordId) { scrollToCareerTarget(opportunityRecordId); }
 function resolveRankName(rankId) { return rankId ? `${registries.ranks.get(rankId).abbreviation} · ${registries.ranks.get(rankId).name}` : "—"; }
@@ -164,6 +188,7 @@ function renderInbox(state, indexes, personId) {
   els.unreadBadge.textContent = String(unread.length);
   els.navCareerBadge.hidden = attentionCount === 0;
   els.navCareerBadge.textContent = attentionCount > 99 ? "99+" : String(attentionCount);
+  if(els.careerTabInboxBadge){els.careerTabInboxBadge.hidden=unread.length===0;els.careerTabInboxBadge.textContent=unread.length>99?"99+":String(unread.length);}
   els.markAllRead.disabled = unread.length === 0;
   els.clearRead.disabled = read.length === 0;
   els.careerInbox.replaceChildren();
@@ -570,9 +595,14 @@ function awardDeviceLabel(item) {
 function renderSoldierIdentity(state,indexes,personId,career) {
   const identity=selectSoldierIdentity(state,indexes,registries,personId);
   els.soldierIdentity.replaceChildren();
-  const tabs=document.createElement("div"); tabs.className="soldier-identity-grid";
+  const identityNav=document.createElement("nav"); identityNav.className="screen-tabs identity-screen-tabs"; identityNav.setAttribute("aria-label","Soldier identity sections");
+  const identityTabDefs=[["uniform","Uniform"],["loadout","Loadout"],["awards","Awards"],["catalog","Catalog"],["record","Record"]];
+  const setIdentityTab=(tab,{scroll=false}={})=>{activeSoldierTab=identityTabDefs.some(([id])=>id===tab)?tab:"uniform";for(const panel of els.soldierIdentity.querySelectorAll("[data-identity-screen]"))panel.hidden=panel.dataset.identityScreen!==activeSoldierTab;for(const button of identityNav.querySelectorAll("[data-identity-tab]")){if(button.dataset.identityTab===activeSoldierTab)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");}try{localStorage.setItem("war-sim:ui:screen:soldier-identity",activeSoldierTab);}catch{}if(scroll)window.scrollTo({top:0,behavior:"auto"});};
+  for(const [id,label] of identityTabDefs){const button=document.createElement("button");button.type="button";button.dataset.identityTab=id;button.textContent=label;button.addEventListener("click",()=>setIdentityTab(id,{scroll:true}));identityNav.appendChild(button);}
+  try{activeSoldierTab=localStorage.getItem("war-sim:ui:screen:soldier-identity")??activeSoldierTab;}catch{}
+  const tabs=document.createElement("div"); tabs.className="soldier-identity-tabs";
 
-  const uniform=document.createElement("section"); uniform.className="identity-subpanel uniform-card";
+  const uniform=document.createElement("section"); uniform.className="identity-subpanel uniform-card"; uniform.dataset.identityScreen="uniform";
   const uniformHead=document.createElement("div"); uniformHead.className="identity-subhead"; const uh=document.createElement("h3");uh.textContent="Service Uniform";const us=document.createElement("span");us.textContent=`${identity.rank} · ${identity.specialty}`;uniformHead.append(uh,us);
   const blouse=document.createElement("div");blouse.className="uniform-blouse";
   const nameTape=document.createElement("div");nameTape.className="uniform-name-tape";nameTape.textContent=identity.name.split(" ").at(-1)?.toUpperCase()??identity.name.toUpperCase();
@@ -589,24 +619,25 @@ function renderSoldierIdentity(state,indexes,personId,career) {
   const uniformNote=document.createElement("p");uniformNote.className="muted compact-note";uniformNote.textContent="Displayed insignia is generated from canonical award and qualification records; qualification badges update from the latest valid rating.";
   uniform.append(uniformHead,blouse,uniformNote);
 
-  const loadout=document.createElement("section");loadout.className="identity-subpanel loadout-card";const lh=document.createElement("h3");lh.textContent="Combat Loadout";loadout.appendChild(lh);
+  const loadout=document.createElement("section");loadout.className="identity-subpanel loadout-card";loadout.dataset.identityScreen="loadout";const lh=document.createElement("h3");lh.textContent="Combat Loadout";loadout.appendChild(lh);
   const cp=identity.combatProfile; const stats=document.createElement("div");stats.className="combat-profile-grid";for(const [label,value] of [["OVERALL",cp.overall],["ACCURACY",cp.accuracy],["FIREPOWER",cp.firepower],["MOBILITY",cp.mobility],["RELIABILITY",cp.reliability]])stats.append(metricBlock(label,`${value}%`));
   loadout.append(statLine("Primary Weapon",cp.primaryWeapon),statLine("Equipment Condition",cp.equipmentCondition==null?"—":`${cp.equipmentCondition}%`),stats);
   if(identity.rifleQualification)loadout.append(statLine("Current Rifle Rating",`${identity.rifleQualification.result.toUpperCase()}${identity.rifleQualification.score!=null?` · ${identity.rifleQualification.score}/${identity.rifleQualification.maxScore}`:""}`));
   const loadoutNote=document.createElement("p");loadoutNote.className="muted compact-note";loadoutNote.textContent="Combat profile is derived from actual equipped weapon statistics, equipment condition, readiness, fatigue, health, and current marksmanship qualification.";loadout.appendChild(loadoutNote);
-  tabs.append(uniform,loadout); els.soldierIdentity.appendChild(tabs);
+  tabs.append(uniform,loadout); els.soldierIdentity.append(identityNav,tabs);
 
-  const earned=document.createElement("details");earned.className="identity-detail disclosure-panel nested-disclosure";const earnedSummary=document.createElement("summary");const earnedKicker=document.createElement("span");earnedKicker.className="summary-kicker";earnedKicker.textContent="DECORATIONS";const earnedTitle=document.createElement("strong");earnedTitle.textContent="Awards & Insignia";earnedSummary.append(earnedKicker,earnedTitle);earned.appendChild(earnedSummary);const earnedBody=document.createElement("div");earnedBody.className="disclosure-body insignia-collection";
+  const earned=document.createElement("section");earned.className="identity-detail identity-tab-panel";earned.dataset.identityScreen="awards";const earnedSummary=document.createElement("div");earnedSummary.className="section-heading compact-heading";const earnedKicker=document.createElement("p");earnedKicker.className="section-kicker";earnedKicker.textContent="DECORATIONS";const earnedTitle=document.createElement("h3");earnedTitle.textContent="Awards & Insignia";earnedSummary.append(earnedKicker,earnedTitle);earned.appendChild(earnedSummary);const earnedBody=document.createElement("div");earnedBody.className="insignia-collection";
   const all=[...identity.ribbons,...identity.badges,...identity.tabs];
   if(identity.rifleQualification){const card=document.createElement("article");card.className="insignia-card";card.append(createInsignia(null,{qualificationResult:identity.rifleQualification.result,badgeClasp:identity.rifleQualification.badgeClasp??"RIFLE"}),metricBlock("QUALIFICATION BADGE",`${identity.rifleQualification.result.toUpperCase()} · ${identity.rifleQualification.badgeClasp??"RIFLE"}`),metricBlock("COMPLETED",identity.rifleQualification.completedDate));earnedBody.appendChild(card);}
   for(const item of all){const latest=item.records.slice().sort((a,b)=>String(b.earnedDate).localeCompare(String(a.earnedDate)))[0];const card=document.createElement("article");card.className="insignia-card";card.append(createInsignia(item.definition),metricBlock(item.definition.category.toUpperCase(),item.definition.name),metricBlock("EARNED",latest?.earnedDate??"—"));const device=awardDeviceLabel(item);if(device)card.append(metricBlock("DEVICE",device));const why=document.createElement("p");why.className="muted insignia-eligibility";why.textContent=item.definition.eligibilityDescription??"Eligibility pathway not yet modeled.";card.appendChild(why);earnedBody.appendChild(card);}
   if(!all.length&&!identity.rifleQualification){const empty=document.createElement("p");empty.className="empty-state military-empty";empty.textContent="NO DECORATIONS OR QUALIFICATION BADGES RECORDED";earnedBody.appendChild(empty);}earned.appendChild(earnedBody);els.soldierIdentity.appendChild(earned);
 
-  const catalog=document.createElement("details");catalog.className="identity-detail disclosure-panel nested-disclosure";const catalogSummary=document.createElement("summary");const catalogKicker=document.createElement("span");catalogKicker.className="summary-kicker";catalogKicker.textContent="ELIGIBILITY";const catalogTitle=document.createElement("strong");catalogTitle.textContent="Award Catalog";catalogSummary.append(catalogKicker,catalogTitle);catalog.appendChild(catalogSummary);const catalogBody=document.createElement("div");catalogBody.className="disclosure-body award-catalog";const earnedIds=new Set(all.map(item=>item.awardId));for(const def of [...registries.awards.values()].filter(item=>!item.legacy).sort((a,b)=>(a.precedence??9999)-(b.precedence??9999)||a.name.localeCompare(b.name))){const card=document.createElement("article");card.className=`award-catalog-card ${earnedIds.has(def.id)?"earned":"locked"}`;const art=createInsignia(def);const copy=document.createElement("div");const head=document.createElement("div");head.className="award-catalog-head";const title=document.createElement("strong");title.textContent=def.name;const stateLabel=document.createElement("span");stateLabel.className="award-state";stateLabel.textContent=earnedIds.has(def.id)?"EARNED":"NOT EARNED";head.append(title,stateLabel);const path=document.createElement("p");path.className="muted";path.textContent=def.eligibilityDescription??"Eligibility pathway pending.";copy.append(head,path);card.append(art,copy);catalogBody.appendChild(card);}catalog.appendChild(catalogBody);els.soldierIdentity.appendChild(catalog);
+  const catalog=document.createElement("section");catalog.className="identity-detail identity-tab-panel";catalog.dataset.identityScreen="catalog";const catalogSummary=document.createElement("div");catalogSummary.className="section-heading compact-heading";const catalogKicker=document.createElement("p");catalogKicker.className="section-kicker";catalogKicker.textContent="ELIGIBILITY";const catalogTitle=document.createElement("h3");catalogTitle.textContent="Award Catalog";catalogSummary.append(catalogKicker,catalogTitle);catalog.appendChild(catalogSummary);const catalogBody=document.createElement("div");catalogBody.className="award-catalog";const earnedIds=new Set(all.map(item=>item.awardId));for(const def of [...registries.awards.values()].filter(item=>!item.legacy).sort((a,b)=>(a.precedence??9999)-(b.precedence??9999)||a.name.localeCompare(b.name))){const card=document.createElement("article");card.className=`award-catalog-card ${earnedIds.has(def.id)?"earned":"locked"}`;const art=createInsignia(def);const copy=document.createElement("div");const head=document.createElement("div");head.className="award-catalog-head";const title=document.createElement("strong");title.textContent=def.name;const stateLabel=document.createElement("span");stateLabel.className="award-state";stateLabel.textContent=earnedIds.has(def.id)?"EARNED":"NOT EARNED";head.append(title,stateLabel);const path=document.createElement("p");path.className="muted";path.textContent=def.eligibilityDescription??"Eligibility pathway pending.";copy.append(head,path);card.append(art,copy);catalogBody.appendChild(card);}catalog.appendChild(catalogBody);els.soldierIdentity.appendChild(catalog);
 
-  const dd=document.createElement("details");dd.className="identity-detail disclosure-panel nested-disclosure";const ddSummary=document.createElement("summary");const ddKicker=document.createElement("span");ddKicker.className="summary-kicker";ddKicker.textContent="SEPARATION RECORD";const ddTitle=document.createElement("strong");ddTitle.textContent="DD214-Style Preview";ddSummary.append(ddKicker,ddTitle);dd.appendChild(ddSummary);const body=document.createElement("div");body.className="disclosure-body dd214-preview";
+  const dd=document.createElement("section");dd.className="identity-detail identity-tab-panel";dd.dataset.identityScreen="record";const ddSummary=document.createElement("div");ddSummary.className="section-heading compact-heading";const ddKicker=document.createElement("p");ddKicker.className="section-kicker";ddKicker.textContent="SEPARATION RECORD";const ddTitle=document.createElement("h3");ddTitle.textContent="DD214-Style Preview";ddSummary.append(ddKicker,ddTitle);dd.appendChild(ddSummary);const body=document.createElement("div");body.className="dd214-preview";
   const service=state.entities.serviceRecords[state.entities.people[personId].serviceRecordId];body.append(metricBlock("NAME",identity.name),metricBlock("GRADE / RANK",`${identity.payGrade} / ${identity.rank}`),metricBlock("MOS",identity.specialty),metricBlock("UNIT",identity.unitName),metricBlock("ENTRY DATE",service?.entryDate??"—"),metricBlock("SEPARATION DATE",service?.separationDate??"ACTIVE SERVICE"));
   const awardsText=identity.ribbons.concat(identity.badges,identity.tabs).map(item=>`${item.definition.dd214Label??item.definition.name}${item.count>1?` (${item.count} awards)`:""}`);if(identity.rifleQualification)awardsText.push(`${identity.rifleQualification.result[0].toUpperCase()+identity.rifleQualification.result.slice(1)} Marksmanship Qualification Badge w/${identity.rifleQualification.badgeClasp??"Rifle"} Clasp`);body.append(metricBlock("DECORATIONS / BADGES",awardsText.join("; ")||"None recorded"),metricBlock("MILITARY EDUCATION",career.education.filter(x=>x.status==="graduated").map(x=>x.name).join("; ")||"None recorded"));const disclaimer=document.createElement("p");disclaimer.className="muted compact-note";disclaimer.textContent="Game service-record preview inspired by separation paperwork; it is not an official reproduction of DD Form 214.";body.appendChild(disclaimer);dd.appendChild(body);els.soldierIdentity.appendChild(dd);
+  setIdentityTab(activeSoldierTab,{scroll:false});
 }
 
 function render() {
@@ -711,7 +742,7 @@ function renderSaveManager(mode) {
 }
 function openSaveManager(mode) { renderSaveManager(mode); els.saveDialog.showModal(); }
 
-els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
+els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); activeCareerScreen="home"; setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
 els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
 els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 7)));
 els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
@@ -731,13 +762,17 @@ els.newCareer.addEventListener("click", async () => {
     els.branchSelect.value = scenario.branchId; els.componentSelect.value = scenario.componentId; els.specialtySelect.value = scenario.specialtyId;
     els.contractSelect.value = scenario.allowedContractDefinitionIds[0] ?? registries.components.get(scenario.componentId).defaultContractDefinitionId;
   }
-  els.worldSeed.value = String(seed); activeView = "career"; selectedOrganizationUnitId = null; personnelFilterUnitId = null; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
+  els.worldSeed.value = String(seed); activeView = "career"; activeCareerScreen="home"; setSubscreen("career","home",{scroll:false}); selectedOrganizationUnitId = null; personnelFilterUnitId = null; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
 });
 
 els.returnMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); selectedOrganizationUnitId=playerAssignmentUnitId(state,indexes); render(); });
-els.viewSelectedPersonnel.addEventListener("click", () => { personnelFilterUnitId=selectedOrganizationUnitId; setActiveView("personnel"); render(); });
+els.viewSelectedPersonnel.addEventListener("click", () => { personnelFilterUnitId=selectedOrganizationUnitId; setSubscreen("personnel","roster",{scroll:false}); setActiveView("personnel"); render(); });
 els.personnelMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); personnelFilterUnitId=playerAssignmentUnitId(state,indexes); render(); });
 document.querySelectorAll("#bottom-nav [data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
+document.querySelectorAll("[data-career-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("career",button.dataset.careerTab)));
+document.querySelectorAll("[data-unit-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("unit",button.dataset.unitTab)));
+document.querySelectorAll("[data-personnel-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("personnel",button.dataset.personnelTab)));
+restoreSubscreens();
 els.appErrorDismiss.addEventListener("click", () => { els.appError.hidden = true; });
 
 function safeRender() {

@@ -10,7 +10,7 @@ import { addDaysIso } from "../src/services/dateMath.js";
 import { validateDefinitions } from "../src/core/definitionValidator.js";
 
 const definitions=validateDefinitions(registries);assert.equal(definitions.ok,true,definitions.errors.join(" | "));
-assert.ok(registries.awards.size>=15,"v0.4.3 should include the expanded Army award/insignia catalog");
+assert.ok(registries.awards.size>=15,"v0.4.3.1 should include the expanded Army award/insignia catalog");
 for(const award of registries.awards.values()){assert.ok(award.display?.iconId,`${award.id} must define an icon`);assert.ok(Number.isFinite(award.precedence));assert.ok(award.dd214Label);}
 
 const store=createStateStore(createInitialWorldState({seed:430043}));
@@ -36,4 +36,4 @@ assert.equal(Object.values(store.getState().entities.awardRecords).filter(r=>r.p
 
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8"),insignia=fs.readFileSync(new URL("../src/ui/insignia.js",import.meta.url),"utf8"),html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 assert.match(html,/id="soldier-identity"/);assert.match(app,/DD214-Style Preview/);assert.match(app,/renderSoldierIdentity/);assert.doesNotMatch(app,/\.innerHTML\s*=/);assert.doesNotMatch(insignia,/\.innerHTML\s*=/);assert.match(insignia,/badgeParachutist/);assert.match(insignia,/qualificationBadge/);
-console.log("War Sim v0.4.3 awards, insignia, uniform, loadout, and service-record QA passed");
+console.log("War Sim v0.4.3.1 awards, insignia, uniform, loadout, and service-record QA passed");

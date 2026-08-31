@@ -1,57 +1,74 @@
-# War Sim v0.4.3 — Software Quality Report
+# War Sim v0.4.3.1 — Software Quality Report
 
 ## Release identity
 
-Runtime: **0.4.3**  
+Runtime: **0.4.3.1**  
 World schema: **16**  
 Save format: **3**  
 Generator: **v3**  
-Release focus: **Awards & Soldier Identity**
+Release focus: **Mobile App UX Overhaul**
 
 ## Scope reviewed
 
-The v0.4.3 release was reviewed across syntax, import integrity, definition validation, deterministic generation, state/index behavior, award progression, qualification-derived insignia, uniform rendering architecture, loadout-derived combat profiling, mobile disclosure changes, service-record/DD214 preview generation, migration compatibility, save-storage regression coverage, and existing living-career/unit behavior.
+This release was reviewed as a presentation/navigation refactor on top of the exact packaged v0.4.3 baseline. The intended constraint was to preserve the existing military art direction and canonical simulation architecture while reducing excessive mobile scrolling and browser-like page length.
 
-## New implementation
+Production changes are narrowly limited to `index.html`, `src/app.js`, `src/ui/styles.css`, plus runtime-version normalization in `src/state/initialState.js` and `src/core/migrations.js`. No award, equipment, qualification, career-rule, world-generation, scheduler, persistence-format, or combat-profile logic was redesigned for this release.
 
-The existing canonical `awardRecords` system was retained and extended through richer award definitions rather than replaced. Award definitions now carry precedence, repeatability, device rules, DD214 labels, eligibility descriptions, and presentation metadata. The new `awardProgression` service centralizes award creation for service and commendation pathways. The `selectSoldierIdentity` selector groups repeated awards, derives the current weapon qualification badge, and builds the loadout combat profile without mutating canonical state.
+## UX implementation reviewed
 
-The presentation layer adds a reusable SVG insignia module. Ribbon patterns are generated from definition data, while badge/tab families use reusable vector geometry. Uniform, Award Catalog, and DD214-style preview displays consume canonical award/qualification/service/education records.
+Career content is partitioned into Home, Actions, Soldier, Records, and Inbox screens. Unit content is partitioned into Unit, Roster, Ready, and Admin screens. Personnel is partitioned into Roster and Bonds. These are presentation-only visibility states; the original DOM targets remain mounted exactly once so existing render functions continue to update the same canonical views.
+
+Soldier Identity received a second-level focused navigation layer: Uniform, Loadout, Awards, Catalog, and Record. Existing v0.4.3 uniform artwork, SVG insignia, award cards, loadout profile, catalog, and DD214-style preview are preserved and are now shown one view at a time instead of being vertically stacked.
+
+Sub-screen choices use local UI state only. Opportunity navigation resolves the target's owning Career screen before focusing it, and Unit-to-Personnel navigation explicitly opens the Roster screen. New careers reset to Career Home.
 
 ## QA results
 
-**PASS — 15/15 test scripts.**
+**PASS — 16/16 test scripts.**
 
-The existing test suite remained green after the release version normalization and UI changes. The dedicated `awards-soldier-identity.mjs` regression adds checks for expanded award-definition metadata, initial Army Service Ribbon creation, repeat-award grouping, Expert Rifle derived qualification state, Parachutist Badge identity display, three-year Good Conduct Medal progression, idempotent service-award evaluation, Soldier Identity DOM integration, DD214-style preview integration, and safe DOM construction conventions.
+The dedicated `mobile-app-navigation.mjs` suite verifies:
 
-The core quality suite also reports:
+- all Career, Unit, Personnel, and Soldier Identity navigation targets exist;
+- every major legacy render target remains mounted exactly once;
+- DOM IDs remain unique after regrouping;
+- presentation screen state is handled outside canonical world state;
+- Soldier Identity contains Uniform/Loadout/Awards/Catalog/Record focused views;
+- sticky app-style tab navigation and 44px touch targets are present;
+- hidden screens are actually removed from layout;
+- reduced-motion support remains present;
+- no unsafe `innerHTML` assignment was introduced.
 
-- 300 generated-world seeds validated.
-- 10,000-person index stress audit passed.
-- Deterministic RNG audit passed.
-- Import graph integrity passed.
-- DOM integrity passed.
-- Selector/index audit passed.
-- Migration audits passed.
-- Mobile disclosure-state persistence passed.
-- No dynamic-code execution (`eval` / `new Function`).
-- No `innerHTML` assignment or `document.write` in source JS.
-- 106 JS/MJS files passed syntax checking at release QA time.
+The existing full suite also passes, including:
+
+- 300 deterministic generated-world validations;
+- 10,000-person index stress audit;
+- deterministic RNG audit;
+- import graph integrity;
+- DOM integrity;
+- selector/index audit;
+- world migration and same-schema runtime normalization;
+- save-storage regression coverage;
+- awards/soldier-identity progression and display integration;
+- service-record and qualification-history regression coverage;
+- living-career, living-unit, training, capability, and gameplay smoke tests;
+- existing mobile disclosure and cross-navigation tests.
+
+All **107 JS/MJS files** under `src/` and `tests/` pass `node --check`.
+
+Static source audit found no `eval`, `new Function`, `innerHTML` assignment, or `document.write` usage in source JavaScript.
 
 ## Compatibility assessment
 
-No world-schema bump was required. v0.4.3 keeps schema 16 and save format 3 because award visual/eligibility fields are registry-definition metadata, while newly created award records remain compatible with the established canonical award store. Existing saves therefore do not require record duplication or an award migration solely to render the new UI.
+World schema remains **16** and save format remains **3**. The release changes runtime version metadata to 0.4.3.1 but does not require canonical-record migration for the UI refactor. Existing v0.4.3 saves remain structurally compatible and normalize through the existing same-schema migration path.
 
 ## Known deferred issues
 
-The v0.4.2.2 full software-quality audit identified save-recovery weaknesses. Those issues were intentionally **not addressed in v0.4.3** per product direction. In particular, manual-save backups can still be written without a runtime restore/fallback path, and corrupted save-index recovery remains unresolved. Validator-hardening items from that audit also remain future stability work unless already covered by existing validation.
+The known v0.4.2.2 persistence-resilience findings were intentionally not addressed in this release per product direction. In particular, corrupted save-index reconstruction and automatic manual-backup recovery remain unresolved. Previously identified validator-hardening and transaction-safety items also remain future stability scope.
 
-## Design limitations / future expansion
+## Environment note
 
-The current award catalog is a deliberately expanded foundation, not an exhaustive implementation of every historical or modern U.S. Army decoration, badge, tab, campaign, device, and component-specific award. Several catalog entries have modeled eligibility descriptions but intentionally wait on future deployment, combat, Air Assault, Ranger, overseas-tour, or expert-testing systems before becoming earnable. This prevents fake award grants unsupported by the simulation.
-
-The Combat Loadout profile in v0.4.3 is a real derived capability profile, but the game does not yet contain a complete battle-resolution engine that consumes every individual profile statistic. Future combat systems should consume this selector rather than invent parallel equipment bonuses.
+The automated Node-based suites and static audits completed successfully. A supplementary Chromium headless smoke attempt could not complete in the current container because the browser process did not terminate under the available headless environment; it produced no application-specific failure signal and was not counted as a passed browser test. Release approval therefore rests on the deterministic application regression suite, DOM/static integrity checks, and syntax/import audits listed above rather than claiming a browser automation pass that did not occur.
 
 ## Release decision
 
-**Approved for v0.4.3 packaging.** The new feature layer is compatible with the current architecture, covered by dedicated regression tests, and leaves the requested save-recovery work deferred rather than mixing unrelated stability changes into the feature release.
+**Approved for v0.4.3.1 packaging.** The refactor substantially reduces top-level mobile page length while preserving the v0.4.3 visual identity and canonical simulation architecture. The change set is isolated to presentation/navigation plus version normalization, and all 16 application regression suites pass.

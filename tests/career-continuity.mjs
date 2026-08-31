@@ -81,4 +81,4 @@ assert.match(css,/\.persistent-world-context\s*\{/);
 assert.match(css,/\.duty-history-row strong\s*\{[^}]*color:\s*var\(--text\)/s,"training result grades must have explicit readable contrast");
 assert.match(css,/padding:\s*18px 0 calc\(100px \+ env\(safe-area-inset-bottom\)\)/,"content must preserve bottom navigation safe-area clearance");
 
-console.log("War Sim v0.4.3 career continuity and mobile polish QA passed");
+console.log("War Sim v0.4.3.1 career continuity and mobile polish QA passed");

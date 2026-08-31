@@ -71,4 +71,4 @@ assert.match(css,/max-width:\s*680px/,"Unit mobile audit must have a narrow-scre
 
 const finalState=careerStore(418003).getState();
 assert.equal(validateWorldState(finalState,registries).ok,true);
-console.log("War Sim v0.4.3 interaction, scope, and Unit-view QA passed");
+console.log("War Sim v0.4.3.1 interaction, scope, and Unit-view QA passed");
