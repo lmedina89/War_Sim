@@ -3,7 +3,7 @@ export function selectOrganizationView(state, indexes, registries, unitId) {
   if (!unit) throw new Error(`Unknown unit: ${unitId}`);
 
   const echelon = registries.echelons.get(unit.echelonId);
-  const childIds = indexes.unitsByParentId.get(unit.id) ?? [];
+  const childIds = indexes.unitsByParentUnitId.get(unit.id) ?? [];
   const billetIds = indexes.billetsByUnitId.get(unit.id) ?? [];
   const assigned = billetIds
     .map(id => state.entities.billets[id])

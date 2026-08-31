@@ -1,56 +1,27 @@
-# War Sim v0.2.0 — Military Organization & Personnel Foundation
+# War Sim v0.2.0.1 — Military Organization UI Hotfix
 
-This checkpoint expands the v0.1.2 career/personnel foundation into a scalable military-organization model.
+This hotfix repairs a regression introduced in v0.2.0 where the new organization model was integrated by replacing the proven v0.1.2 UI controller. That caused the career content to remain hidden and also removed the incremental-index API expected by the state store.
+
+## Fixes
+
+- Restores the complete v0.1.2 new-career, training, promotion, school/award popup, Career Inbox, and multi-slot save/load UI.
+- Preserves the v0.2.0 military-organization architecture:
+  - company → platoon → squad hierarchy
+  - persistent Billet entities
+  - billet definitions separate from Person
+  - authorized vs assigned strength
+  - parent/child units
+- Restores grouped incremental index refreshing and adds a dedicated `billets` index group.
+- Adapts player creation and reassignment to fill canonical billets.
+- Adapts career/squad selectors to resolve roles through billets.
+- Strengthens definition and runtime cross-reference validation.
+- Adds v0.1.2 world-schema 3 → v0.2.0.1 world-schema 4 migration while retaining compatible career history.
+- Keeps save format v3 so existing multi-slot save metadata remains compatible.
 
 ## Permanent engineering rules
 
-1. Gameplay content belongs in immutable definitions.
-2. Mutable runtime state is normalized.
-3. Entities use stable IDs and references rather than duplicated nested objects.
-4. UI consumes selectors/view models and never owns simulation logic.
-5. State changes occur through commands/services.
-6. Common lookups are indexed.
-7. Historical records are preserved.
-8. Saves are schema-versioned and migrated forward.
-9. Simulation systems are modular and domain-bounded.
-10. Scaling concerns are addressed through access-path optimization, aggregate simulation tiers, and explicit indexes.
+Definitions remain immutable and data-driven. Runtime state is normalized. Stable IDs, indexed lookups, command-controlled mutation, selectors/view models, schema migrations, and modular domain boundaries remain mandatory.
 
-## v0.2.0 adds
+## Next milestone
 
-- Canonical military-organization hierarchy
-- Branch-aware organization definitions
-- Unit echelon definitions
-- Billet/position definitions separate from Person
-- Authorized strength vs assigned strength
-- Persistent Unit and Billet runtime entities
-- Parent/child unit relationships
-- Personnel-to-billet assignment model
-- Derived unit readiness/manpower view models
-- Indexes for:
-  - units by parent
-  - units by branch
-  - billets by unit
-  - billet by assigned person
-  - person by billet
-- Player assignment through a billet rather than role baked into Person
-- Data-driven initial force package:
-  - 1 company
-  - 1 platoon
-  - 1 squad with 9 authorized billets
-- v0.1.2 → v0.2.0 save migration support
-- Stronger cross-reference validation
-- Node smoke test coverage for organization structure
-
-## Why this comes before MOS and reenlistment
-
-MOS/job systems, branch transfers, reenlistment bonuses, and manpower shortages become meaningful only when personnel occupy real positions inside a real organization. v0.2.0 establishes that structure first.
-
-## Next likely milestone
-
-v0.3.0 — MOS & Career Contract Foundation
-- MOS/job definitions
-- MOS eligibility
-- enlistment contracts
-- reenlistment windows
-- branch transfer compatibility
-- manpower shortage signals
+After this hotfix is verified in GitHub Pages, continue to v0.3.0 — MOS & Career Contract Foundation.
