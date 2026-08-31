@@ -5,10 +5,10 @@ export const feedbackPresentationDefinitions = [
 ];
 
 export const performanceRatingDefinitions = [
-  { id: "exceptional", schemaVersion: 1, label: "EXCEPTIONAL", tone: "excellent", description: "Performance significantly exceeded the expected standard." },
-  { id: "strong", schemaVersion: 1, label: "STRONG", tone: "good", description: "Performance exceeded the expected standard." },
-  { id: "satisfactory", schemaVersion: 1, label: "SATISFACTORY", tone: "routine", description: "Performance met the expected standard." },
-  { id: "poor", schemaVersion: 1, label: "POOR", tone: "warning", description: "Performance fell below the expected standard." }
+  { id: "exceptional", schemaVersion: 2, label: "EXCEPTIONAL", tone: "excellent", minimumScore: 85, effectMultiplier: 1.25, description: "Performance significantly exceeded the expected standard." },
+  { id: "strong", schemaVersion: 2, label: "STRONG", tone: "good", minimumScore: 70, effectMultiplier: 1.10, description: "Performance exceeded the expected standard." },
+  { id: "satisfactory", schemaVersion: 2, label: "SATISFACTORY", tone: "routine", minimumScore: 50, effectMultiplier: 1.0, description: "Performance met the expected standard." },
+  { id: "poor", schemaVersion: 2, label: "POOR", tone: "warning", minimumScore: 0, effectMultiplier: 0.70, description: "Performance fell below the expected standard." }
 ];
 
 export const relationshipBandDefinitions = [
@@ -40,7 +40,13 @@ export const statusPresentationDefinitions = [
   { id: "pending", schemaVersion: 1, label: "PENDING", tone: "attention", priority: 40 },
   { id: "cancelled", schemaVersion: 1, label: "CANCELLED", tone: "warning", priority: 30 },
   { id: "open", schemaVersion: 1, label: "OPEN", tone: "attention", priority: 40 },
-  { id: "completed", schemaVersion: 1, label: "COMPLETED", tone: "good", priority: 20 }
+  { id: "completed", schemaVersion: 1, label: "COMPLETED", tone: "good", priority: 20 },
+  { id: "executing", schemaVersion: 1, label: "EXECUTING", tone: "attention", priority: 45 },
+  { id: "accepted", schemaVersion: 1, label: "ACCEPTED", tone: "good", priority: 25 },
+  { id: "declined", schemaVersion: 1, label: "DECLINED", tone: "routine", priority: 10 },
+  { id: "expired", schemaVersion: 1, label: "EXPIRED", tone: "warning", priority: 20 },
+  { id: "in_progress", schemaVersion: 1, label: "IN PROGRESS", tone: "attention", priority: 40 },
+  { id: "scheduled", schemaVersion: 1, label: "SCHEDULED", tone: "attention", priority: 30 }
 ];
 
 export const documentPresentationDefinitions = [

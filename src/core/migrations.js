@@ -1,6 +1,9 @@
 import { ensureInfantryCompanyStructure, npcIdentityForIndex } from "../services/organizationSeed.js";
+import { initializeUnitTrainingProfiles } from "../services/unitReadiness.js";
+import { seedCareerGameplayRecords } from "../services/careerGameplay.js";
+import { registries } from "../data/registries.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 12;
+export const CURRENT_WORLD_SCHEMA_VERSION = 13;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -167,6 +170,28 @@ function repairLegacyPlayerSquadDuplicates(state) {
 
 
 
+
+function migrateWorldV12ToV13(worldState) {
+  const next = structuredClone(worldState);
+  next.entities.unitTrainingProfiles ??= {};
+  next.entities.scheduleRecords ??= {};
+  next.entities.opportunityRecords ??= {};
+  next.entities.objectiveRecords ??= {};
+  next.world ??= {};
+  next.world.scheduler ??= null;
+  const scenario = next.world?.generation?.scenarioId && registries.careerStartScenarios.has(next.world.generation.scenarioId) ? registries.careerStartScenarios.get(next.world.generation.scenarioId) : null;
+  const readinessModelId = scenario?.readinessModelId ?? registries.readinessModels.values()[0]?.id;
+  for (const unit of Object.values(next.entities.units ?? {})) unit.readinessModelId ??= readinessModelId;
+  initializeUnitTrainingProfiles(next, readinessModelId);
+  if (next.playerPersonId) {
+    const person = next.entities.people?.[next.playerPersonId];
+    if (person?.affiliation?.unitId && !Object.values(next.entities.objectiveRecords).some(record => record.personId === next.playerPersonId)) seedCareerGameplayRecords(next, registries, next.playerPersonId, person.affiliation.unitId);
+  }
+  next.schemaVersion = 13;
+  next.gameVersion = "0.4.1";
+  return next;
+}
+
 function migrateWorldV11ToV12(worldState) {
   const next = structuredClone(worldState);
   next.entities.skillProfiles ??= {};
@@ -285,12 +310,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 9) next.worldState = migrateWorldV9ToV10(next.worldState);
   if (next.worldState.schemaVersion === 10) next.worldState = migrateWorldV10ToV11(next.worldState);
   if (next.worldState.schemaVersion === 11) next.worldState = migrateWorldV11ToV12(next.worldState);
+  if (next.worldState.schemaVersion === 12) next.worldState = migrateWorldV12ToV13(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.4.0.3";
-  next.worldState.gameVersion = "0.4.0.3";
+  next.gameVersion = "0.4.1";
+  next.worldState.gameVersion = "0.4.1";
   return next;
 }

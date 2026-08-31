@@ -20,6 +20,9 @@ import { skillDefinitions } from "./skills.js";
 import { activityDefinitions } from "./activities.js";
 import { gameplayEventDefinitions, eventTableDefinitions } from "./gameplayEvents.js";
 import { feedbackPresentationDefinitions, performanceRatingDefinitions, relationshipBandDefinitions, statusPresentationDefinitions, documentPresentationDefinitions } from "./presentation.js";
+import { dutyDefinitions, scheduleTemplateDefinitions, readinessModelDefinitions } from "./duties.js";
+import { opportunityDefinitions, careerObjectiveDefinitions } from "./opportunities.js";
+import { authorityDefinitions } from "./authorities.js";
 
 export const registries = Object.freeze({
   branches: createRegistry(branchDefinitions, "branches"),
@@ -47,5 +50,11 @@ export const registries = Object.freeze({
   performanceRatings: createRegistry(performanceRatingDefinitions, "performanceRatings"),
   relationshipBands: createRegistry(relationshipBandDefinitions, "relationshipBands"),
   statusPresentations: createRegistry(statusPresentationDefinitions, "statusPresentations"),
-  documentPresentations: createRegistry(documentPresentationDefinitions, "documentPresentations")
+  documentPresentations: createRegistry(documentPresentationDefinitions, "documentPresentations"),
+  duties: createRegistry(dutyDefinitions, "duties"),
+  scheduleTemplates: createRegistry(scheduleTemplateDefinitions, "scheduleTemplates"),
+  readinessModels: createRegistry(readinessModelDefinitions, "readinessModels"),
+  opportunities: createRegistry(opportunityDefinitions, "opportunities"),
+  careerObjectives: createRegistry(careerObjectiveDefinitions, "careerObjectives"),
+  authorities: createRegistry(authorityDefinitions, "authorities")
 });

@@ -19,9 +19,31 @@ export function resolveActivityEvent(draft, registries, { personId, unitId, rela
   const isDecision = Array.isArray(def.choices) && def.choices.length > 0;
   if (!isDecision) applyEffects(draft, registries, { personId, unitId, relationshipIds, effects: def.effects });
   const id = createEntityId(draft, "gameevt");
-  draft.entities.gameplayEventRecords[id] = { id, schemaVersion: 1, definitionId: def.id, personId, unitId, activityId, gameDate: draft.world.date, elapsedDays: draft.world.clock.elapsedDays, status: isDecision ? "pending" : "resolved", selectedChoiceId: null, resolvedDate: isDecision ? null : draft.world.date };
+  draft.entities.gameplayEventRecords[id] = { id, schemaVersion: 2, definitionId: def.id, personId, unitId, activityId, gameDate: draft.world.date, elapsedDays: draft.world.clock.elapsedDays, status: isDecision ? "pending" : "resolved", selectedChoiceId: null, resolvedDate: isDecision ? null : draft.world.date, expiresElapsedDay: isDecision && Number.isFinite(def.decisionDeadlineDays) ? draft.world.clock.elapsedDays + def.decisionDeadlineDays : null };
   const noticeId = recordNotification(draft, { personId, type: isDecision ? "decision_required" : "gameplay_event", title: def.title, message: def.message, priority: def.priority, references: { eventRecordId: id, activityId } });
   return { eventRecordId: id, notificationId: noticeId, definitionId: def.id, pendingDecision: isDecision };
+}
+
+
+export function resolveExpiredGameplayDecisionsInDraft(draft, registries, personId) {
+  const resolved = [], notificationIds = [];
+  for (const record of Object.values(draft.entities.gameplayEventRecords ?? {})) {
+    if (record.personId !== personId || record.status !== "pending" || !Number.isInteger(record.expiresElapsedDay)) continue;
+    if (draft.world.clock.elapsedDays < record.expiresElapsedDay) continue;
+    const def = registries.gameplayEvents.get(record.definitionId);
+    const choiceId = def.defaultChoiceId ?? def.choices?.[0]?.id;
+    if (!choiceId) continue;
+    const choice = (def.choices ?? []).find(item => item.id === choiceId);
+    if (!choice) continue;
+    applyEffects(draft, registries, { personId, unitId: record.unitId, relationshipIds: null, effects: choice.effects ?? [] });
+    record.status = "resolved";
+    record.selectedChoiceId = choice.id;
+    record.resolvedDate = draft.world.date;
+    record.resolutionSource = "deadline_default";
+    resolved.push(record.id);
+    notificationIds.push(recordNotification(draft, { personId, type:"decision_deadline", title:`${def.title} — Deadline`, message:`No response was entered before the deadline. Default action: ${choice.label}.`, priority:"normal", references:{ eventRecordId:record.id, choiceId:choice.id } }));
+  }
+  return { resolved, notificationIds };
 }
 
 export function resolveGameplayEventChoice(draft, registries, { personId, eventRecordId, choiceId, relationshipIds = null }) {

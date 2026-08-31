@@ -1,114 +1,206 @@
-# War Sim v0.4.0.3 — Military Visual Identity Overhaul
+# War Sim v0.4.1 — Soldier & Unit Gameplay
 
-War Sim v0.4.0.3 is a presentation and interaction release built directly on the known-good v0.4.0.2 simulation foundation. It deliberately does **not** add deployment, combat, new branches, new MOS pipelines, or a save-schema migration. The goal is to make the systems that already work feel like one coherent military personnel and operations application instead of a generic management dashboard.
+War Sim v0.4.1 is the first gameplay-heavy release built on the stable v0.4.0.3 military UI foundation. It keeps the existing career, organization, personnel, orders, saves, deterministic generation, and military presentation systems while making time, training, readiness, relationships, opportunities, and orders interact as a living military career.
 
-## What changed
+## Release goal
 
-### Persistent Current Situation display
-A compact, always-available situation strip now summarizes the player's real canonical state across the five primary views:
-- rank and name
-- MOS/specialty
-- assignment chain
-- world date
+v0.4.1 answers the question: **what are the soldier and unit actually doing?**
+
+The release deliberately stops before deployment/combat. Instead it builds the reusable systems that deployment and future operations will consume.
+
+## Major gameplay systems
+
+### Canonical duty / schedule system
+- new immutable duty definitions drive scheduled PT, weapons qualification, squad drills, maintenance, field exercises, and recovery
+- a schedule-template definition creates a rolling unit training cycle
+- scheduled duties have canonical records with start/end dates, status, source, and outcome-event references
+- focused player activities detect mandatory duty conflicts before consuming time
+- accepted school opportunities reserve their own dates and cancel/replace conflicting personal duty participation rather than silently double-booking the soldier
+- the scheduler extends its planning horizon as the world advances
+
+### Unit training and calculated readiness
+Every runtime unit now has one canonical `unitTrainingProfile` with:
+- physical readiness
+- weapons proficiency
+- tactical proficiency
+- cohesion
+- discipline
+- equipment readiness
+
+A registry-driven readiness model combines:
+- personnel fill
+- individual readiness
+- unit training
+- cohesion
+- equipment readiness
+- fatigue/recovery
+
+The Unit screen exposes the breakdown instead of showing only a decorative readiness percentage.
+
+### Fatigue and recovery
+- focused training and scheduled duties can increase fatigue
+- passive recovery occurs on unscheduled days
+- dedicated recovery activities restore fatigue/readiness/health
+- high fatigue blocks focused non-recovery activities
+- focused activities have cooldowns and repetition-efficiency penalties
+
+### Soldier performance
+- recent activity performance is summarized as a rolling performance index
+- activity outcomes continue to use skills, health, morale, readiness, fatigue, deterministic RNG, and performance-rating definitions
+- AAR records remain canonical and retain before/after values and effects
+
+### Relationships and cohesion
+- collective duties can modify squad relationships through the same generic effect pipeline
+- unit cohesion is part of the unit-training model and therefore contributes to calculated readiness
+- personnel relationships remain canonical records rather than UI-owned values
+
+### Dynamic events and decisions
+- scheduled duties reuse the existing weighted event-table engine
+- event effects can now target unit-training components generically, so cohesion/equipment events persist in the readiness model instead of temporarily changing a display number
+- blocking player decisions interrupt time advancement
+- definition-driven non-blocking decisions can expire to a default choice when a deadline is reached
+- decision resolution remains deterministic and recorded
+
+### Career opportunities and actionable orders
+Initial v0.4.1 opportunity definitions include:
+- Airborne School volunteer slot
+- Basic Leader Course seat
+
+Opportunities are definition-driven and evaluate:
+- service time
+- rank level
+- health
 - personnel status
-- assigned/authorized strength
-- unit readiness
-- unit morale
+- prior school completion
 
-The strip is derived from existing selectors/indexes; it does not maintain a second copy of gameplay state.
+An accepted opportunity:
+1. reserves a conflict-free report window
+2. creates canonical military orders
+3. progresses `open → accepted → in_progress → completed`
+4. changes the soldier to training status while attending
+5. completes the existing school/qualification/award pipeline
+6. completes the associated order
 
-### Military service-record Career presentation
-- career identity uses a digital military service-record header
-- stable human-readable record references derive from canonical record/person IDs
-- existing rank/pay grade/MOS/unit information receives stronger visual hierarchy
-- contract, awards/education, and permanent service-record sections can collapse to reduce mobile scrolling
-- disclosure state is stored only as local UI preference and never enters canonical world/save state
+Declined and expired opportunities remain durable history.
 
-### Tactical Unit / command presentation
-- selected organizations render as a compact command-status block
-- personnel fill, vacancies, readiness, and morale use shared military metric components
-- chain-of-command browsing remains independent from the Personnel filter
-- unit children retain explicit player-unit context
-- roster interaction still opens canonical personnel records
+### Career objectives / onboarding
+New careers receive canonical objectives such as:
+- report to assigned unit
+- complete an initial training activity
+- build personal readiness
+- reach promotion eligibility
 
-### Personnel roster and personnel files
-- Personnel view uses denser roster-file rows rather than large repeated cards
-- status/readiness/morale use shared generic renderers
-- the detailed personnel record includes a dog-tag-inspired identity plate using only real state values
-- personnel file shows assignment, condition, assigned primary equipment, proficiency, qualifications, and awards
-- assignment breadcrumbs and **Open Unit** provide explicit cross-navigation to the Unit view
-- no decorative fake blood type, religion, service number, nation, or other unsupported data is fabricated
+Objectives derive completion from canonical state/history and are not separate achievement counters owned by the UI.
 
-### Operations & Orders board
-- canonical orders render as military-document records with stable reference numbers
-- issue/effective dates and order status use shared presentation primitives
-- an order with a valid unit reference can explicitly open that unit in the Unit view
-- no deployment/mission details are invented when the simulation does not contain them
+### Billet-driven command authority
+- command authorities are immutable definitions
+- role definitions reference authority IDs
+- the UI resolves authority labels through the authority registry
+- supported command actions validate the actor's billet/role authority, not a rank-specific UI condition
+- a rifleman has no command authority simply because the player controls that character
 
-### Message Center
-- Inbox is presented as a personnel dispatch/message center
-- each notification has a stable reference derived from its canonical ID
-- unread/read state is visually distinct
-- Acknowledge and Archive preserve the v0.4.0.2 notification semantics: clearing read messages archives them rather than deleting canonical history
+### Better time advancement
+Advancing 1 / 7 / 30 days now processes:
+- scheduled duties
+- passive recovery
+- NPC personnel lifecycle
+- vacancies/replacements
+- opportunity start/completion/expiration
+- career-opportunity generation
+- unit-training decay
+- calculated readiness updates
+- career objectives
+- gameplay decisions
 
-### AAR / SITREP presentation
-- After Action Reports include a stable AAR reference
-- time-advance summaries use a stable SITREP-style reference
-- performance grades, before/after changes, and significant events keep the existing v0.4.0.2 data-driven feedback system
+Time stops when a blocking decision requires player attention.
 
-### Unified presentation definitions
-New immutable registries define:
-- personnel/unit/order status presentation
-- military document presentation metadata
+## Data-driven architecture additions
 
-Existing registries continue to define:
-- feedback priority/tone
-- performance ratings
-- relationship bands
+New or expanded immutable registries:
+- duties
+- schedule templates
+- readiness models
+- career opportunities
+- career objectives
+- command authorities
 
-Runtime renderers resolve these definitions generically. Normal UI code does not contain Army/11B/rank/weapon content IDs or branch-specific HTML.
+Career-start scenarios now define:
+- schedule template
+- readiness model
+- default starting skill value
+- starting skill overrides
 
-### Mobile and accessibility
-- more compact personnel density
-- fixed navigation continues to respect iPhone safe areas
-- narrow screens reflow command metrics, status blocks, and record strips
-- long names/assignments are constrained safely
-- reduced-motion behavior remains supported
-- native buttons remain the primary interaction surface
+Generation profiles define the readiness model used by generated units.
 
-## Architecture rules preserved
+No normal runtime logic needs to ask whether the character is specifically Army, 11B, a particular rank, or a particular weapon to run these systems.
 
-- definitions/registries describe content and presentation
-- canonical world entities remain authoritative
-- selectors/indexes supply view data
-- UI never owns simulation state
-- no `Math.random()` in runtime source
-- no `innerHTML =`, `eval`, `new Function`, or `document.write`
-- stable IDs, not display names, drive logic
-- derived indexes are not serialized
-- existing Unit and Personnel selection states remain independent
-- presentation preferences stay outside save-state schema
+## Canonical state additions
+
+World schema **13** adds:
+- `unitTrainingProfiles`
+- `scheduleRecords`
+- `opportunityRecords`
+- `objectiveRecords`
+- `world.scheduler`
+
+All are durable canonical data. Derived indexes are rebuilt after load and are not serialized.
+
+## UI additions
+
+Career:
+- Career Objectives
+- Current Duty
+- Duty Schedule
+- Career Opportunities
+- activity availability states / conflict reasons
+- recent performance index
+
+Unit:
+- calculated Readiness Breakdown
+- Billet Command Authority
+
+Current Situation:
+- current duty is surfaced alongside existing identity/unit/date/status information
+
+The v0.4.0.3 military visual identity remains intact.
 
 ## Compatibility
 
 - Save format: **3**
-- World schema: **12**
-- Runtime version: **0.4.0.3**
-- v0.4.0.2 schema-12 saves normalize to 0.4.0.3 without a schema migration
-- older supported schema-11 careers still migrate through the existing 11 → 12 pipeline
+- World schema: **13**
+- Runtime version: **0.4.1**
+- v0.4.0.3 schema-12 careers migrate to schema 13 without moving the player, regenerating personnel, or replacing existing career/contract/activity history
+- older supported saves continue through the existing migration chain
 
 ## Deliberately not included
 
-This is a visual/interaction release. It does not add:
+v0.4.1 does **not** add:
 - deployment simulation
-- tactical combat
-- national/world-map simulation
-- new playable MOS pipelines
-- new service branches
-- logistics/economy systems
+- combat
+- enemy forces
+- world-map strategy
+- national economy / geopolitics
+- new playable branches
+- a broad MOS expansion
 
-Those remain later gameplay milestones so this release can be validated independently from simulation expansion.
+Those remain later milestones. v0.4.1 establishes the soldier/unit gameplay systems they will use.
+
+## Architecture rules preserved
+
+- immutable definitions describe content and rules
+- stable IDs drive logic; display strings do not
+- canonical state remains authoritative
+- commands/services mutate state
+- selectors/view models read state
+- UI owns presentation state only
+- deterministic RNG is centralized
+- normal runtime modules contain no direct `Math.random()`
+- no `innerHTML =`, `eval`, `new Function`, or `document.write`
+- indexes support scoped queries and are never serialized
+- player and NPC personnel use the same canonical Person model
+- history records remain durable
+- branch/MOS/rank-specific UI hacks are not used
 
 ## Quality verification
 
-See `SOFTWARE_QUALITY_REPORT.md` for the independent quality audit and packaged-copy verification.
+See `SOFTWARE_QUALITY_REPORT.md` for the full release audit, migration checks, scheduler/opportunity/readiness integration tests, generated-world validation, long-run simulation sweep, save/checksum tests, and packaged-copy verification.

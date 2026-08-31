@@ -1,11 +1,12 @@
 const EFFECT_FIELDS = Object.freeze({
   person: new Set(["career.experience","career.prestige","condition.health","condition.morale","condition.fatigue","condition.readiness"]),
   unit: new Set(["condition.readiness","condition.morale","condition.cohesion","condition.supply"]),
-  relationships: new Set(["familiarity","trust","respect","bond"])
+  relationships: new Set(["familiarity","trust","respect","bond"]),
+  unitTraining: new Set(["physical","weapons","tactical","cohesion","discipline","equipmentReadiness"])
 });
 
 function validateEffect(errors, ownerId, effect, registries) {
-  if (!["skill","person","unit","relationships"].includes(effect.target)) { errors.push(`${ownerId}: invalid effect target ${effect.target}.`); return; }
+  if (!["skill","person","unit","relationships","unitTraining"].includes(effect.target)) { errors.push(`${ownerId}: invalid effect target ${effect.target}.`); return; }
   if (!["add","set"].includes(effect.operation)) errors.push(`${ownerId}: invalid effect operation ${effect.operation}.`);
   if (!Number.isFinite(effect.value)) errors.push(`${ownerId}: effect value must be numeric.`);
   if (effect.target === "skill") { if (!registries.skills.has(effect.skillId)) errors.push(`${ownerId}: invalid skill ${effect.skillId}.`); }
@@ -39,6 +40,11 @@ export function validateDefinitions(registries) {
     if (!billet.primaryEquipmentDefinitionId || !registries.equipment.has(billet.primaryEquipmentDefinitionId)) errors.push(`${billet.id}: invalid primaryEquipmentDefinitionId ${billet.primaryEquipmentDefinitionId}.`);
   }
 
+
+  for (const role of registries.roles.values()) {
+    for (const authorityId of role.authorityIds ?? []) if (!registries.authorities.has(authorityId)) errors.push(`${role.id}: invalid authority ${authorityId}.`);
+  }
+
   for (const component of registries.components.values()) {
     if (!registries.branches.has(component.branchId)) errors.push(`${component.id}: invalid branchId ${component.branchId}.`);
     if (!registries.contracts.has(component.defaultContractDefinitionId)) errors.push(`${component.id}: invalid default contract ${component.defaultContractDefinitionId}.`);
@@ -69,6 +75,7 @@ export function validateDefinitions(registries) {
   for (const profile of registries.generationProfiles.values()) {
     if (!registries.branches.has(profile.branchId)) errors.push(`${profile.id}: invalid branchId ${profile.branchId}.`);
     if (!Array.isArray(profile.units) || profile.units.length === 0) errors.push(`${profile.id}: generation profile must define units.`);
+    if (!registries.readinessModels.has(profile.readinessModelId)) errors.push(`${profile.id}: invalid readinessModelId ${profile.readinessModelId}.`);
     const unitIds = new Set(profile.units.map(unit => unit.id));
     if (!unitIds.has(profile.rootUnitId)) errors.push(`${profile.id}: missing rootUnitId ${profile.rootUnitId}.`);
     for (const unit of profile.units) {
@@ -95,6 +102,10 @@ export function validateDefinitions(registries) {
     if (!registries.specialties.has(scenario.specialtyId)) errors.push(`${scenario.id}: invalid specialtyId ${scenario.specialtyId}.`);
     if (!registries.generationProfiles.has(scenario.generationProfileId)) errors.push(`${scenario.id}: invalid generationProfileId ${scenario.generationProfileId}.`);
     if (!registries.ranks.has(scenario.startingRankId)) errors.push(`${scenario.id}: invalid startingRankId ${scenario.startingRankId}.`);
+    if (!registries.scheduleTemplates.has(scenario.scheduleTemplateId)) errors.push(`${scenario.id}: invalid scheduleTemplateId ${scenario.scheduleTemplateId}.`);
+    if (!registries.readinessModels.has(scenario.readinessModelId)) errors.push(`${scenario.id}: invalid readinessModelId ${scenario.readinessModelId}.`);
+    if (scenario.defaultStartingSkillValue != null && !Number.isFinite(scenario.defaultStartingSkillValue)) errors.push(`${scenario.id}: invalid defaultStartingSkillValue.`);
+    for (const [skillId, value] of Object.entries(scenario.startingSkillValues ?? {})) { if (!registries.skills.has(skillId)) errors.push(`${scenario.id}: invalid starting skill ${skillId}.`); if (!Number.isFinite(value)) errors.push(`${scenario.id}: invalid starting skill value for ${skillId}.`); }
     for (const id of scenario.eligibleStartingBilletDefinitionIds ?? []) if (!registries.billets.has(id)) errors.push(`${scenario.id}: invalid starting billet ${id}.`);
     for (const id of scenario.allowedContractDefinitionIds ?? []) if (!registries.contracts.has(id)) errors.push(`${scenario.id}: invalid allowed contract ${id}.`);
   }
@@ -119,8 +130,42 @@ export function validateDefinitions(registries) {
       choiceIds.add(choice.id);
       for (const effect of choice.effects ?? []) validateEffect(errors, `${event.id}/${choice.id}`, effect, registries);
     }
+    if (event.defaultChoiceId && !choiceIds.has(event.defaultChoiceId)) errors.push(`${event.id}: invalid defaultChoiceId ${event.defaultChoiceId}.`);
+    if (event.decisionDeadlineDays != null && (!Number.isInteger(event.decisionDeadlineDays) || event.decisionDeadlineDays < 1)) errors.push(`${event.id}: invalid decisionDeadlineDays.`);
+    if (event.blocksTimeAdvance != null && typeof event.blocksTimeAdvance !== "boolean") errors.push(`${event.id}: blocksTimeAdvance must be boolean.`);
   }
 
+
+
+  for (const duty of registries.duties.values()) {
+    if (!Number.isInteger(duty.durationDays) || duty.durationDays <= 0) errors.push(`${duty.id}: invalid durationDays.`);
+    if (duty.eventTableId && !registries.eventTables.has(duty.eventTableId)) errors.push(`${duty.id}: invalid eventTableId ${duty.eventTableId}.`);
+    for (const effect of duty.playerEffects ?? []) validateEffect(errors, duty.id, effect, registries);
+    for (const [key, value] of Object.entries(duty.trainingEffects ?? {})) {
+      if (!["physical","weapons","tactical","cohesion","discipline","equipmentReadiness"].includes(key)) errors.push(`${duty.id}: invalid unit-training field ${key}.`);
+      if (!Number.isFinite(value)) errors.push(`${duty.id}: invalid unit-training effect ${key}.`);
+    }
+  }
+  for (const template of registries.scheduleTemplates.values()) {
+    if (!Number.isInteger(template.horizonDays) || template.horizonDays < 1) errors.push(`${template.id}: invalid horizonDays.`);
+    for (const entry of template.entries ?? []) {
+      if (!registries.duties.has(entry.dutyDefinitionId)) errors.push(`${template.id}: invalid duty ${entry.dutyDefinitionId}.`);
+      if (!Number.isInteger(entry.offsetDays) || entry.offsetDays < 1 || !Number.isInteger(entry.repeatEveryDays) || entry.repeatEveryDays < 1) errors.push(`${template.id}: invalid schedule entry for ${entry.dutyDefinitionId}.`);
+    }
+  }
+  for (const model of registries.readinessModels.values()) {
+    const values = Object.values(model.weights ?? {});
+    if (!values.length || values.some(v => !Number.isFinite(v) || v < 0)) errors.push(`${model.id}: invalid readiness weights.`);
+    const sum = values.reduce((a,b)=>a+b,0); if (Math.abs(sum - 1) > 0.0001) errors.push(`${model.id}: readiness weights must sum to 1.`);
+  }
+  for (const opportunity of registries.opportunities.values()) {
+    if (opportunity.schoolId && !registries.schools.has(opportunity.schoolId)) errors.push(`${opportunity.id}: invalid schoolId ${opportunity.schoolId}.`);
+    if (opportunity.presentationId && !registries.feedbackPresentations.has(opportunity.presentationId)) errors.push(`${opportunity.id}: invalid presentationId ${opportunity.presentationId}.`);
+    for (const key of ["minimumServiceDays","minimumRankLevel","minimumHealth","expiresAfterDays","reportDelayDays"]) if (opportunity[key] != null && (!Number.isFinite(opportunity[key]) || opportunity[key] < 0)) errors.push(`${opportunity.id}: invalid ${key}.`);
+  }
+  for (const objective of registries.careerObjectives.values()) {
+    if (!["has_assignment","has_activity","minimum_readiness","promotion_eligible"].includes(objective.completionRule)) errors.push(`${objective.id}: invalid completionRule ${objective.completionRule}.`);
+  }
 
   const relationshipBands = registries.relationshipBands.values().slice().sort((a,b) => a.minimumTrust - b.minimumTrust);
   if (!relationshipBands.length || relationshipBands[0].minimumTrust > -100 || relationshipBands.at(-1).maximumTrust < 100) errors.push("relationshipBands: trust range must cover -100 through 100.");

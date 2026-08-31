@@ -18,6 +18,9 @@ import { selectCareerRecord } from "../src/selectors/selectCareerRecord.js";
 import { migratePayload } from "../src/core/migrations.js";
 import { markAllNotificationsRead, clearReadNotifications } from "../src/commands/manageNotifications.js";
 import { selectNotifications } from "../src/selectors/selectNotifications.js";
+import { acceptCareerOpportunity } from "../src/commands/careerOpportunities.js";
+import { resolveDecision } from "../src/commands/resolveDecision.js";
+import { calculateUnitReadiness } from "../src/services/unitReadiness.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const srcRoot = path.join(root, "src");
@@ -26,6 +29,23 @@ const jsFiles = walk(srcRoot).filter(file => file.endsWith(".js"));
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(srcRoot, "app.js"), "utf8");
 const css = fs.readFileSync(path.join(srcRoot, "ui", "styles.css"), "utf8");
+
+function advanceThroughDays(store, days) {
+  let remaining = days;
+  let guard = 0;
+  while (remaining > 0) {
+    if (++guard > days * 5 + 100) throw new Error("advanceThroughDays guard exceeded");
+    const result = advanceWorldDays(store, remaining);
+    remaining -= result.data.days;
+    if (result.code === "time_interrupted") {
+      const state = store.getState();
+      const personId = state.playerPersonId;
+      const decision = selectGameplay(state, store.getIndexes(), registries, personId).pendingDecisions[0];
+      assert.ok(decision, "interrupted time must expose a pending decision");
+      resolveDecision(store, registries, personId, decision.id, decision.choices[0].id);
+    }
+  }
+}
 
 // Import graph integrity: every relative static import resolves.
 for (const file of jsFiles) {
@@ -129,12 +149,103 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const b = createStateStore(createInitialWorldState({ seed }));
   const input = { firstName:"Deterministic", lastName:"Activity", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed };
   createPlayerCareer(a, registries, input); createPlayerCareer(b, registries, input);
-  for (let i=0;i<20;i++) { performActivity(a, registries, a.getState().playerPersonId, "activity_pt"); performActivity(b, registries, b.getState().playerPersonId, "activity_pt"); }
+  performActivity(a, registries, a.getState().playerPersonId, "activity_pt"); performActivity(b, registries, b.getState().playerPersonId, "activity_pt");
   assert.deepEqual(a.getState(), b.getState(), "identical seeds + identical activities must remain deterministic");
   const gameplay = selectGameplay(a.getState(), a.getIndexes(), registries, a.getState().playerPersonId);
-  assert.equal(gameplay.recentActivities.length, 5);
+  assert.equal(gameplay.recentActivities.length, 1);
   assert.ok(gameplay.skills.find(x=>x.id==="skill_fitness").value > 35);
   assert.equal(validateWorldState(a.getState(), registries).ok, true);
+}
+
+
+// v0.4.1 soldier/unit gameplay: scheduler, readiness, objectives, opportunities, conflicts, recovery, and authority definitions.
+{
+  assert.ok(registries.duties.size >= 6, "duty definitions must drive the unit training cycle");
+  assert.ok(registries.scheduleTemplates.size >= 1, "schedule templates must be registry driven");
+  assert.ok(registries.readinessModels.size >= 1, "readiness models must be registry driven");
+  assert.ok(registries.opportunities.size >= 2, "career opportunities must be registry driven");
+  assert.ok(registries.careerObjectives.size >= 4, "career objectives must be registry driven");
+  assert.ok(registries.authorities.size >= 3, "billet command authorities must be registry driven");
+
+  const seed = 741041;
+  const gameStore = createStateStore(createInitialWorldState({ seed }));
+  createPlayerCareer(gameStore, registries, { firstName:"Gameplay", lastName:"QA", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed });
+  const personId = gameStore.getState().playerPersonId;
+  let view = selectGameplay(gameStore.getState(), gameStore.getIndexes(), registries, personId);
+  assert.ok(view.upcomingSchedule.length > 0, "new careers need an upcoming unit schedule");
+  assert.equal(Object.keys(gameStore.getState().entities.objectiveRecords).length, registries.careerObjectives.size);
+  assert.equal(Object.keys(gameStore.getState().entities.unitTrainingProfiles).length, Object.keys(gameStore.getState().entities.units).length);
+  assert.ok(view.objectives.some(x => x.definitionId === "objective_report_unit" && x.status === "completed"));
+  assert.equal(view.authorityIds.length, 0, "starting rifleman billet must not receive command authority");
+
+  const unitId = gameStore.getState().entities.people[personId].affiliation.unitId;
+  const beforeReadiness = calculateUnitReadiness(gameStore.getState(), gameStore.getIndexes(), registries, unitId);
+  for (const value of Object.values(beforeReadiness.components)) assert.ok(value >= 0 && value <= 100, "readiness components must remain bounded");
+  const beforeTraining = structuredClone(gameStore.getState().entities.unitTrainingProfiles[`unit_training_${unitId}`].values);
+  const beforeFatigue = gameStore.getState().entities.people[personId].condition.fatigue;
+  performActivity(gameStore, registries, personId, "activity_pt");
+  const afterPt = gameStore.getState();
+  assert.ok(afterPt.entities.people[personId].condition.fatigue > beforeFatigue, "PT must create fatigue");
+  assert.ok(afterPt.entities.unitTrainingProfiles[`unit_training_${unitId}`].values.physical > beforeTraining.physical, "PT must improve unit physical training state");
+  view = selectGameplay(afterPt, gameStore.getIndexes(), registries, personId);
+  assert.ok(view.objectives.some(x => x.definitionId === "objective_complete_training" && x.status === "completed"), "training objective should complete from real activity history");
+
+  const fatigueAfterPt = afterPt.entities.people[personId].condition.fatigue;
+  performActivity(gameStore, registries, personId, "activity_recovery");
+  assert.ok(gameStore.getState().entities.people[personId].condition.fatigue < fatigueAfterPt, "recovery must reduce fatigue");
+
+  // From day 2, a 2+ day focused activity overlaps the mandatory day-3 unit PT and must be blocked.
+  view = selectGameplay(gameStore.getState(), gameStore.getIndexes(), registries, personId);
+  const range = view.activities.find(x => x.id === "activity_range");
+  assert.equal(range.eligible, false);
+  assert.equal(range.availabilityState, "scheduled");
+  assert.throws(() => performActivity(gameStore, registries, personId, "activity_range"), /conflicts with scheduled/i);
+
+  // Process through the Airborne eligibility threshold, resolving any generated player decisions deterministically.
+  advanceThroughDays(gameStore, 43); // already consumed two activity days => world day 45
+  view = selectGameplay(gameStore.getState(), gameStore.getIndexes(), registries, personId);
+  const airborne = view.opportunities.find(x => x.definitionId === "opportunity_airborne_school" && x.status === "open");
+  assert.ok(airborne, "eligible Airborne opportunity must be generated by time progression");
+  const accepted = acceptCareerOpportunity(gameStore, registries, airborne.id);
+  assert.equal(accepted.ok, true);
+  const acceptedRecord = gameStore.getState().entities.opportunityRecords[airborne.id];
+  assert.equal(acceptedRecord.status, "accepted");
+  assert.ok(acceptedRecord.orderId && gameStore.getState().entities.orderRecords[acceptedRecord.orderId], "accepting an opportunity must generate canonical orders");
+  assert.equal(gameStore.getState().entities.orderRecords[acceptedRecord.orderId].status, "pending");
+
+  const daysToSchoolCompletion = acceptedRecord.completeElapsedDay - gameStore.getState().world.clock.elapsedDays;
+  advanceThroughDays(gameStore, daysToSchoolCompletion);
+  assert.equal(gameStore.getState().entities.opportunityRecords[airborne.id].status, "completed");
+  assert.equal(gameStore.getState().entities.orderRecords[acceptedRecord.orderId].status, "completed");
+  assert.ok(Object.values(gameStore.getState().entities.qualificationRecords).some(r => r.personId === personId && r.schoolId === "school_airborne"), "scheduled school completion must award its qualification");
+  assert.equal(validateWorldState(gameStore.getState(), registries).ok, true);
+}
+
+// Direct v0.4.0.3 schema-12 migration preserves the career and layers in v0.4.1 gameplay records.
+{
+  const seed = 404003;
+  const old = createStateStore(createInitialWorldState({ seed }));
+  createPlayerCareer(old, registries, { firstName:"Visual", lastName:"Baseline", branchId:"branch_army", componentId:"component_active", specialtyId:"specialty_army_11b", contractDefinitionId:"contract_army_4y", seed });
+  performActivity(old, registries, old.getState().playerPersonId, "activity_pt");
+  const legacy = structuredClone(old.getState());
+  const personId = legacy.playerPersonId;
+  const unitId = legacy.entities.people[personId].affiliation.unitId;
+  const name = legacy.entities.people[personId].identity.displayName;
+  const contractId = legacy.entities.serviceRecords[legacy.entities.people[personId].serviceRecordId].currentContractId;
+  legacy.schemaVersion = 12; legacy.gameVersion = "0.4.0.3";
+  delete legacy.world.scheduler;
+  for (const storeName of ["unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords"]) delete legacy.entities[storeName];
+  for (const unit of Object.values(legacy.entities.units)) delete unit.readinessModelId;
+  const migrated = migratePayload({ saveFormatVersion:3, saveId:"schema12-visual", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
+  assert.equal(migrated.worldState.schemaVersion, 13);
+  assert.equal(migrated.worldState.gameVersion, "0.4.1");
+  assert.equal(migrated.worldState.entities.people[personId].identity.displayName, name);
+  assert.equal(migrated.worldState.entities.people[personId].affiliation.unitId, unitId);
+  assert.ok(migrated.worldState.entities.contractRecords[contractId], "active contract must survive schema-12 migration");
+  assert.ok(Object.values(migrated.worldState.entities.scheduleRecords).some(r => r.personId === personId));
+  assert.equal(Object.values(migrated.worldState.entities.objectiveRecords).filter(r => r.personId === personId).length, registries.careerObjectives.size);
+  assert.equal(Object.keys(migrated.worldState.entities.unitTrainingProfiles).length, Object.keys(migrated.worldState.entities.units).length);
+  assert.equal(validateWorldState(migrated.worldState, registries).ok, true);
 }
 
 // Current schema migration preserves v0.3.2.3 careers and adds skill profiles without regeneration.
@@ -144,8 +255,8 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   delete legacy.entities.skillProfiles; delete legacy.entities.activityRecords; delete legacy.entities.performanceRecords; delete legacy.entities.gameplayEventRecords;
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
-  assert.equal(payload.worldState.schemaVersion, 12);
-  assert.equal(payload.worldState.gameVersion, "0.4.0.3");
+  assert.equal(payload.worldState.schemaVersion, 13);
+  assert.equal(payload.worldState.gameVersion, "0.4.1");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -174,8 +285,8 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const current = createInitialWorldState({ seed: 909090 });
   current.gameVersion = "0.4.0.2";
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.2", worldState:current });
-  assert.equal(migrated.worldState.schemaVersion, 12);
-  assert.equal(migrated.worldState.gameVersion, "0.4.0.3");
+  assert.equal(migrated.worldState.schemaVersion, 13);
+  assert.equal(migrated.worldState.gameVersion, "0.4.1");
 }
 
 // Notification clearing archives records, uses indexed scope, and keeps canonical history intact.
@@ -244,9 +355,16 @@ console.log(JSON.stringify({
   independentUnitPersonnelState:true,
   militaryPresentationDom:true,
   gameplayDefinitions:true,
+  soldierUnitGameplayIntegration:true,
+  canonicalScheduler:true,
+  actionableOpportunityOrders:true,
+  readinessModelIntegration:true,
+  conflictAndRecoveryRules:true,
+  authorityDefinitions:true,
   deterministicActivities:true,
   selectorIndexAudit:true,
-  schema12Migration:true,
+  schema13Migration:true,
+  directSchema12Migration:true,
   semanticTimeAdvanceSummary:true,
   transientStatusFeedback:true,
   relationshipPresentationDefinitions:true,

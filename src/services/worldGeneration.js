@@ -1,5 +1,6 @@
 import { randomInt } from "../core/rng.js";
 import { personnelGenerationDefinition as personnelData } from "../data/personnelGeneration.js";
+import { initializeUnitTrainingProfiles } from "./unitReadiness.js";
 
 export const CURRENT_WORLD_GENERATOR_VERSION = 2;
 
@@ -43,7 +44,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
   if (!scenario.enabled) throw new Error(`Career start scenario ${scenario.name} is not enabled.`);
 
   const e = state.entities;
-  for (const name of ["people","units","billets","serviceRecords","loadouts","equipmentInstances","skillProfiles"]) e[name] = {};
+  for (const name of ["people","units","billets","serviceRecords","loadouts","equipmentInstances","skillProfiles","unitTrainingProfiles"]) e[name] = {};
 
   const childrenByParent = new Map();
   for (const template of profile.units) {
@@ -63,6 +64,7 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
       branchId: profile.branchId,
       echelonId: org.echelonId,
       name: template.name,
+      readinessModelId: profile.readinessModelId,
       parentUnitId: template.parentUnitId,
       childUnitIds: [...(childrenByParent.get(template.id) ?? [])],
       condition: cloneCondition(state)
@@ -110,6 +112,8 @@ export function generateCareerStartWorld(state, registries, scenarioId) {
     billet.assignedPersonId = id;
     billet.status = "filled";
   }
+
+  initializeUnitTrainingProfiles(state, profile.readinessModelId);
 
   state.world.generation = {
     generatorVersion: CURRENT_WORLD_GENERATOR_VERSION,

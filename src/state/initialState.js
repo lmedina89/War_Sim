@@ -6,7 +6,8 @@ const ENTITY_STORES = [
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
-  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords"
+  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords",
+  "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords"
 ];
 
 function emptyEntities() {
@@ -19,8 +20,8 @@ export function createInitialWorldState({
 } = {}) {
   const normalizedSeed = Number(seed) >>> 0 || 0x6d2b79f5;
   const state = {
-    schemaVersion: 12,
-    gameVersion: "0.4.0.3",
+    schemaVersion: 13,
+    gameVersion: "0.4.1",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
@@ -30,7 +31,8 @@ export function createInitialWorldState({
       clock: { elapsedDays: 0, paused: true, speed: 1 },
       nationIds: ["nation_demo"],
       careerStartUnitByBranchId: {},
-      generation: null
+      generation: null,
+      scheduler: null
     },
     entities: emptyEntities()
   };

@@ -511,3 +511,57 @@ body::before { opacity: .06; background-size: 26px 26px; background-image: linea
 .disclosure-body { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--mil-line); }
 .confirmation-sheet { border-color: color-mix(in srgb, var(--warn) 35%, var(--mil-line)); }
 .order-actions { display: flex; gap: 7px; margin-top: 10px; }
+
+/* v0.4.1 soldier & unit gameplay */
+.gameplay-status-grid { align-items: start; }
+.objective-list, .schedule-list, .opportunity-list { display: grid; gap: 8px; }
+.objective-row { border: 1px solid var(--mil-line); border-left: 3px solid var(--mil-field); border-radius: 4px; padding: 10px; background: #131d23; }
+.objective-row.completed { opacity: .62; border-left-color: var(--good); }
+.objective-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.objective-row p { margin: 6px 0 0; color: var(--muted); font-size: .83rem; }
+.current-duty-card { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(110px, auto); gap: 7px; margin-bottom: 10px; align-items: stretch; }
+.compact-empty { margin: 0 0 10px; padding: 9px; }
+.schedule-row { display: grid; grid-template-columns: 8.5rem minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 9px 10px; border: 1px solid var(--mil-line); border-left: 3px solid var(--mil-field); border-radius: 4px; background: #121c22; }
+.schedule-row time { color: var(--mil-tan); font: 800 .68rem/1.2 var(--doc-font); }
+.schedule-row > div { display: grid; gap: 2px; }
+.schedule-row > div span { color: var(--muted); font: 700 .61rem/1.2 var(--doc-font); letter-spacing: .05em; }
+.schedule-row.in_progress { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, #121c22); }
+.opportunity-card { border: 1px solid var(--mil-line); border-left: 4px solid var(--warn); border-radius: 4px; padding: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--warn) 4%, #142028), #10191f); }
+.opportunity-card h3 { margin: 0 0 6px; text-transform: uppercase; }
+.opportunity-card > p { color: var(--muted); }
+.opportunity-metrics { display: grid; grid-template-columns: auto repeat(3,minmax(0,1fr)); gap: 7px; margin-top: 10px; }
+.opportunity-actions { margin-top: 12px; }
+.activity-option { position: relative; }
+.activity-option.state-scheduled, .activity-option.state-recovering, .activity-option.state-locked { opacity: .72; }
+.activity-reasons { color: var(--warn); font: 700 .72rem/1.35 var(--doc-font); text-transform: uppercase; letter-spacing: .025em; }
+.performance-index { margin-bottom: 8px; }
+.decision-deadline { color: var(--warn); font: 800 .72rem/1.2 var(--doc-font); text-transform: uppercase; }
+.readiness-breakdown { display: grid; gap: 10px; }
+.readiness-overall { display: flex; }
+.readiness-overall .mil-metric { min-width: 180px; border-color: var(--mil-field); }
+.readiness-component-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.readiness-component { border: 1px solid var(--mil-line); border-radius: 4px; padding: 7px; background: #111a20; }
+.readiness-component .mil-metric { border: 0; padding: 0; background: transparent; }
+.mini-readiness-track { height: 5px; margin-top: 7px; border: 1px solid var(--border); background: #080d10; overflow: hidden; }
+.mini-readiness-track span { display: block; width: var(--value,0%); height: 100%; background: linear-gradient(90deg,var(--mil-field),var(--accent)); }
+.command-authority { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--mil-line); }
+.command-authority strong { font: 900 .7rem/1.2 var(--doc-font); text-transform: uppercase; letter-spacing: .08em; color: var(--mil-field-strong); }
+.command-authority p { margin: 5px 0 0; text-transform: capitalize; }
+
+@media (max-width: 760px) {
+  .current-duty-card { grid-template-columns: 1fr 1fr; }
+  .current-duty-card .mil-status-stamp { grid-column: 1 / -1; }
+  .schedule-row { grid-template-columns: 1fr auto; }
+  .schedule-row time { grid-column: 1 / -1; }
+  .opportunity-metrics { grid-template-columns: 1fr 1fr; }
+  .opportunity-metrics .mil-status-stamp { grid-column: 1 / -1; }
+  .readiness-component-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 420px) {
+  .readiness-component-grid { grid-template-columns: 1fr 1fr; }
+  .schedule-row { padding: 8px; }
+}
+.command-duty-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.55rem;margin-top:.7rem}
+.command-duty-grid button{min-width:0}
+.schedule-history-heading{margin:1rem 0 .5rem;font-size:.84rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.duty-history{display:grid;gap:.45rem}.duty-history-row{width:100%;display:flex;justify-content:space-between;gap:.75rem;align-items:center;text-align:left;padding:.7rem .8rem;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--radius-sm)}.duty-history-row span{min-width:0;color:var(--muted)}.duty-history-row strong{white-space:nowrap;font-size:.78rem;letter-spacing:.05em}

@@ -3,7 +3,8 @@ const REQUIRED_STORES = [
   "assignmentRecords","promotionRecords","awardRecords","qualificationRecords","deploymentRecords",
   "casualtyRecords","memorialRecords","relationshipRecords","notificationRecords","actionRecords","orderRecords",
   "contractRecords","servicePeriodRecords","reenlistmentOfferRecords","careerChangeRequestRecords","interServiceTransferRecords",
-  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords"
+  "personnelActionRecords","replacementRequestRecords","skillProfiles","activityRecords","performanceRecords","gameplayEventRecords",
+  "unitTrainingProfiles","scheduleRecords","opportunityRecords","objectiveRecords"
 ];
 
 function requireRef(errors, store, id, label) { if (id != null && !store[id]) errors.push(`${label}: missing reference ${id}.`); }
@@ -11,7 +12,7 @@ function requireRef(errors, store, id, label) { if (id != null && !store[id]) er
 export function validateWorldState(state, registries) {
   const errors = [];
   if (!state || typeof state !== "object") return { ok: false, errors: ["State must be an object."] };
-  if (state.schemaVersion !== 12) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
+  if (state.schemaVersion !== 13) errors.push(`Unsupported world-state schemaVersion ${state.schemaVersion}.`);
   const e = state.entities ?? {};
   for (const name of REQUIRED_STORES) if (!e[name] || typeof e[name] !== "object") errors.push(`Missing entity store: ${name}.`);
   if (errors.length) return { ok: false, errors };
@@ -23,6 +24,7 @@ export function validateWorldState(state, registries) {
   for (const unit of Object.values(e.units)) {
     if (!registries.organizations.has(unit.organizationDefinitionId)) errors.push(`${unit.id}: invalid organizationDefinitionId.`);
     if (!registries.echelons.has(unit.echelonId)) errors.push(`${unit.id}: invalid echelonId.`);
+    if (unit.readinessModelId && !registries.readinessModels.has(unit.readinessModelId)) errors.push(`${unit.id}: invalid readinessModelId ${unit.readinessModelId}.`);
     requireRef(errors, e.units, unit.parentUnitId, `${unit.id}.parentUnitId`);
     if (new Set(unit.childUnitIds ?? []).size !== (unit.childUnitIds ?? []).length) errors.push(`${unit.id}: duplicate childUnitIds.`);
     for (const childId of unit.childUnitIds ?? []) {
@@ -92,6 +94,38 @@ export function validateWorldState(state, registries) {
     if (!["pending","resolved"].includes(record.status)) errors.push(`${record.id}: invalid gameplay event status ${record.status}.`);
     const def = registries.gameplayEvents.has(record.definitionId) ? registries.gameplayEvents.get(record.definitionId) : null;
     if (record.selectedChoiceId && !(def?.choices ?? []).some(choice => choice.id === record.selectedChoiceId)) errors.push(`${record.id}: invalid selected choice ${record.selectedChoiceId}.`);
+  }
+
+
+  const unitTrainingUnits = new Set();
+  for (const profile of Object.values(e.unitTrainingProfiles ?? {})) {
+    requireRef(errors, e.units, profile.unitId, `${profile.id}.unitId`);
+    if (!registries.readinessModels.has(profile.readinessModelId)) errors.push(`${profile.id}: invalid readinessModelId ${profile.readinessModelId}.`);
+    if (unitTrainingUnits.has(profile.unitId)) errors.push(`${profile.unitId}: multiple unit training profiles.`);
+    unitTrainingUnits.add(profile.unitId);
+    for (const key of ["physical","weapons","tactical","cohesion","discipline","equipmentReadiness"]) {
+      const value = profile.values?.[key];
+      if (!Number.isFinite(value) || value < 0 || value > 100) errors.push(`${profile.id}: invalid ${key} value ${value}.`);
+    }
+  }
+  for (const unit of Object.values(e.units)) if (!unitTrainingUnits.has(unit.id)) errors.push(`${unit.id}: missing unit training profile.`);
+  for (const record of Object.values(e.scheduleRecords ?? {})) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`);
+    if (!registries.duties.has(record.dutyDefinitionId)) errors.push(`${record.id}: invalid dutyDefinitionId ${record.dutyDefinitionId}.`);
+    if (!registries.scheduleTemplates.has(record.sourceTemplateId)) errors.push(`${record.id}: invalid sourceTemplateId ${record.sourceTemplateId}.`);
+    if (!Number.isInteger(record.startElapsedDay) || !Number.isInteger(record.endElapsedDay) || record.endElapsedDay < record.startElapsedDay) errors.push(`${record.id}: invalid schedule interval.`);
+    if (!["scheduled","in_progress","completed","cancelled"].includes(record.status)) errors.push(`${record.id}: invalid schedule status ${record.status}.`);
+  }
+  for (const record of Object.values(e.opportunityRecords ?? {})) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.opportunities.has(record.definitionId)) errors.push(`${record.id}: invalid opportunity definition ${record.definitionId}.`);
+    if (!["open","accepted","in_progress","completed","declined","expired"].includes(record.status)) errors.push(`${record.id}: invalid opportunity status ${record.status}.`);
+    requireRef(errors, e.orderRecords, record.orderId, `${record.id}.orderId`);
+  }
+  for (const record of Object.values(e.objectiveRecords ?? {})) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.careerObjectives.has(record.definitionId)) errors.push(`${record.id}: invalid objective definition ${record.definitionId}.`);
+    if (!["active","completed","failed"].includes(record.status)) errors.push(`${record.id}: invalid objective status ${record.status}.`);
   }
 
   if (state.playerPersonId) requireRef(errors, e.people, state.playerPersonId, "playerPersonId");

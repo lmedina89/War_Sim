@@ -1,65 +1,169 @@
-# War Sim v0.4.0.3 — Software Quality Report
+# War Sim v0.4.1 — Software Quality Report
 
 ## Executive result
 
-**PASS — approved for live mobile validation.**
+**PASS — release candidate approved for live iPhone validation.**
 
-v0.4.0.3 is a presentation/interaction release built on the v0.4.0.2 simulation foundation. No world-schema bump was introduced. The audit focused on preventing the visual overhaul from leaking branch-specific content into runtime code, duplicating simulation state, breaking Unit/Personnel scope isolation, regressing save compatibility, or introducing expensive broad scans.
+The interrupted v0.4.1 worktree was treated as untrusted. It was compared against the known-good v0.4.0.3 package, repaired, completed, then subjected to source-level and behavioral verification before packaging. No interrupted artifact was assumed valid simply because it existed.
 
 ## Release identity
 
-- Runtime version: **0.4.0.3**
+- Runtime version: **0.4.1**
 - Save format: **3**
-- World schema: **12**
+- World schema: **13**
 - Primary views: **5** — Career, Unit, Personnel, Orders, More
-- JavaScript source modules checked: **69**
-- JavaScript source lines: approximately **3,293**
+- JavaScript runtime/test architecture remains plain ES modules with no production dependencies
 
-## Verification performed
+## Recovery / integrity procedure
 
-### Syntax and module graph
+1. Re-extracted the known-good v0.4.0.3 ZIP as a comparison baseline.
+2. Compared the interrupted v0.4.1 worktree file-by-file against the baseline.
+3. Identified incomplete UI/version/documentation state rather than trusting partial generated files.
+4. Repaired DOM requirements, release identity, tests, and the new gameplay systems.
+5. Ran syntax, smoke, quality, deterministic-world, migration, long-run simulation, and stress-index checks.
+6. Package verification is performed again after final ZIP creation by extracting that exact archive to a clean directory and rerunning the test suites.
 
-**PASS**
-
-- every JS/MJS source and test file passed `node --check`
-- every relative static import resolves to an existing file
-- no broken module references were found
-
-### DOM/controller integrity
+## Static integrity
 
 **PASS**
 
-The audit confirms:
+Checks include:
+- every JS/MJS source/test file passes `node --check`
+- every relative static import resolves
 - no duplicate DOM IDs
 - every `app.js` `#id` dependency exists in `index.html`
-- all five primary views still exist
-- independent Unit/Personnel navigation controls remain present
-- Current Situation display exists
-- personnel-file reference and assignment breadcrumbs exist
-- AAR/SITREP reference field exists
-- persisted disclosure controls exist for major collapsible sections
+- all five primary views remain present
+- Unit and Personnel selection states remain independent
+- military visual components from v0.4.0.3 remain present
+- fixed-navigation safe-area and reduced-motion contracts remain present
 
-### Data-driven military presentation
+## Data-definition integrity
 
 **PASS**
 
-New immutable registries provide:
-- standard status presentation definitions
-- military document presentation definitions
+Validated registry references include:
+- branches/ranks/roles/billets/equipment
+- specialties/components/contracts
+- organization/generation profiles
+- career-start scenarios
+- skills/activities/event tables/events
+- feedback/performance/relationship/status/document presentation definitions
+- duties/schedule templates
+- readiness models
+- career opportunities/objectives
+- command authorities
 
-The audit validates required statuses including active, training, deployed, wounded, missing, POW, separated, retired, deceased, executed, and pending.
+Additional v0.4.1 definition checks verify:
+- schedule entries reference valid duty definitions
+- readiness weights are numeric and sum to 1
+- opportunity school/presentation references resolve
+- role authority IDs resolve through the authority registry
+- career-start schedule/readiness/starting-skill references resolve
+- generation profiles reference a valid readiness model
+- generic effect targets/fields are validated, including unit-training effects
 
-The audit validates document types including personnel file, order, AAR, notification, service record, unit status, and career record.
-
-The player-facing visual shell contains no hardcoded `DEPARTMENT OF THE ARMY` / `US ARMY` presentation. Personnel authority labels resolve from canonical branch data at runtime.
-
-### Runtime content hardcoding
+## Runtime state validation
 
 **PASS**
 
-Normal runtime modules were scanned for concrete content IDs that belong in data definitions/profiles. No forbidden Army/11B/rank/weapon/billet IDs were found outside approved data or legacy migration/repair areas.
+Schema-13 validation covers the existing canonical world plus:
+- exactly one valid unit-training profile per unit
+- readiness-model references
+- bounded training components
+- schedule person/unit/duty/template references
+- valid schedule intervals/statuses
+- opportunity person/definition/order references and lifecycle states
+- objective person/definition references and states
 
-### Determinism / safety hygiene
+Existing billet/person/unit, contract, service-period, assignment, qualification, award, relationship, order, skill-profile, activity, performance, and gameplay-event integrity checks remain enabled.
+
+## Soldier / unit gameplay integration
+
+**PASS**
+
+Behavioral tests verify:
+- new careers receive a rolling schedule
+- new careers receive the configured career objectives
+- the initial assignment objective completes from real assignment state
+- unit-training profiles exist for every generated unit
+- starting rifleman billet has no command authority
+- calculated readiness components remain bounded 0–100
+- PT creates fatigue and improves the unit physical-training component
+- completed activity history completes the training objective
+- Recovery reduces fatigue
+- focused activities are blocked when they overlap mandatory scheduled duty
+- unavailable activities expose a meaningful availability state/reason
+
+## Canonical scheduler
+
+**PASS**
+
+Tests verify:
+- schedule records are generated from the configured scenario/template
+- schedule coverage extends as the world advances
+- scheduled duties progress through scheduled/in-progress/completed states
+- duty effects modify canonical player/unit data
+- activity conflict detection prevents double-booking
+- accepted school windows replace/cancel conflicting personal duty participation rather than silently overlapping it
+- monthly training decay is applied by elapsed-world-time boundaries
+- passive recovery occurs on unscheduled days
+
+## Career opportunities / actionable orders
+
+**PASS**
+
+End-to-end Airborne opportunity test verifies:
+- eligibility appears after the configured service threshold
+- accepting the opportunity creates canonical orders
+- report delay is honored
+- order state progresses pending → executing → completed
+- opportunity state progresses open → accepted → in_progress → completed
+- player status changes to/from training appropriately
+- completion uses the existing school pipeline
+- Airborne qualification is awarded from the real school definition
+- resulting world validates after completion
+
+## Decisions / deadlines
+
+**PASS**
+
+- blocking decisions stop time advancement
+- definition-driven non-blocking decisions can advance to an expiry deadline
+- expiry resolves through the definition's default choice
+- deadline-default resolution is recorded
+- decision effects use the same generic effect engine
+
+## Billet command authority
+
+**PASS**
+
+- command-authority labels are registry definitions
+- role definitions reference authority IDs
+- an unauthorized player/rifleman command is rejected
+- a generated leader with the matching billet authority can execute the supported schedule command
+- authority is determined from billet → role → authority metadata, not from rank-specific UI logic
+
+## Readiness consistency fixes found during audit
+
+The audit found and fixed a subtle modeling issue: some event effects directly changed `unit.condition.readiness/cohesion`, while calculated readiness was derived from `unitTrainingProfiles`. A later sync could therefore erase the event's apparent effect.
+
+Fix:
+- generic effect engine now supports a validated `unitTraining` target
+- cohesion/equipment setbacks update the canonical training model
+- readiness is synchronized after event resolution
+- fresh person IDs are derived from the scoped billet set before readiness sync, preventing stale replacement/personnel membership from contaminating the calculation
+
+## Data-driven cleanup found during audit
+
+Additional fixes:
+- player starting skill values moved from runtime skill-ID conditionals into career-start scenario definitions
+- focused recovery detection uses the activity category rather than a concrete activity ID
+- schedule template is selected from the career-start scenario rather than "first registry entry"
+- generated units carry their configured readiness-model ID
+- authority labels no longer derive from string manipulation of IDs
+- activity completion refreshes the promotion-eligibility career objective immediately
+
+## Determinism / safety hygiene
 
 **PASS**
 
@@ -70,121 +174,95 @@ Runtime source contains no:
 - `document.write()`
 - runtime `.innerHTML =`
 
-The deterministic seeded simulation model remains intact.
+Same seed + same actions remain deterministic under the tested paths.
 
-### Selector/index efficiency
-
-**PASS**
-
-- hot selectors do not globally scan the people collection
-- scoped notification/qualification/reenlistment/billet commands retain indexed lookups
-- Unit roster and Personnel browsing continue to use derived indexes
-- descendant-unit traversal was tightened to cursor-based queue iteration rather than repeated array shifting
-
-Synthetic index stress:
-- **10,000 people**
-- packaged-copy index build: approximately **11–17 ms** across repeated verification runs
-- threshold: **2,000 ms**
-
-### Generated-world integrity
+## Generated-world testing
 
 **PASS**
 
 Formal quality suite:
 - **300 generated seeds** validated
-- no invalid worlds
 
-Additional packaged-copy sweep:
-- **1,000 generated seeds** validated
+Additional release sweep:
+- **1,000 generated seeds**
 - **0 failures**
-- sweep completed in approximately **802 ms** in the verification run
+- approximately **0.8 seconds** in the verification environment
 
-### Gameplay regression coverage
+Each generated world validates organization/billet/person/specialty/skills/unit-training integrity.
+
+## Long-run scheduler simulation
 
 **PASS**
 
-Existing gameplay tests still cover:
-- deterministic activities
-- skill progression
-- activity/performance/event records
-- pending decision resolution
-- reenlistment
-- personnel vacancy/replacement pipeline
+Additional behavioral sweep:
+- **20 independent seeds**
+- **180 simulated days per career**
+- blocking decisions resolved deterministically through a valid choice
+- **0 validation failures**
+
+This exercises repeated schedule generation, scheduled duties, events, opportunity generation/expiration, personnel lifecycle, replacement processing, readiness changes, and ongoing world validation.
+
+## Time-step / existing gameplay regression
+
+**PASS**
+
+Existing smoke coverage still verifies:
 - exact-date ETS
-- 30×1-day vs 1×30-day personnel consistency
-- generated billet-specialty integrity
+- reenlistment
+- vacancy/replacement pipeline
+- deterministic activity outcomes
+- one skill profile per person
+- generated specialty matches billet-profile mapping
+- generic gameplay decision resolution
 - low-level billet assignment
+- 30×1-day vs 1×30-day NPC personnel progression consistency
+- squad/player organization integrity
 
-### Save / migration integrity
-
-**PASS**
-
-- schema 11 → 12 migration remains valid
-- existing schema-12 v0.4.0.2 saves normalize runtime version to v0.4.0.3 without a schema bump
-- save/load round trip preserves canonical state
-- checksum corruption is rejected
-- disclosure/open-state preferences stay in local UI storage and do not enter canonical world/save state
-
-### Notification/history integrity
+## Save / migration integrity
 
 **PASS**
 
-- read/clear behavior still archives rather than destroys canonical notifications
-- active Inbox may be cleared while archived history remains recoverable through canonical records
+- direct schema **12 → 13** migration preserves player identity, unit assignment, active contract, and prior gameplay history while adding scheduler/training/opportunity/objective scaffolding
+- schema **11 → 13** chain remains valid
+- migrated careers are not regenerated or reassigned
+- browser save/load round trip preserves canonical state
+- checksum corruption rejection remains enabled
+- derived indexes are rebuilt rather than serialized
 
-### Mobile/accessibility presentation checks
+## Index / performance stress
 
-**PASS — static/contract checks**
+**PASS**
 
-Confirmed in source:
-- `viewport-fit=cover`
-- iPhone safe-area handling for fixed navigation/status feedback
-- reduced-motion media query
-- native buttons for interaction
-- focus-visible styling
-- narrow-screen reflow rules for situation metrics, command metrics, personnel rows, record strips, AARs, and order status blocks
+Quality suite synthetic index population:
+- **10,000 people**
+- index build remains far below the existing 2,000 ms guardrail (single-run results vary by environment; typical verification is in the low tens of milliseconds)
 
-A real-device visual check remains appropriate because static QA cannot perfectly predict Safari layout rendering.
-
-## Visual architecture added
-
-The release adds or strengthens:
-- persistent Current Situation strip
-- digital military service-record Career header
-- tactical Unit command-status block
-- dense military roster files
-- dog-tag-inspired detailed personnel record using only real state fields
-- explicit Personnel → Unit and Order → Unit cross-navigation
-- stable human-readable record references derived from canonical IDs
-- operations/orders board styling
-- personnel message-center styling
-- AAR/SITREP document rails
-- military status stamps and metric blocks
-- remembered disclosure state outside simulation state
-- military confirmation-sheet styling
+Scoped hot paths continue to use derived indexes for Unit/Personnel browsing and other established command/selectors. New scheduler indexes include person, unit, start-day, and status lookup maps.
 
 ## Deliberate scope boundary
 
-The audit confirms v0.4.0.3 does **not** introduce:
+v0.4.1 does not implement:
 - deployment simulation
-- tactical combat
-- world map/national simulation
-- new playable branches
-- new playable MOS pipelines
-- logistics/economy systems
+- combat
+- enemy AI
+- strategic geography/world map
+- national economy/geopolitics
+- large playable MOS/branch expansion
 
-This keeps the release a controlled visual/interaction overhaul rather than a simulation rewrite.
+The purpose is to make soldier/unit life playable and to provide the reusable scheduling/readiness/opportunity/authority systems those later milestones will consume.
 
-## Remaining manual validation
+## Manual live validation recommended
 
-On the live iPhone build, verify:
-1. Current Situation strip does not wrap/clip badly on the narrowest screen you use.
-2. Personnel roster rows remain readable and tappable.
-3. Dog-tag personnel files open, scroll, and cross-navigate to Unit correctly.
-4. Orders with unit references can open the correct unit.
-5. Career Contract/Awards/Service Record and Personnel Connections remember open/closed state after refresh.
-6. AARs, time summaries, Inbox archive behavior, save/load, and bottom navigation still behave normally.
+On iPhone, verify:
+1. Existing v0.4.0.3 save loads and remains in the correct unit/squad.
+2. Career Objectives / Current Duty / Duty Schedule / Opportunities render without clipping.
+3. Try a focused activity that conflicts with an upcoming mandatory duty and confirm the reason is clear.
+4. Advance time through scheduled PT/range/drills and inspect SITREPs/AARs/readiness changes.
+5. Confirm fatigue rises with training and Recovery lowers it.
+6. Advance past the first school-opportunity threshold and test accept → Orders → report → completion.
+7. Check Unit → Readiness Breakdown.
+8. Save/reload after schedule/opportunity progression and verify the same dates/statuses remain.
 
 ## Final assessment
 
-**Approved for live mobile validation.** No known simulation, save, deterministic-RNG, organization-scope, or data-driven-architecture regression was found in the audited source tree.
+**Approved for live mobile validation after packaged-copy verification.**

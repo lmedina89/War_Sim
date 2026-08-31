@@ -1,3 +1,4 @@
+import { ensureUnitTrainingProfile } from "./unitReadiness.js";
 function getPath(object, path) {
   const parts = String(path).split(".");
   let current = object;
@@ -40,6 +41,10 @@ export function applyEffects(draft, registries, { personId, unitId = null, relat
       profile.values[effect.skillId] = Math.max(def.minimum, Math.min(def.maximum, value));
     } else if (effect.target === "person") numericEffect(person, effect.field, effect);
     else if (effect.target === "unit" && unit) numericEffect(unit, effect.field, effect);
+    else if (effect.target === "unitTraining" && unit) {
+      const training = ensureUnitTrainingProfile(draft, unit.id, unit.readinessModelId);
+      numericEffect(training.values, effect.field, effect);
+    }
     else if (effect.target === "relationships") {
       const records = relationshipIds == null ? Object.values(draft.entities.relationshipRecords) : relationshipIds.map(id => draft.entities.relationshipRecords[id]).filter(Boolean);
       for (const relationship of records) {

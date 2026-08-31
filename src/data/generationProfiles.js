@@ -5,6 +5,7 @@ export const generationProfileDefinitions = [
     branchId: "branch_army",
     nationId: "nation_demo",
     rootUnitId: "unit_company_001",
+    readinessModelId: "readiness_standard_unit",
     units: [
       { id: "unit_company_001", name: "Alpha Company", organizationDefinitionId: "orgdef_infantry_company", parentUnitId: null },
       { id: "unit_platoon_001", name: "1st Platoon", organizationDefinitionId: "orgdef_infantry_platoon", parentUnitId: "unit_company_001" },
