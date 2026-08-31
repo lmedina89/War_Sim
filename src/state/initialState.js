@@ -1,3 +1,4 @@
+import { ensureInfantryCompanyStructure } from "../services/organizationSeed.js";
 const NPC_SEED = [
   ["pers_1002", "Marcus", "Hill", "rank_army_e5", "billet_squad_leader", 100, 86, "weapon_carbine"],
   ["pers_1003", "Daniel", "Reyes", "rank_army_e4", "billet_team_leader", 96, 78, "weapon_service_rifle"],
@@ -92,9 +93,9 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
     loadouts[built.loadout.id] = built.loadout;
   });
 
-  return {
-    schemaVersion: 6,
-    gameVersion: "0.3.0",
+  const state = {
+    schemaVersion: 7,
+    gameVersion: "0.3.1",
     playerPersonId: null,
     world: {
       date: "2046-02-10",
@@ -150,4 +151,5 @@ export function createInitialWorldState({ seed = 0x4f1bbcdc } = {}) {
       interServiceTransferRecords: {}
     }
   };
+  return ensureInfantryCompanyStructure(state);
 }

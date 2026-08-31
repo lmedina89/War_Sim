@@ -29,4 +29,10 @@ export const rankDefinitions = [
     payGrade: "E6", hierarchyLevel: 6, category: "enlisted",
     promotionRequirements: null
   }
+,
+  { id:"rank_army_e7",schemaVersion:1,branchId:"branch_army",name:"Sergeant First Class",abbreviation:"SFC",payGrade:"E7",hierarchyLevel:7,category:"enlisted",promotionRequirements:null },
+  { id:"rank_army_e8",schemaVersion:1,branchId:"branch_army",name:"First Sergeant",abbreviation:"1SG",payGrade:"E8",hierarchyLevel:8,category:"enlisted",promotionRequirements:null },
+  { id:"rank_army_o1",schemaVersion:1,branchId:"branch_army",name:"Second Lieutenant",abbreviation:"2LT",payGrade:"O1",hierarchyLevel:7,category:"officer",promotionRequirements:null },
+  { id:"rank_army_o2",schemaVersion:1,branchId:"branch_army",name:"First Lieutenant",abbreviation:"1LT",payGrade:"O2",hierarchyLevel:8,category:"officer",promotionRequirements:null },
+  { id:"rank_army_o3",schemaVersion:1,branchId:"branch_army",name:"Captain",abbreviation:"CPT",payGrade:"O3",hierarchyLevel:9,category:"officer",promotionRequirements:null }
 ];

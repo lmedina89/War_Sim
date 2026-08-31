@@ -19,7 +19,7 @@ const appSource = fs.readFileSync(new URL("../src/app.js", import.meta.url), "ut
 const htmlSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const queriedIds = [...appSource.matchAll(/\$\(\"#([^\"]+)\"\)/g)].map(match => match[1]);
 for (const id of queriedIds) assert.match(htmlSource, new RegExp(`id=[\"']${id}[\"']`), `index.html missing #${id} required by app.js`);
-assert.match(htmlSource, /WAR SIM · v0\.3\.0/);
+assert.match(htmlSource, /WAR SIM · v0\.3\.1/);
 assert.match(htmlSource, /id="component-select"/);
 assert.match(htmlSource, /id="specialty-select"/);
 assert.match(htmlSource, /id="contract-select"/);
@@ -34,10 +34,10 @@ assert.equal(registries.contracts.size, 3);
 
 const initial = createInitialWorldState();
 assert.equal(initial.playerPersonId, null);
-assert.equal(initial.schemaVersion, 6);
-assert.equal(initial.gameVersion, "0.3.0");
-assert.equal(Object.keys(initial.entities.units).length, 3);
-assert.equal(Object.keys(initial.entities.billets).length, 9);
+assert.equal(initial.schemaVersion, 7);
+assert.equal(initial.gameVersion, "0.3.1");
+assert.equal(Object.keys(initial.entities.units).length, 13);
+assert.equal(Object.keys(initial.entities.billets).length, 91);
 
 const store = createStateStore(initial);
 let validation = validateWorldState(store.getState(), registries);
@@ -67,12 +67,15 @@ assert.equal(squad.members.find(x => x.isPlayer).role, "Rifleman");
 const career = selectCareerRecord(state, store.getIndexes(), registries, state.playerPersonId);
 assert.equal(career.specialty, "11B · Infantryman");
 const company = selectOrganizationView(state, store.getIndexes(), registries, "unit_company_001");
-assert.deepEqual(company.childUnitIds, ["unit_platoon_001"]);
+assert.deepEqual(company.childUnitIds, ["unit_platoon_001", "unit_platoon_002", "unit_platoon_003"]);
+assert.equal(company.authorizedStrength, 4);
+assert.equal(Object.keys(state.entities.people).length, 91);
 
 let service = selectServiceCareer(state, store.getIndexes(), registries, state.playerPersonId);
 assert.equal(service.contractDef.id, "contract_army_3y");
 assert.equal(service.reenlistmentWindowOpen, false);
 advanceWorldDays(store, 930);
+assert.ok(Object.keys(store.getState().entities.promotionRecords).length > 0, "NPC lifecycle should record early-career promotions as time advances");
 service = selectServiceCareer(store.getState(), store.getIndexes(), registries, state.playerPersonId);
 assert.equal(service.reenlistmentWindowOpen, true);
 const offers = generateReenlistmentOffers(store, registries, state.playerPersonId);
@@ -88,4 +91,4 @@ assert.equal(Object.keys(state.entities.orderRecords).length, 2);
 validation = validateWorldState(state, registries);
 assert.equal(validation.ok, true, validation.errors.join("\n"));
 
-console.log("War Sim v0.3.0 career contracts smoke test passed");
+console.log("War Sim v0.3.1 living organization smoke test passed");

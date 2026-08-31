@@ -1,5 +1,6 @@
+import { ensureInfantryCompanyStructure } from "../services/organizationSeed.js";
 export const CURRENT_SAVE_FORMAT_VERSION = 3;
-export const CURRENT_WORLD_SCHEMA_VERSION = 6;
+export const CURRENT_WORLD_SCHEMA_VERSION = 7;
 
 function roleToBilletDefinition(roleId) {
   const map = {
@@ -127,6 +128,15 @@ function migrateWorldV5ToV6(worldState) {
   return next;
 }
 
+
+function migrateWorldV6ToV7(worldState) {
+  const next = structuredClone(worldState);
+  next.schemaVersion = 7;
+  next.gameVersion = "0.3.1";
+  ensureInfantryCompanyStructure(next);
+  return next;
+}
+
 function migrateWorldV2ToV3(worldState) {
   const next = structuredClone(worldState);
   next.schemaVersion = 3;
@@ -162,12 +172,13 @@ export function migratePayload(payload) {
   if (next.worldState.schemaVersion === 3) next.worldState = migrateWorldV3ToV4(next.worldState);
   if (next.worldState.schemaVersion === 4) next.worldState = migrateWorldV4ToV5(next.worldState);
   if (next.worldState.schemaVersion === 5) next.worldState = migrateWorldV5ToV6(next.worldState);
+  if (next.worldState.schemaVersion === 6) next.worldState = migrateWorldV6ToV7(next.worldState);
 
   if (next.worldState.schemaVersion !== CURRENT_WORLD_SCHEMA_VERSION) {
     throw new Error(`Unsupported world schema: ${next.worldState.schemaVersion}`);
   }
 
-  next.gameVersion = "0.3.0";
-  next.worldState.gameVersion = "0.3.0";
+  next.gameVersion = "0.3.1";
+  next.worldState.gameVersion = "0.3.1";
   return next;
 }
