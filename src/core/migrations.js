@@ -1,4 +1,5 @@
 import { ensureInfantryCompanyStructure, npcIdentityForIndex } from "../services/organizationSeed.js";
+import { createEntityId } from "./ids.js";
 import { initializeUnitTrainingProfiles } from "../services/unitReadiness.js";
 import { ensureScheduleCoverageInDraft, seedCareerGameplayRecords, seedScheduleThrough, setTrainingPhaseInDraft } from "../services/careerGameplay.js";
 import { syncSimulationTiersForPlayerUnit } from "../services/livingUnit.js";
@@ -324,7 +325,7 @@ function migrateWorldV15ToV16(worldState) {
   next.world ??={};
   next.world.livingCareer ??={version:1,lastPlayerEventElapsedDay:-999};
   next.schemaVersion=16;
-  next.gameVersion="0.4.3.1";
+  next.gameVersion="0.4.3.2";
   return next;
 }
 
@@ -418,6 +419,44 @@ function migrateWorldV2ToV3(worldState) {
   return next;
 }
 
+
+function backfillArmyServiceRibbon(worldState) {
+  const personId=worldState.playerPersonId;
+  const person=worldState.entities?.people?.[personId];
+  if(!person || person.affiliation?.branchId!=="branch_army") return worldState;
+  worldState.entities.awardRecords ??= {};
+  const awards=Object.values(worldState.entities.awardRecords);
+  if(awards.some(record=>record.personId===personId&&record.awardId==="award_army_service_ribbon")) return worldState;
+
+  // Upgrade the retired pre-v0.4.3 representation in place so prestige/history are not duplicated.
+  const legacy=awards.find(record=>record.personId===personId&&record.awardId==="award_basic_training");
+  if(legacy){
+    legacy.awardId="award_army_service_ribbon";
+    legacy.schemaVersion=Math.max(3,legacy.schemaVersion??1);
+    legacy.sourceType=legacy.sourceType??"legacy_initial_entry_training";
+    legacy.reason=legacy.reason??"Initial entry training completed before assignment to the operational unit.";
+    return worldState;
+  }
+
+  // Player careers in the current Army scenario enter the operational unit only after IET.
+  // A durable enlistment event + initial assignment is therefore the canonical legacy evidence.
+  const enlistment=Object.values(worldState.entities.careerEvents??{}).find(record=>record.personId===personId&&record.type==="enlistment");
+  const assignment=Object.values(worldState.entities.assignmentRecords??{}).find(record=>record.personId===personId&&record.reason==="initial_assignment");
+  if(!enlistment || !assignment) return worldState;
+
+  const id=createEntityId(worldState,"award");
+  worldState.entities.awardRecords[id]={
+    id,schemaVersion:3,personId,awardId:"award_army_service_ribbon",
+    earnedDate:enlistment.date??assignment.startDate??person.career?.enlistmentDate??worldState.world?.date,
+    sourceType:"legacy_initial_entry_training_backfill",sourceId:enlistment.id,
+    reason:"Initial entry training completed before assignment to the operational unit."
+  };
+  const def=registries.awards.get("award_army_service_ribbon");
+  person.career ??= {};
+  person.career.prestige=(person.career.prestige??0)+(def?.prestigeValue??0);
+  return worldState;
+}
+
 export function migratePayload(payload) {
   let next = structuredClone(payload);
 
@@ -465,7 +504,8 @@ export function migratePayload(payload) {
   repairLegacyBilletRankViolations(next.worldState);
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
-  next.gameVersion = "0.4.3.1";
-  next.worldState.gameVersion = "0.4.3.1";
+  backfillArmyServiceRibbon(next.worldState);
+  next.gameVersion = "0.4.3.2";
+  next.worldState.gameVersion = "0.4.3.2";
   return next;
 }

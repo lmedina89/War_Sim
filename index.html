@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>War Sim v0.4.3.1</title>
+  <title>War Sim v0.4.3.2</title>
   <link rel="stylesheet" href="./src/ui/styles.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">WAR SIM · v0.4.3.1</p>
+        <p class="eyebrow">WAR SIM · v0.4.3.2</p>
         <h1>Military Career</h1>
         <p class="lede">Build a career inside a living military organization.</p>
       </div>
@@ -59,7 +59,7 @@
             <article class="panel objective-panel"><div class="section-heading compact-heading"><p class="section-kicker">MISSION FOCUS</p><h2>Career Objectives</h2></div><div id="career-objectives"></div></article>
             <article class="panel duty-panel"><div class="section-heading compact-heading"><p class="section-kicker">DUTY STATUS</p><h2>Current Duty</h2></div><div id="current-duty"></div></article>
           </section>
-          <section class="dashboard-grid living-career-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">LOOK AHEAD</p><h2>Next 30 Days</h2></div><div id="next-30-days"></div></article><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">UNIT LIFE</p><h2>Situation Feed</h2></div><div id="unit-situation-feed"></div></article></section>
+          <section class="dashboard-grid living-career-grid"><article class="panel"><div class="section-heading compact-heading"><p class="section-kicker">LOOK AHEAD</p><h2>Next 30 Days</h2></div><div id="next-30-days"></div></article><details class="panel disclosure-panel situation-feed-panel" data-persist-key="situation-feed" open><summary><span class="summary-kicker">UNIT LIFE</span><strong>Situation Feed <span id="situation-feed-count" class="summary-count"></span></strong></summary><div class="disclosure-body"><div id="unit-situation-feed"></div></div></details></section>
         </div>
 
         <div class="app-screen" data-career-screen="actions" hidden>

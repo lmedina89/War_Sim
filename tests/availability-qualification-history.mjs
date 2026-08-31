@@ -55,4 +55,4 @@ function careerStore(seed=415001){ const store=createStateStore(createInitialWor
  assert.ok(row.participantPersonIds.length>0,"home unit should still train without the Soldier away at school");
  assert.equal(Object.values(after.entities.performanceRecords).some(r=>r.personId===personId&&r.sourceId===scheduleId),false);
 }
-console.log("War Sim v0.4.3.1 availability, qualification-history, and school-effects QA passed");
+console.log("War Sim v0.4.3.2 availability, qualification-history, and school-effects QA passed");

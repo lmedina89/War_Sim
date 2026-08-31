@@ -38,4 +38,4 @@ for(const notice of opportunityNotices){assert.ok(notice.references?.opportunity
 const view=selectGameplay(state,store.getIndexes(),registries,personId);
 assert.ok(Array.isArray(view.recentActivities));
 assert.ok(Array.isArray(view.recentDuties));
-console.log("War Sim v0.4.3.1 mobile UX and career-page consolidation QA passed");
+console.log("War Sim v0.4.3.2 mobile UX and career-page consolidation QA passed");

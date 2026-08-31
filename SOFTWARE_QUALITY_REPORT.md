@@ -1,74 +1,140 @@
-# War Sim v0.4.3.1 — Software Quality Report
+# War Sim v0.4.3.2 — Software Quality Report
 
-## Release identity
+## Release scope
 
-Runtime: **0.4.3.1**  
-World schema: **16**  
-Save format: **3**  
-Generator: **v3**  
-Release focus: **Mobile App UX Overhaul**
+v0.4.3.2 is a narrow mobile-polish and legacy-award compatibility hotfix built from the packaged v0.4.3.1 baseline. The intended code changes are limited to version normalization, Soldier Identity tab sizing, Situation Feed compaction/disclosure behavior, and Army Service Ribbon legacy-save normalization.
 
-## Scope reviewed
+- Runtime: **0.4.3.2**
+- World schema: **16**
+- Save format: **3**
+- Generator: **v3**
 
-This release was reviewed as a presentation/navigation refactor on top of the exact packaged v0.4.3 baseline. The intended constraint was to preserve the existing military art direction and canonical simulation architecture while reducing excessive mobile scrolling and browser-like page length.
+## Result
 
-Production changes are narrowly limited to `index.html`, `src/app.js`, `src/ui/styles.css`, plus runtime-version normalization in `src/state/initialState.js` and `src/core/migrations.js`. No award, equipment, qualification, career-rule, world-generation, scheduler, persistence-format, or combat-profile logic was redesigned for this release.
+**PASS for packaged automated/static QA.**
 
-## UX implementation reviewed
+One environment limitation remains: an attempted Chromium headless smoke at 390×844 timed out with container DBus/environment errors, so no browser smoke pass is claimed.
 
-Career content is partitioned into Home, Actions, Soldier, Records, and Inbox screens. Unit content is partitioned into Unit, Roster, Ready, and Admin screens. Personnel is partitioned into Roster and Bonds. These are presentation-only visibility states; the original DOM targets remain mounted exactly once so existing render functions continue to update the same canonical views.
+## Automated regression suite
 
-Soldier Identity received a second-level focused navigation layer: Uniform, Loadout, Awards, Catalog, and Record. Existing v0.4.3 uniform artwork, SVG insignia, award cards, loadout profile, catalog, and DD214-style preview are preserved and are now shown one view at a time instead of being vertically stacked.
+**17/17 test scripts pass.**
 
-Sub-screen choices use local UI state only. Opportunity navigation resolves the target's owning Career screen before focusing it, and Unit-to-Personnel navigation explicitly opens the Roster screen. New careers reset to Career Home.
+Passing suites:
 
-## QA results
+1. `availability-qualification-history.mjs`
+2. `awards-soldier-identity.mjs`
+3. `capability-foundation.mjs`
+4. `career-continuity.mjs`
+5. `living-career-polish.mjs`
+6. `living-unit.mjs`
+7. `migration-qualification-hotfix.mjs`
+8. `mobile-app-navigation.mjs`
+9. `mobile-polish-compatibility.mjs`
+10. `mobile-ux-consolidation.mjs`
+11. `quality.mjs`
+12. `save-storage.mjs`
+13. `service-record-foundation.mjs`
+14. `smoke.mjs`
+15. `stability-hotfix.mjs`
+16. `training-consolidation.mjs`
+17. `unit-interaction-integrity.mjs`
 
-**PASS — 16/16 test scripts.**
+## Core quality/stress results
 
-The dedicated `mobile-app-navigation.mjs` suite verifies:
+`tests/quality.mjs` result: **PASS**.
 
-- all Career, Unit, Personnel, and Soldier Identity navigation targets exist;
-- every major legacy render target remains mounted exactly once;
-- DOM IDs remain unique after regrouping;
-- presentation screen state is handled outside canonical world state;
-- Soldier Identity contains Uniform/Loadout/Awards/Catalog/Record focused views;
-- sticky app-style tab navigation and 44px touch targets are present;
-- hidden screens are actually removed from layout;
-- reduced-motion support remains present;
-- no unsafe `innerHTML` assignment was introduced.
+- Source modules audited by quality suite: **91**
+- Generated-world seeds validated: **300**
+- Stress population: **10,000 people**
+- Primary views: **5**
+- Deterministic RNG audit: PASS
+- Runtime/concrete ID audit: PASS
+- DOM integrity: PASS
+- Import graph integrity: PASS
+- Render containment: PASS
+- Selector/index audit: PASS
+- Schema-13 migration: PASS
+- Direct schema-12 migration: PASS
+- Same-schema hotfix normalization: PASS
+- Remembered disclosure UI state: PASS
+- Reduced-motion support: PASS
+- Current-situation presentation: PASS
+- Personnel/unit cross-navigation: PASS
 
-The existing full suite also passes, including:
+The measured 10,000-person index-build run completed in approximately **10.93 ms** in this QA environment. This is a local benchmark, not a device performance guarantee.
 
-- 300 deterministic generated-world validations;
-- 10,000-person index stress audit;
-- deterministic RNG audit;
-- import graph integrity;
-- DOM integrity;
-- selector/index audit;
-- world migration and same-schema runtime normalization;
-- save-storage regression coverage;
-- awards/soldier-identity progression and display integration;
-- service-record and qualification-history regression coverage;
-- living-career, living-unit, training, capability, and gameplay smoke tests;
-- existing mobile disclosure and cross-navigation tests.
+## Syntax/static checks
 
-All **107 JS/MJS files** under `src/` and `tests/` pass `node --check`.
+All **108 JS/MJS files** under `src/` and `tests/` pass `node --check`.
 
-Static source audit found no `eval`, `new Function`, `innerHTML` assignment, or `document.write` usage in source JavaScript.
+The existing static-quality suite continues to enforce DOM/import integrity and unsafe rendering constraints. No new dynamic-code or HTML-injection mechanism was introduced by this patch.
 
-## Compatibility assessment
+## v0.4.3.2 targeted verification
 
-World schema remains **16** and save format remains **3**. The release changes runtime version metadata to 0.4.3.1 but does not require canonical-record migration for the UI refactor. Existing v0.4.3 saves remain structurally compatible and normalize through the existing same-schema migration path.
+### Soldier Identity tab sizing
+
+PASS.
+
+The identity sub-navigation now uses:
+
+- five explicit equal-width grid columns;
+- `minmax(0,1fr)` so labels can shrink with the card;
+- no horizontal overflow requirement for the normal five-tab set;
+- tighter <=420px spacing/font sizing while preserving the existing active-tab visual treatment.
+
+This specifically addresses the narrower nested Soldier card seen on iPhone, where the earlier `minmax(70px/72px,1fr)` auto-columns could exceed the available inner width.
+
+### Situation Feed compaction
+
+PASS.
+
+The Home Situation Feed now:
+
+- lives in a native `<details>` disclosure using the project's persisted disclosure system;
+- shows a three-record preview by default while expanded;
+- shows the total feed count in the summary;
+- exposes `Show All (N)` and `Show Recent` controls when more than three records exist;
+- preserves all feed records instead of discarding or archiving them.
+
+### Legacy Army Service Ribbon backfill
+
+PASS.
+
+Regression cases verify that:
+
+- a qualifying legacy Army player career with canonical enlistment + initial-assignment evidence and no ASR receives exactly one ASR record;
+- the backfilled award date is historical, based on the original career-start evidence rather than the load date;
+- the current ASR prestige value is applied once when no historical award existed;
+- running migration again creates no duplicate;
+- a retired `award_basic_training` record is upgraded in place to the current ASR ID;
+- upgrading the legacy record does not add prestige a second time;
+- the resulting world passes `validateWorldState`.
+
+The migration is intentionally quiet: it does not create a present-day award notification for an award that was historically earned before the feature existed.
+
+## Scope-control verification
+
+`src/core/saveSystem.js` SHA-256 in v0.4.3.2:
+
+`b67d3d64caecbe2cd32f2e8d683fd28174326439485f629be0f7fad2a4eb0c43`
+
+The packaged v0.4.3.1 baseline has the identical hash. Therefore the previously deferred save-recovery behavior was not modified in this patch.
 
 ## Known deferred issues
 
-The known v0.4.2.2 persistence-resilience findings were intentionally not addressed in this release per product direction. In particular, corrupted save-index reconstruction and automatic manual-backup recovery remain unresolved. Previously identified validator-hardening and transaction-safety items also remain future stability scope.
+The earlier v0.4.2.2 full audit findings remain applicable where not superseded:
 
-## Environment note
+- corrupted save-index reconstruction is still unresolved;
+- manual-save backups are still written without automatic fallback/restore behavior;
+- validator completeness for some canonical stores still warrants future hardening;
+- broader state-store transaction/error resilience remains future stability work.
 
-The automated Node-based suites and static audits completed successfully. A supplementary Chromium headless smoke attempt could not complete in the current container because the browser process did not terminate under the available headless environment; it produced no application-specific failure signal and was not counted as a passed browser test. Release approval therefore rests on the deterministic application regression suite, DOM/static integrity checks, and syntax/import audits listed above rather than claiming a browser automation pass that did not occur.
+These items were intentionally outside v0.4.3.2 scope.
 
-## Release decision
+## Browser smoke limitation
 
-**Approved for v0.4.3.1 packaging.** The refactor substantially reduces top-level mobile page length while preserving the v0.4.3 visual identity and canonical simulation architecture. The change set is isolated to presentation/navigation plus version normalization, and all 16 application regression suites pass.
+A local HTTP server plus headless Chromium was attempted at **390×844**. Chromium did not complete within the timeout and emitted DBus/environment errors from the container. Because the attempt did not produce a reliable rendered result, browser smoke is recorded as **NOT VERIFIED**, not PASS.
+
+## Release assessment
+
+Within the requested hotfix scope, v0.4.3.2 is suitable for packaging. The changes are small, backward-compatible at schema level, regression-covered, and preserve the v0.4.3.1 UI/gameplay architecture.

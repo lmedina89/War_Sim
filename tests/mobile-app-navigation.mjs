@@ -5,7 +5,7 @@ const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 
-assert.match(html,/War Sim v0\.4\.3\.1/);
+assert.match(html,/War Sim v0\.4\.3\.2/);
 for(const tab of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-tab="${tab}"`));
 for(const screen of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-screen="${screen}"`));
 for(const tab of ["overview","roster","readiness","admin"]) assert.match(html,new RegExp(`data-unit-tab="${tab}"`));
@@ -27,4 +27,4 @@ assert.deepEqual([...new Set(duplicates)],[],"DOM IDs must remain unique after s
 for(const id of ["career-summary","activity-options","soldier-identity","schools-awards","career-inbox","squad-body","unit-history","readiness-breakdown","relationships"]) {
   assert.equal(ids.filter(value=>value===id).length,1,`${id} must remain mounted exactly once`);
 }
-console.log("War Sim v0.4.3.1 mobile app navigation QA passed");
+console.log("War Sim v0.4.3.2 mobile app navigation QA passed");
