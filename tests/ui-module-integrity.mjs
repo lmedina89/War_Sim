@@ -16,6 +16,7 @@ const presentationSource=fs.readFileSync(path.join(rootDir,"src/ui/presentation.
 const relationshipsSource=fs.readFileSync(path.join(rootDir,"src/ui/render/relationships.js"),"utf8");
 const inboxSource=fs.readFileSync(path.join(rootDir,"src/ui/render/inbox.js"),"utf8");
 const historyArchiveSource=fs.readFileSync(path.join(rootDir,"src/ui/historyArchive.js"),"utf8");
+const unitPersonnelSource=fs.readFileSync(path.join(rootDir,"src/ui/render/unitPersonnel.js"),"utf8");
 const html=fs.readFileSync(path.join(rootDir,"index.html"),"utf8");
 
 // Phase-1 boundary: app remains the composition root while low-level UI concerns move out.
@@ -24,11 +25,11 @@ assert.match(app,/createNavigationController/);
 assert.match(app,/initializeDisclosureState/);
 assert.match(app,/createSaveManagerController/);
 assert.match(app,/createPersonProfileController/);
-assert.ok(Buffer.byteLength(app,"utf8") < 82_000,`app.js should remain below the Phase-6 82 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
+assert.ok(Buffer.byteLength(app,"utf8") < 70_000,`app.js should remain below the Phase-7 70 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
 assert.doesNotMatch(app,/\blocalStorage\b/,"app.js should use the resilient UI-storage module instead of direct localStorage access");
 
 // UI-only modules must stay presentation-only and never reach into canonical mutation layers.
-for(const [name,source] of [["dom.js",dom],["navigation.js",nav],["uiStorage.js",storageSource],["dialogs/saveManager.js",saveManagerSource],["dialogs/personProfile.js",personProfileSource],["presentation.js",presentationSource],["render/relationships.js",relationshipsSource],["render/inbox.js",inboxSource],["historyArchive.js",historyArchiveSource]]){
+for(const [name,source] of [["dom.js",dom],["navigation.js",nav],["uiStorage.js",storageSource],["dialogs/saveManager.js",saveManagerSource],["dialogs/personProfile.js",personProfileSource],["presentation.js",presentationSource],["render/relationships.js",relationshipsSource],["render/inbox.js",inboxSource],["render/unitPersonnel.js",unitPersonnelSource],["historyArchive.js",historyArchiveSource]]){
   assert.doesNotMatch(source,/from\s+["']\.\.\/(?:commands|services|state|core)\//,`${name} must not import canonical mutation/state infrastructure`);
   assert.doesNotMatch(source,/\.innerHTML\s*=/,`${name} must not introduce innerHTML assignment`);
 }

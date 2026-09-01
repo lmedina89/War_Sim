@@ -69,6 +69,7 @@ function advanceThroughDays(store, days) {
 const appSource = fs.readFileSync(path.join(root, "src/app.js"), "utf8");
 const domSource = fs.readFileSync(path.join(root, "src/ui/dom.js"), "utf8");
 const navigationSource = fs.readFileSync(path.join(root, "src/ui/navigation.js"), "utf8");
+const unitPersonnelSource = fs.readFileSync(path.join(root, "src/ui/render/unitPersonnel.js"), "utf8");
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 for (const id of [...`${appSource}\n${domSource}`.matchAll(/\$\("#([^"]+)"\)/g)].map(match => match[1])) {
   assert.match(htmlSource, new RegExp(`id=["']${id}["']`), `index.html missing #${id} required by app.js`);
@@ -89,7 +90,7 @@ assert.match(appSource, /selectedOrganizationUnitId/);
 assert.match(appSource, /personnelFilterUnitId/);
 assert.doesNotMatch(appSource, /selectedUnitId/);
 assert.match(appSource, /function collectUnitPersonnel\(/);
-assert.match(appSource, /renderUnitRoster\(state, indexes, selectedOrganizationUnitId\)/);
+assert.match(unitPersonnelSource, /renderUnitRoster\(state, indexes, selectedUnitId\)/);
 
 // Generation and simulation randomness must stay centralized; no direct Math.random() calls.
 for (const file of fs.readdirSync(path.join(root, "src"), { recursive: true }).filter(name => name.endsWith(".js"))) {
@@ -107,7 +108,7 @@ const sameA = createInitialWorldState({ seed: 123456789 });
 const sameB = createInitialWorldState({ seed: 123456789 });
 assert.deepEqual(sameA, sameB, "same seed must reproduce the same generated world");
 assert.equal(sameA.schemaVersion, 16);
-assert.equal(sameA.gameVersion, "0.4.3.10.3");
+assert.equal(sameA.gameVersion, "0.4.3.11");
 assert.equal(sameA.world.generation.generatorVersion, 3);
 assert.equal(Object.keys(sameA.entities.units).length, 13 + registries.formations.get(sameA.world.formationIdentityId).lineage.length);
 assert.equal(Object.keys(sameA.entities.billets).length, 91);
@@ -180,7 +181,7 @@ assert.deepEqual(npcNamesA, npcNamesB);
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema10", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 16);
-  assert.equal(payload.worldState.gameVersion, "0.4.3.10.3");
+  assert.equal(payload.worldState.gameVersion, "0.4.3.11");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(payload.worldState.world.generation.legacyWorld, true);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -436,7 +437,7 @@ assert.equal(validateWorldState(store.getState(), registries).ok, true);
   const beforeUnit = legacy.entities.people[legacy.playerPersonId].affiliation.unitId;
   const payload = migratePayload({ saveFormatVersion:3, saveId:"schema12-v041", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 16);
-  assert.equal(payload.worldState.gameVersion, "0.4.3.10.3");
+  assert.equal(payload.worldState.gameVersion, "0.4.3.11");
   assert.equal(payload.worldState.entities.people[payload.worldState.playerPersonId].affiliation.unitId, beforeUnit);
   assert.equal(Object.keys(payload.worldState.entities.unitTrainingProfiles).length, Object.keys(payload.worldState.entities.units).length);
   assert.ok(Object.values(payload.worldState.entities.scheduleRecords).some(record => record.personId === payload.worldState.playerPersonId));

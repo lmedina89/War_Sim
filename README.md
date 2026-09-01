@@ -1,15 +1,36 @@
-# War Sim v0.4.3.10.3 — Browser Startup Recovery Hotfix
+# War Sim v0.4.3.11 — UI Architecture Refactor Phase 7
 
-War Sim v0.4.3.10.3 is built from the exact user-uploaded v0.4.3.10.2 package. It preserves the Phase 5 and Phase 6 UI refactors and repairs the browser-startup regression that left GitHub Pages showing only the static Military Career shell.
+War Sim v0.4.3.11 is built directly from the verified v0.4.3.10.3 startup-recovery baseline. Runtime **0.4.3.11**, world schema **16**, save format **3**, generator **v3**.
 
-Runtime **0.4.3.10.3**, world schema **16**, save format **3**, generator **v3**.
+This is a refactor-only release. It does not intentionally change gameplay, simulation rules, save data, career progression, world generation, or canonical records.
 
-## Fix
+## Phase 7: Unit / Personnel presentation boundary
 
-Phase 5 extracted UI archive persistence into `src/ui/historyArchive.js`, but the Person Profile controller still required a low-level `writeUiArchive` callback. The controller did not expose `write()` and `src/app.js` passed an undefined `writeUiArchive` identifier while composing the Person Profile controller. Browser execution therefore threw `ReferenceError: writeUiArchive is not defined` before the initial render.
+The Unit and Personnel presentation layer is now extracted to `src/ui/render/unitPersonnel.js`.
 
-v0.4.3.10.3 exposes the existing history archive `write()` operation and explicitly binds it in `app.js` before Person Profile composition. No gameplay, world-generation, schema, save-format, command, service, selector, or canonical-record behavior changes.
+The extracted renderer owns DOM presentation for:
 
-## Verification improvement
+- Unit organization browsing and breadcrumbs
+- selected-unit command header and formation identity
+- Unit roster presentation
+- Personnel browser cards and readiness indicators
+- readiness-component and capability presentation
+- Unit history presentation and UI-only archiving controls
+- command-authority presentation and schedule-duty buttons
+- order-card presentation and Unit cross-navigation
 
-A dedicated startup-runtime binding test now verifies the history controller exposes `write()`, verifies round-trip archive persistence, verifies the app composition binding exists before Person Profile construction, and verifies the callback is injected. The final package is additionally exercised in Chromium with the complete application module graph bundled into the browser DOM; the New Career form must visibly render with zero page errors before release.
+`src/app.js` remains the composition/controller root. It still owns `selectedOrganizationUnitId` and `personnelFilterUnitId`, canonical store access, navigation composition, and all state-changing commands. The renderer receives selectors, services, presentation helpers, and mutation/navigation callbacks through dependency injection rather than importing canonical command/state infrastructure directly.
+
+## Architecture result
+
+`src/app.js` changed from **80,411 bytes / 722 lines** in v0.4.3.10.3 to **67,134 bytes / 678 lines** in v0.4.3.11.
+
+A new `tests/unit-personnel-module.mjs` protects the extracted presentation boundary. A new `tests/module-import-closure.mjs` verifies that every relative runtime module import resolves to an actual packaged source file.
+
+The previous browser-startup regression protections remain in place, including the startup composition and runtime-binding tests.
+
+## Compatibility
+
+World schema remains **16**. Save format remains **3**. Generator remains **v3**. `src/core/saveSystem.js` is unchanged and retains SHA-256:
+
+`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`

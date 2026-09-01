@@ -28,6 +28,7 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes:true }).flatMap(entry =>
 const jsFiles = walk(srcRoot).filter(file => file.endsWith(".js"));
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(srcRoot, "app.js"), "utf8");
+const unitPersonnelSource = fs.readFileSync(path.join(srcRoot, "ui/render/unitPersonnel.js"), "utf8");
 const css = fs.readFileSync(path.join(srcRoot, "ui", "styles.css"), "utf8");
 
 function advanceThroughDays(store, days) {
@@ -75,7 +76,7 @@ assert.match(html, /Squad Connections/, "relationship presentation heading must 
 assert.match(app, /selectedOrganizationUnitId/, "Unit view must own organization selection state");
 assert.match(app, /personnelFilterUnitId/, "Personnel view must own independent filter state");
 assert.doesNotMatch(app, /selectedUnitId/, "legacy shared Unit/Personnel selection state must not return");
-assert.match(app, /renderUnitRoster\(state, indexes, selectedOrganizationUnitId\)/, "Unit roster must follow selected organization scope");
+assert.match(unitPersonnelSource, /renderUnitRoster\(state, indexes, selectedUnitId\)/, "Unit roster must follow selected organization scope");
 assert.match(app, /summaryItems/, "time-advance UI must consume semantic summary items");
 assert.doesNotMatch(app, /action Records|actionRecords:\s*\+/, "player-facing time summary must not leak raw record collection names");
 assert.match(app, /statusTimer/, "transient status feedback must replace persistent page messages");
@@ -237,7 +238,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   for (const unit of Object.values(legacy.entities.units)) delete unit.readinessModelId;
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"schema12-visual", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
   assert.equal(migrated.worldState.schemaVersion, 16);
-  assert.equal(migrated.worldState.gameVersion, "0.4.3.10.3");
+  assert.equal(migrated.worldState.gameVersion, "0.4.3.11");
   assert.equal(migrated.worldState.entities.people[personId].identity.displayName, name);
   assert.equal(migrated.worldState.entities.people[personId].affiliation.unitId, unitId);
   assert.ok(migrated.worldState.entities.contractRecords[contractId], "active contract must survive schema-12 migration");
@@ -255,7 +256,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 16);
-  assert.equal(payload.worldState.gameVersion, "0.4.3.10.3");
+  assert.equal(payload.worldState.gameVersion, "0.4.3.11");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -285,7 +286,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   current.gameVersion = "0.4.0.2";
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.2", worldState:current });
   assert.equal(migrated.worldState.schemaVersion, 16);
-  assert.equal(migrated.worldState.gameVersion, "0.4.3.10.3");
+  assert.equal(migrated.worldState.gameVersion, "0.4.3.11");
 }
 
 // Notification clearing archives records, uses indexed scope, and keeps canonical history intact.
