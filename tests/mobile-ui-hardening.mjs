@@ -35,4 +35,4 @@ for(const pattern of [
 // Fixed labels may stay nowrap; dynamic military metric values may not regress back to it.
 assert.match(css,/\.screen-tabs button\{[^}]*white-space:nowrap/s);
 
-console.log("War Sim v0.4.3.10.1 mobile UI hardening QA passed");
+console.log("War Sim v0.4.3.10.2 mobile UI hardening QA passed");

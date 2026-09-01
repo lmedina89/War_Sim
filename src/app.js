@@ -202,12 +202,6 @@ function playerAssignmentUnitId(state, indexes, personId = state.playerPersonId)
   return selectAssignmentView(state, indexes, registries, personId).chain.at(-1)?.unitId ?? null;
 }
 
-function formatMilitaryDate(isoDate) {
-  const date=new Date(`${isoDate}T00:00:00Z`);
-  if(Number.isNaN(date.getTime())) return String(isoDate ?? "—");
-  const day=String(date.getUTCDate()).padStart(2,"0"), month=date.toLocaleString("en-US",{month:"short",timeZone:"UTC"}).toUpperCase(), year=date.getUTCFullYear();
-  return `${day} ${month} ${year}`;
-}
 function renderPersistentWorldContext(state) {
   if(!els.persistentWorldContext) return;
   if(!state.playerPersonId){els.persistentWorldContext.textContent="";return;}
