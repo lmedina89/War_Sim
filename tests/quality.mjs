@@ -237,7 +237,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   for (const unit of Object.values(legacy.entities.units)) delete unit.readinessModelId;
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"schema12-visual", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.3", worldState:legacy });
   assert.equal(migrated.worldState.schemaVersion, 16);
-  assert.equal(migrated.worldState.gameVersion, "0.4.3.9");
+  assert.equal(migrated.worldState.gameVersion, "0.4.3.10.1");
   assert.equal(migrated.worldState.entities.people[personId].identity.displayName, name);
   assert.equal(migrated.worldState.entities.people[personId].affiliation.unitId, unitId);
   assert.ok(migrated.worldState.entities.contractRecords[contractId], "active contract must survive schema-12 migration");
@@ -255,7 +255,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   const beforeNames = Object.values(legacy.entities.people).map(p=>p.identity.displayName);
   const payload = migratePayload({ saveFormatVersion:3, saveId:"quality-legacy", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.3.2.3", worldState:legacy });
   assert.equal(payload.worldState.schemaVersion, 16);
-  assert.equal(payload.worldState.gameVersion, "0.4.3.9");
+  assert.equal(payload.worldState.gameVersion, "0.4.3.10.1");
   assert.deepEqual(Object.values(payload.worldState.entities.people).map(p=>p.identity.displayName), beforeNames);
   assert.equal(Object.keys(payload.worldState.entities.skillProfiles).length, Object.keys(payload.worldState.entities.people).length);
   assert.equal(validateWorldState(payload.worldState, registries).ok, true);
@@ -285,7 +285,7 @@ for (const event of registries.gameplayEvents.values()) assert.ok(registries.fee
   current.gameVersion = "0.4.0.2";
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"same-schema", createdAt:new Date().toISOString(), savedAt:new Date().toISOString(), gameVersion:"0.4.0.2", worldState:current });
   assert.equal(migrated.worldState.schemaVersion, 16);
-  assert.equal(migrated.worldState.gameVersion, "0.4.3.9");
+  assert.equal(migrated.worldState.gameVersion, "0.4.3.10.1");
 }
 
 // Notification clearing archives records, uses indexed scope, and keeps canonical history intact.

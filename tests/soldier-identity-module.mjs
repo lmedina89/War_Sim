@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const mod=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
+assert.match(app,/createSoldierIdentityRenderer/);
+assert.doesNotMatch(app,/function renderSoldierIdentity\(/);
+for(const text of ["Service Uniform","Combat Loadout","Awards & Insignia","Award Catalog","DD214-Style Preview","WHY EARNED","DECORATIONS \/ BADGES","MILITARY EDUCATION"]) assert.match(mod,new RegExp(text));
+assert.match(mod,/readUiText/); assert.match(mod,/writeUiText/);
+assert.doesNotMatch(mod,/from ["']\.\.\/\.\.\/(commands|services|state|core|selectors)\//);
+assert.doesNotMatch(mod,/\.innerHTML\s*=/);
+assert.ok(Buffer.byteLength(app,"utf8") < 82_000);
+console.log("War Sim Soldier Identity renderer module QA passed");

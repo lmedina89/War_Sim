@@ -3,10 +3,11 @@ import fs from "node:fs";
 
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const soldierIdentity=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const navigation=fs.readFileSync(new URL("../src/ui/navigation.js",import.meta.url),"utf8");
 
-assert.match(html,/War Sim v0\.4\.3\.9/);
+assert.match(html,/War Sim v0\.4\.3\.10/);
 for(const tab of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-tab="${tab}"`));
 for(const screen of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-screen="${screen}"`));
 for(const tab of ["overview","roster","readiness","admin"]) assert.match(html,new RegExp(`data-unit-tab="${tab}"`));
@@ -15,8 +16,8 @@ for(const tab of ["roster","relationships"]) assert.match(html,new RegExp(`data-
 assert.match(navigation,/function setSubscreen\(/);
 assert.match(navigation,/war-sim:ui:screen:/);
 assert.match(app,/createNavigationController/);
-assert.match(app,/identityTabDefs=\[\["uniform","Uniform"\],\["loadout","Loadout"\],\["awards","Awards"\],\["catalog","Catalog"\],\["record","Record"\]\]/);
-assert.match(app,/dataset\.identityScreen/);
+assert.match(soldierIdentity,/identityTabDefs=\[\["uniform","Uniform"\],\["loadout","Loadout"\],\["awards","Awards"\],\["catalog","Catalog"\],\["record","Record"\]\]/);
+assert.match(soldierIdentity,/dataset\.identityScreen/);
 assert.doesNotMatch(app,/\.innerHTML\s*=/);
 assert.match(css,/\.screen-tabs\{position:sticky/);
 assert.match(css,/min-height:44px/);

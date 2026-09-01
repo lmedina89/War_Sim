@@ -1,90 +1,30 @@
-# War Sim v0.4.3.9 — Software Quality Report
-
-## Release identity
-
-- Release: **v0.4.3.9 — UI Architecture Refactor Phase 5**
-- Baseline: exact verified **v0.4.3.8** GitHub package
-- Runtime: **0.4.3.9**
-- World schema: **16**
-- Save format: **3**
-- Generator: **v3**
+# War Sim v0.4.3.10.1 — Software Quality Report
 
 ## Scope
+Startup Composition Hotfix, built directly from the exact v0.4.3.10 UI Architecture Refactor Phase 6 package.
 
-This is a presentation-architecture refactor only. It extracts shared presentation primitives, relationship rendering, presentation-only history archive controls, and Inbox rendering from `src/app.js`. Canonical state, commands, services, selectors, save-format behavior, world schema, gameplay rules, and content definitions are not redesigned.
+The v0.4.3.9 Phase 5 Inbox extraction accidentally removed `scrollToCareerTarget()` and `openOpportunityRecord()` from `src/app.js` while the achievement and Inbox controllers still referenced `openOpportunityRecord` during module initialization. That produced a startup `ReferenceError` before the initial render, leaving only the static HTML/CSS shell visible. v0.4.3.10 inherited the same defect because it was built on v0.4.3.9.
 
-New focused modules:
+v0.4.3.10.1 restores those composition-layer navigation callbacks and adds startup-composition regression coverage. It preserves all Phase 5 and Phase 6 architecture work.
 
-- `src/ui/presentation.js`
-- `src/ui/historyArchive.js`
-- `src/ui/render/relationships.js`
-- `src/ui/render/inbox.js`
+Runtime **0.4.3.10.1**, world schema **16**, save format **3**, generator **v3**.
 
-`src/app.js` remains the composition root. It continues to own the state store, canonical selectors/actions, command execution, save validation/persistence coordination, and render orchestration. The extracted UI modules receive their dependencies through narrow presentation contracts.
+## Containment
+- No gameplay rule changes.
+- No schema, save-format, generator, command, service, selector, or canonical-record changes.
+- `src/app.js` only regains the two presentation/navigation callbacks required by existing controllers.
+- `src/app.js`: 80,722 bytes / 727 lines.
+- `src/core/saveSystem.js` remains byte-identical with SHA-256 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`.
+- All v0.4.3.10 Soldier Identity extraction work remains intact.
 
-## app.js reduction
+## Regression results
+- 30/30 test suites PASS.
+- 137/137 JS/MJS syntax checks PASS.
+- New `tests/startup-composition.mjs` PASS and verifies the required opportunity-navigation callback definition plus achievement/Inbox wiring.
+- Quality harness PASS.
+- 300 deterministic generated worlds PASS.
+- 10,000-person stress/index audit PASS.
+- Import graph, DOM integrity, deterministic RNG, save/storage, migrations, career-boundary, mobile UI, awards/identity, and architecture checks PASS.
 
-- v0.4.3.8 baseline: **103,524 bytes / 785 lines**
-- v0.4.3.9 final: **91,504 bytes / 747 lines**
-- Reduction this phase: **12,020 bytes**
-
-The Phase-5 architecture regression ceiling now requires `app.js` to remain below 100 KB.
-
-## Automated verification
-
-- **28/28 packaged test suites PASS**
-- **134/134 JS/MJS files pass `node --check`**
-- **106 runtime JS modules**
-- `tests/quality.mjs`: **PASS**
-- **300 deterministic generated worlds validated**
-- **10,000-person index stress audit PASS**
-- Observed final source-worktree index build: **10.85 ms** (environment-dependent regression indicator only)
-- deterministic RNG audit PASS
-- concrete runtime-ID audit PASS
-- DOM integrity PASS
-- import graph integrity PASS
-- render containment PASS
-- selector/index audit PASS
-- migrations and same-schema runtime normalization PASS
-- scheduler/opportunity/orders/readiness integration PASS
-- mobile/UI regression suites PASS
-- career-boundary integrity PASS
-- save-storage regression PASS
-
-## Phase-5 regression coverage
-
-`tests/presentation-modules.mjs` exercises the extracted modules with a minimal fake DOM and verifies:
-
-- shared rank/branch/status/document formatting;
-- stable compact record references;
-- military date formatting;
-- metric/progress DOM construction;
-- relationship band/meter/card rendering and profile-open callback behavior;
-- UI archive persistence, clear/restore controls, and rerender callback behavior;
-- Inbox unread/attention badges;
-- dispatch rendering;
-- opportunity-open/read acknowledgement/archive action callbacks;
-- presentation modules remain free of canonical command/service imports and unsafe `innerHTML` assignment.
-
-Existing tests that previously asserted presentation implementation strings inside `app.js` were redirected to the extracted module that now owns that behavior. The checks were preserved rather than removed.
-
-## Structural safety checks
-
-- **0 circular dependencies** in the runtime `src/` import graph.
-- Static sweep found no runtime `eval`, `new Function`, `document.write`, or `.innerHTML =` assignment.
-- New UI modules do not directly import canonical command/service/state/core mutation infrastructure.
-- History archive state remains presentation-only and is stored through the existing resilient `uiStorage` wrapper.
-- Inbox renderer receives notification mutations through injected callbacks rather than importing commands.
-
-## Save compatibility
-
-`src/core/saveSystem.js` is byte-identical to the stabilized baseline.
-
-SHA-256:
-`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
-
-World schema remains 16 and save format remains 3. Existing compatible saves normalize their runtime version to 0.4.3.9 through the existing same-schema migration path.
-
-## Release assessment
-
-**PASS.** v0.4.3.9 is suitable as the next provisional architecture checkpoint, subject to the user's later cumulative real-device smoke test after several refactor phases.
+## Device verification target
+On iPhone/GitHub Pages, confirm the initial New Career screen renders immediately instead of showing only the header/background shell. Then create or load a career and open Career → Inbox / an opportunity notification to verify the restored navigation callback works in its intended path.

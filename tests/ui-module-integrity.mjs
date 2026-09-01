@@ -24,7 +24,7 @@ assert.match(app,/createNavigationController/);
 assert.match(app,/initializeDisclosureState/);
 assert.match(app,/createSaveManagerController/);
 assert.match(app,/createPersonProfileController/);
-assert.ok(Buffer.byteLength(app,"utf8") < 100_000,`app.js should remain below the Phase-5 100 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
+assert.ok(Buffer.byteLength(app,"utf8") < 82_000,`app.js should remain below the Phase-6 82 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
 assert.doesNotMatch(app,/\blocalStorage\b/,"app.js should use the resilient UI-storage module instead of direct localStorage access");
 
 // UI-only modules must stay presentation-only and never reach into canonical mutation layers.

@@ -34,6 +34,7 @@ assert.equal(Object.values(store.getState().entities.awardRecords).filter(r=>r.p
 store.mutate(draft=>{evaluateServiceAwardsInDraft(draft,registries,personId);},["history","notifications"]);
 assert.equal(Object.values(store.getState().entities.awardRecords).filter(r=>r.personId===personId&&r.awardId==="award_army_good_conduct_medal").length,1,"service award evaluation must be idempotent on the same date");
 
+const soldierIdentity=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8"),insignia=fs.readFileSync(new URL("../src/ui/insignia.js",import.meta.url),"utf8"),html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
-assert.match(html,/id="soldier-identity"/);assert.match(app,/DD214-Style Preview/);assert.match(app,/renderSoldierIdentity/);assert.doesNotMatch(app,/\.innerHTML\s*=/);assert.doesNotMatch(insignia,/\.innerHTML\s*=/);assert.match(insignia,/badgeParachutist/);assert.match(insignia,/qualificationBadge/);
+assert.match(html,/id="soldier-identity"/);assert.match(soldierIdentity,/DD214-Style Preview/);assert.match(app,/createSoldierIdentityRenderer/);assert.doesNotMatch(app,/\.innerHTML\s*=/);assert.doesNotMatch(insignia,/\.innerHTML\s*=/);assert.match(insignia,/badgeParachutist/);assert.match(insignia,/qualificationBadge/);
 console.log("War Sim v0.4.3.2 awards, insignia, uniform, loadout, and service-record QA passed");

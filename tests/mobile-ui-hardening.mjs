@@ -3,9 +3,10 @@ import fs from "node:fs";
 
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const soldierIdentity=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 
-assert.match(html,/War Sim v0\.4\.3\.9/);
+assert.match(html,/War Sim v0\.4\.3\.10/);
 
 // Shared military metrics carry dynamic content. Long values must be allowed to wrap
 // instead of forcing a narrow grid/card to grow beyond the viewport.
@@ -13,7 +14,7 @@ assert.match(css,/\.mil-metric > strong \{[^}]*white-space: normal;[^}]*overflow
 assert.doesNotMatch(css,/\.mil-metric > strong \{[^}]*white-space:\s*nowrap/s);
 
 // Soldier Identity award cards are the concrete iPhone regression case.
-assert.match(app,/metricBlock\("WHY EARNED",latest\.reason\)/);
+assert.match(soldierIdentity,/metricBlock\("WHY EARNED",latest\.reason\)/);
 assert.match(css,/\.insignia-card\{[^}]*min-width:0;max-width:100%/s);
 assert.match(css,/\.insignia-card \.mil-metric,\.insignia-card \.mil-metric>strong\{[^}]*white-space:normal;[^}]*overflow-wrap:anywhere/s);
 
@@ -34,4 +35,4 @@ for(const pattern of [
 // Fixed labels may stay nowrap; dynamic military metric values may not regress back to it.
 assert.match(css,/\.screen-tabs button\{[^}]*white-space:nowrap/s);
 
-console.log("War Sim v0.4.3.9 mobile UI hardening QA passed");
+console.log("War Sim v0.4.3.10.1 mobile UI hardening QA passed");

@@ -10,6 +10,7 @@ import { evaluateCommendationAwardsInDraft } from "../src/services/awardProgress
 
 const root=new URL("../",import.meta.url);
 const appSource=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const soldierIdentitySource=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const personProfileSource=fs.readFileSync(new URL("../src/ui/dialogs/personProfile.js",import.meta.url),"utf8");
 const relationshipsSource=fs.readFileSync(new URL("../src/ui/render/relationships.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
@@ -25,8 +26,8 @@ function makeCareer(seed=433101){
 // Runtime/version and responsive DD214 containment.
 {
   const state=createInitialWorldState({seed:433102});
-  assert.equal(state.gameVersion,"0.4.3.9");
-  assert.match(html,/War Sim v0\.4\.3\.9/);
+  assert.equal(state.gameVersion,"0.4.3.10.1");
+  assert.match(html,/War Sim v0\.4\.3\.10/);
   assert.match(css,/\.dd214-preview \.mil-metric>strong\{white-space:normal;overflow-wrap:anywhere/);
 }
 
@@ -83,7 +84,7 @@ function makeCareer(seed=433101){
   assert.equal(aam.reason,"Sustained excellent duty and training performance.");
   const notice=Object.values(store.getState().entities.notificationRecords).find(n=>n.references?.awardRecordId===aam.id);
   assert.match(notice.message,/Sustained excellent duty and training performance/);
-  assert.match(appSource,/WHY EARNED/);
+  assert.match(soldierIdentitySource,/WHY EARNED/);
 }
 
-console.log("War Sim v0.4.3.9 on-device polish QA passed");
+console.log("War Sim v0.4.3.10.1 on-device polish QA passed");

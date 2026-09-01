@@ -1,23 +1,20 @@
-# War Sim v0.4.3.9 — UI Architecture Refactor Phase 5
+# War Sim v0.4.3.10.1 — Startup Composition Hotfix
 
-War Sim v0.4.3.9 is built directly from the verified v0.4.3.8 UI Architecture Refactor Phase 4 checkpoint. This release continues the conservative `src/app.js` decomposition by extracting reusable presentation primitives, relationship-card rendering, and presentation-only history archive controls into focused UI modules.
+War Sim v0.4.3.10.1 is built directly from the exact v0.4.3.10 UI Architecture Refactor Phase 6 package. It preserves all Phase 5 and Phase 6 architecture work while repairing a startup regression introduced in v0.4.3.9.
 
-Runtime **0.4.3.9**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.10.1**, world schema **16**, save format **3**, generator **v3**.
 
-## Phase 5 scope
+## Hotfix scope
 
-- Added `src/ui/presentation.js` for shared DOM presentation primitives and formatting helpers used across the UI.
-- Added `src/ui/render/relationships.js` for relationship-card and trust/respect/rapport meter rendering.
-- Added `src/ui/historyArchive.js` for presentation-only archive/show-more controls backed by the existing resilient UI-storage layer.
-- Added `src/ui/render/inbox.js` for dispatch-card, badge, and Inbox action presentation while canonical notification selection/mutation remains injected from `app.js`.
-- Kept `src/app.js` as the composition root. It injects registries, DOM targets, callbacks, and canonical actions rather than moving simulation ownership into the extracted modules.
-- Added `tests/presentation-modules.mjs` and strengthened UI architecture checks around the new module boundaries.
-- Updated older structural tests to verify behavior at the new module locations instead of assuming those helpers live physically inside `app.js`.
+- Restored the composition-layer `scrollToCareerTarget()` and `openOpportunityRecord()` callbacks that were accidentally removed during the Phase 5 Inbox extraction.
+- Those callbacks are required by the achievement and Inbox controllers during `app.js` initialization; their absence caused a `ReferenceError` before the initial render, leaving the HTML/CSS shell visible with a blank game body.
+- Preserved the v0.4.3.10 Soldier Identity renderer extraction and all earlier modular UI work.
+- Added a startup-composition regression test that verifies the required opportunity-navigation callbacks exist and remain wired into both controllers.
 
 ## Compatibility
 
-No gameplay rules, world schema, save format, generator, commands, services, selectors, or save-system behavior were redesigned. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.9 through the existing same-schema migration path.
+No gameplay rules, world schema, save format, generator behavior, commands, services, selectors, canonical records, or save-system behavior changed. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.10.1 through the existing same-schema migration path.
 
 ## QA
 
-See `SOFTWARE_QUALITY_REPORT.md` for exact packaged verification results.
+See `SOFTWARE_QUALITY_REPORT.md` for final exact-package verification.
