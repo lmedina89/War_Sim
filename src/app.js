@@ -32,29 +32,24 @@ import { selectSchoolCatalog } from "./selectors/selectSchoolCatalog.js";
 import { requestSchoolOpportunity } from "./commands/requestSchool.js";
 import { selectSoldierIdentity } from "./selectors/selectSoldierIdentity.js";
 import { createInsignia, createNamedInsignia, createRankInsignia } from "./ui/insignia.js";
+import { createDomRegistry } from "./ui/dom.js";
+import { initializeDisclosureState, readUiJson, writeUiJson, readUiText, writeUiText } from "./ui/uiStorage.js";
+import { createNavigationController } from "./ui/navigation.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, activeView = "career", statusTimer = null, personProfileActivityExpanded = false;
-let activeCareerScreen = "home", activeUnitScreen = "overview", activePersonnelScreen = "roster", activeSoldierTab = "uniform";
+let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null, personProfileActivityExpanded = false;
+let activeSoldierTab = "uniform";
 const CAREER_HISTORY_PREVIEW_LIMIT = 5;
 const UNIT_TRAINING_PREVIEW_LIMIT = 4;
 const UNIT_HISTORY_PREVIEW_LIMIT = 5;
 const SITUATION_FEED_PREVIEW_LIMIT = 3;
 
-const $ = selector => document.querySelector(selector);
-const els = {
-  appError: $("#app-error"), appErrorMessage: $("#app-error-message"), appErrorDismiss: $("#app-error-dismiss"), situationStrip: $("#situation-strip"), persistentWorldContext: $("#persistent-world-context"), navCareerBadge: $("#nav-career-badge"), pendingDecisions: $("#pending-decisions"), activityOptions: $("#activity-options"), skillSummary: $("#skill-summary"), activityHistory: $("#activity-history"), careerObjectives: $("#career-objectives"), next30Days: $("#next-30-days"), unitSituationFeed: $("#unit-situation-feed"), situationFeedCount: $("#situation-feed-count"), currentDuty: $("#current-duty"), dutySchedule: $("#duty-schedule"), careerOpportunities: $("#career-opportunities"), schoolCatalog: $("#school-catalog"), readinessBreakdown: $("#readiness-breakdown"), commandAuthority: $("#command-authority"), trainingPhaseSummary: $("#training-phase-summary"), unitHistory: $("#unit-history"), unitCapability: $("#unit-capability"),
-  newCareerPanel: $("#new-career-panel"), careerContent: $("#career-content"), newCareerForm: $("#new-career-form"), firstName: $("#first-name"), lastName: $("#last-name"), branchSelect: $("#branch-select"), componentSelect: $("#component-select"), specialtySelect: $("#specialty-select"), contractSelect: $("#contract-select"), worldSeed: $("#world-seed"), rerollSeed: $("#reroll-seed"),
-  squadMeta: $("#squad-meta"), squadBody: $("#squad-body"), careerSummary: $("#career-summary"), careerCard: $("#career-card"), promotionCard: $("#promotion-card"), schoolsAwards: $("#schools-awards"), soldierIdentity: $("#soldier-identity"), relationships: $("#relationships"), careerEvents: $("#career-events"), careerInbox: $("#career-inbox"), unreadBadge: $("#unread-badge"), markAllRead: $("#mark-all-read"), clearRead: $("#clear-read"), assignmentCard: $("#assignment-card"), unitBreadcrumbs: $("#unit-breadcrumbs"), organizationBrowser: $("#organization-browser"), unitPersonnel: $("#unit-personnel"), unitPersonnelMeta: $("#unit-personnel-meta"), returnMyUnit: $("#return-my-unit"), viewSelectedPersonnel: $("#view-selected-personnel"), personnelMyUnit: $("#personnel-my-unit"), personDogTag: $("#person-dog-tag"), personProfileAuthority: $("#person-profile-authority"), personProfileRef: $("#person-profile-ref"), personProfileBreadcrumbs: $("#person-profile-breadcrumbs"), ordersList: $("#orders-list"), serviceCareer: $("#service-career"), reenlistmentOffers: $("#reenlistment-offers"), reviewReenlistment: $("#review-reenlistment"), careerFramework: $("#career-framework"), personDialog: $("#person-dialog"), personProfileName: $("#person-profile-name"), personProfileBody: $("#person-profile-body"), personProfileClose: $("#person-profile-close"), administrationSummary: $("#administration-summary"), replacementRequests: $("#replacement-requests"), personnelActions: $("#personnel-actions"), diagnostics: $("#diagnostics"), auditNpc30: $("#audit-npc-30"), auditNpc90: $("#audit-npc-90"), auditNpc365: $("#audit-npc-365"), status: $("#status-message"), resultDialog: $("#result-dialog"), resultReference: $("#result-reference"), resultKicker: $("#result-kicker"), resultTitle: $("#result-title"), resultBody: $("#result-body"), resultClose: $("#result-close"),
-  advance1: $("#advance-1"), advance7: $("#advance-7"), advance30: $("#advance-30"), promote: $("#promote-player"), save: $("#save-game"), load: $("#load-game"), newCareer: $("#new-career"), loadFromStart: $("#load-from-start"),
-  achievementDialog: $("#achievement-dialog"), achievementType: $("#achievement-type"), achievementTitle: $("#achievement-title"), achievementMessage: $("#achievement-message"), achievementOk: $("#achievement-ok"),
-  saveDialog: $("#save-dialog"), saveDialogTitle: $("#save-dialog-title"), saveModeLabel: $("#save-mode-label"), saveSlots: $("#save-slots"), saveDialogClose: $("#save-dialog-close"),
-  confirmDialog: $("#confirm-dialog"), confirmTitle: $("#confirm-title"), confirmMessage: $("#confirm-message"), confirmOk: $("#confirm-ok"), careerTabInboxBadge: $("#career-tab-inbox-badge")
-};
+const els = createDomRegistry();
+const navigation = createNavigationController();
 
 function freshWorldSeed() {
   const values = new Uint32Array(1);
@@ -65,13 +60,6 @@ function assignFreshWorldSeed() { els.worldSeed.value = String(freshWorldSeed())
 assignFreshWorldSeed();
 els.rerollSeed.addEventListener("click", assignFreshWorldSeed);
 
-function initializeDisclosureState() {
-  document.querySelectorAll("details[data-persist-key]").forEach(details => {
-    const key=`war-sim:ui:details:${details.dataset.persistKey}`;
-    try { const saved=localStorage.getItem(key); if(saved != null) details.open=saved === "open"; } catch {}
-    details.addEventListener("toggle",()=>{ try { localStorage.setItem(key,details.open?"open":"closed"); } catch {} });
-  });
-}
 initializeDisclosureState();
 
 for (const branch of registries.branches.values()) { const option = document.createElement("option"); option.value = branch.id; option.textContent = branch.name; els.branchSelect.appendChild(option); }
@@ -94,38 +82,11 @@ function progressRow(label, value, max) {
   const track = document.createElement("div"); track.className = "progress-track"; track.setAttribute("role", "progressbar"); track.setAttribute("aria-label", label); track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", String(safeMax)); track.setAttribute("aria-valuenow", String(safeValue));
   const fill = document.createElement("div"); fill.className = "progress-fill"; fill.style.setProperty("--progress", `${percent}%`); track.appendChild(fill); wrapper.append(head, track); return wrapper;
 }
-function setSubscreen(kind, value, { scroll = true } = {}) {
-  const config = {
-    career: { allowed:["home","actions","soldier","records","inbox"], selector:"[data-career-screen]", button:"[data-career-tab]" },
-    unit: { allowed:["overview","roster","readiness","admin"], selector:"[data-unit-screen]", button:"[data-unit-tab]" },
-    personnel: { allowed:["roster","relationships"], selector:"[data-personnel-screen]", button:"[data-personnel-tab]" }
-  }[kind];
-  if (!config) return;
-  const next=config.allowed.includes(value)?value:config.allowed[0];
-  if(kind==="career") activeCareerScreen=next; else if(kind==="unit") activeUnitScreen=next; else activePersonnelScreen=next;
-  document.querySelectorAll(config.selector).forEach(section=>{section.hidden=section.dataset[`${kind}Screen`]!==next;});
-  document.querySelectorAll(config.button).forEach(button=>{const selected=button.dataset[`${kind}Tab`]===next;if(selected)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");});
-  try { localStorage.setItem(`war-sim:ui:screen:${kind}`,next); } catch {}
-  if(scroll) window.scrollTo({top:0,behavior:"auto"});
-}
-function restoreSubscreens() {
-  for (const [kind,fallback] of [["career","home"],["unit","overview"],["personnel","roster"]]) {
-    let value=fallback; try { value=localStorage.getItem(`war-sim:ui:screen:${kind}`)??fallback; } catch {}
-    setSubscreen(kind,value,{scroll:false});
-  }
-}
-function setActiveView(view, { scroll = true } = {}) {
-  activeView = ["career", "unit", "personnel", "orders", "more"].includes(view) ? view : "career";
-  document.querySelectorAll(".game-view[data-view]").forEach(section => { section.hidden = section.dataset.view !== activeView; });
-  document.querySelectorAll("#bottom-nav [data-view]").forEach(button => {
-    if (button.dataset.view === activeView) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
-  });
-  if (scroll) window.scrollTo({ top: 0, behavior: "auto" });
-}
+const { setSubscreen, restoreSubscreens, setActiveView } = navigation;
 function renderList(container, items, emptyText) { container.replaceChildren(); if (!items.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = emptyText; container.appendChild(p); return; } const ul = document.createElement("ul"); ul.className = "compact-list"; for (const item of items) { const li = document.createElement("li"); li.textContent = item; ul.appendChild(li); } container.appendChild(ul); }
 function uiArchiveKey(kind, personId) { return `war-sim:ui:archive:${kind}:${personId ?? "none"}`; }
-function readUiArchive(kind, personId) { try { const raw=localStorage.getItem(uiArchiveKey(kind,personId)); const values=raw?JSON.parse(raw):[]; return new Set(Array.isArray(values)?values:[]); } catch { return new Set(); } }
-function writeUiArchive(kind, personId, values) { try { localStorage.setItem(uiArchiveKey(kind,personId), JSON.stringify([...values])); } catch {} }
+function readUiArchive(kind, personId) { const values=readUiJson(uiArchiveKey(kind,personId),[]); return new Set(Array.isArray(values)?values:[]); }
+function writeUiArchive(kind, personId, values) { writeUiJson(uiArchiveKey(kind,personId), [...values]); }
 function archiveUiRecord(kind, personId, recordId) { archiveUiRecords(kind,personId,[recordId]); }
 function archiveUiRecords(kind, personId, recordIds) { const values=readUiArchive(kind,personId); for(const id of recordIds) values.add(id); writeUiArchive(kind,personId,values); render(); }
 function clearUiArchive(kind, personId) { writeUiArchive(kind,personId,new Set()); render(); }
@@ -636,9 +597,9 @@ function renderSoldierIdentity(state,indexes,personId,career) {
   els.soldierIdentity.replaceChildren();
   const identityNav=document.createElement("nav"); identityNav.className="screen-tabs identity-screen-tabs"; identityNav.setAttribute("aria-label","Soldier identity sections");
   const identityTabDefs=[["uniform","Uniform"],["loadout","Loadout"],["awards","Awards"],["catalog","Catalog"],["record","Record"]];
-  const setIdentityTab=(tab,{scroll=false}={})=>{activeSoldierTab=identityTabDefs.some(([id])=>id===tab)?tab:"uniform";for(const panel of els.soldierIdentity.querySelectorAll("[data-identity-screen]"))panel.hidden=panel.dataset.identityScreen!==activeSoldierTab;for(const button of identityNav.querySelectorAll("[data-identity-tab]")){if(button.dataset.identityTab===activeSoldierTab)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");}try{localStorage.setItem("war-sim:ui:screen:soldier-identity",activeSoldierTab);}catch{}if(scroll)window.scrollTo({top:0,behavior:"auto"});};
+  const setIdentityTab=(tab,{scroll=false}={})=>{activeSoldierTab=identityTabDefs.some(([id])=>id===tab)?tab:"uniform";for(const panel of els.soldierIdentity.querySelectorAll("[data-identity-screen]"))panel.hidden=panel.dataset.identityScreen!==activeSoldierTab;for(const button of identityNav.querySelectorAll("[data-identity-tab]")){if(button.dataset.identityTab===activeSoldierTab)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");}writeUiText("war-sim:ui:screen:soldier-identity",activeSoldierTab);if(scroll)window.scrollTo({top:0,behavior:"auto"});};
   for(const [id,label] of identityTabDefs){const button=document.createElement("button");button.type="button";button.dataset.identityTab=id;button.textContent=label;button.addEventListener("click",()=>setIdentityTab(id,{scroll:true}));identityNav.appendChild(button);}
-  try{activeSoldierTab=localStorage.getItem("war-sim:ui:screen:soldier-identity")??activeSoldierTab;}catch{}
+  activeSoldierTab=readUiText("war-sim:ui:screen:soldier-identity",activeSoldierTab);
   const tabs=document.createElement("div"); tabs.className="soldier-identity-tabs";
 
   const uniform=document.createElement("section"); uniform.className="identity-subpanel uniform-card"; uniform.dataset.identityScreen="uniform";
@@ -736,7 +697,7 @@ function render() {
   renderServiceCareer(state, indexes, state.playerPersonId);
   renderAdministration(state, indexes);
   els.diagnostics.textContent = JSON.stringify({ valid: validation.ok, validationErrors: validation.errors, definitionValidation, worldSchemaVersion: state.schemaVersion, gameVersion: state.gameVersion, worldClock: state.world.clock, worldSeed: state.world.seed, generation: state.world.generation, rngState: state.world.rngState, nextEntitySequence: state.world.nextEntitySequence, registryCounts: Object.fromEntries(Object.entries(registries).map(([k, r]) => [k, r.size])), runtimeCounts: Object.fromEntries(Object.entries(state.entities).map(([name, collection]) => [name, Object.keys(collection).length])), indexedSquadMembers: indexes.peopleByUnitId.get(squad.unitId)?.length ?? 0, playerRelationships: indexes.relationshipsByPersonId.get(state.playerPersonId)?.length ?? 0, simulationTierCounts:Object.values(state.entities.people).reduce((acc,p)=>{const k=`tier_${p.simulationTier??2}`;acc[k]=(acc[k]??0)+1;return acc;},{}), trainingPhase:state.world.scheduler?.trainingPhaseId ?? null }, null, 2);
-  setActiveView(activeView, { scroll: false });
+  setActiveView(navigation.getActiveView(), { scroll: false });
 }
 
 function auditNpcProgression(days){
@@ -783,7 +744,7 @@ function renderSaveManager(mode) {
 }
 function openSaveManager(mode) { renderSaveManager(mode); els.saveDialog.showModal(); }
 
-els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); activeCareerScreen="home"; setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
+els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
 els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
 els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 7)));
 els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
@@ -803,16 +764,13 @@ els.newCareer.addEventListener("click", async () => {
     els.branchSelect.value = scenario.branchId; els.componentSelect.value = scenario.componentId; els.specialtySelect.value = scenario.specialtyId;
     els.contractSelect.value = scenario.allowedContractDefinitionIds[0] ?? registries.components.get(scenario.componentId).defaultContractDefinitionId;
   }
-  els.worldSeed.value = String(seed); activeView = "career"; activeCareerScreen="home"; setSubscreen("career","home",{scroll:false}); selectedOrganizationUnitId = null; personnelFilterUnitId = null; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
+  els.worldSeed.value = String(seed); setActiveView("career",{scroll:false}); setSubscreen("career","home",{scroll:false}); selectedOrganizationUnitId = null; personnelFilterUnitId = null; setStatus("New career setup ready with a new generated world seed. Existing save slots were preserved.", "warn");
 });
 
 els.returnMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); selectedOrganizationUnitId=playerAssignmentUnitId(state,indexes); render(); });
 els.viewSelectedPersonnel.addEventListener("click", () => { personnelFilterUnitId=selectedOrganizationUnitId; setSubscreen("personnel","roster",{scroll:false}); setActiveView("personnel"); render(); });
 els.personnelMyUnit.addEventListener("click", () => { const state=store.getState(), indexes=store.getIndexes(); personnelFilterUnitId=playerAssignmentUnitId(state,indexes); render(); });
-document.querySelectorAll("#bottom-nav [data-view]").forEach(button => button.addEventListener("click", () => setActiveView(button.dataset.view)));
-document.querySelectorAll("[data-career-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("career",button.dataset.careerTab)));
-document.querySelectorAll("[data-unit-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("unit",button.dataset.unitTab)));
-document.querySelectorAll("[data-personnel-tab]").forEach(button=>button.addEventListener("click",()=>setSubscreen("personnel",button.dataset.personnelTab)));
+navigation.bindNavigation();
 restoreSubscreens();
 els.appErrorDismiss.addEventListener("click", () => { els.appError.hidden = true; });
 
