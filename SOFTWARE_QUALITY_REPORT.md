@@ -1,146 +1,116 @@
-# War Sim v0.4.3.4 — Software Quality Report
+# War Sim v0.4.3.5 — Software Quality Report
 
 ## Release identity
 
-- Version: **0.4.3.4 — UI Architecture Refactor Phase 1**
-- Base package: exact verified **v0.4.3.3.2 — Career Boundary Integrity Hotfix**
+- Version: **0.4.3.5 — UI Architecture Refactor Phase 2**
+- Baseline: exact packaged **v0.4.3.4 — UI Architecture Refactor Phase 1**
 - World schema: **16**
 - Save format: **3**
 - Generator: **v3**
-- Scope: presentation/controller refactor only; no gameplay feature or canonical data-model expansion
+- Scope: Save Manager UI extraction only; no gameplay feature or canonical-state redesign
 
-## Refactor scope
+## Refactor reviewed
 
-Phase 1 intentionally extracts only low-risk UI responsibilities from `src/app.js`:
+The existing Save Manager rendering and dialog orchestration were extracted from `src/app.js` into `src/ui/dialogs/saveManager.js` behind an injected controller contract. The module handles presentation concerns only: mode labels, slot cards, buttons, confirmations, dialog visibility, and successful-action refreshes.
 
-- `src/ui/dom.js` — centralized static DOM lookup registry.
-- `src/ui/uiStorage.js` — resilient best-effort UI-only local persistence helpers and disclosure-state persistence.
-- `src/ui/navigation.js` — primary view plus Career/Unit/Personnel subscreen presentation state and event binding.
-- `src/app.js` remains the composition/controller root and continues to own gameplay orchestration and render coordination.
-- Existing DOM IDs and mounted render targets are preserved.
-- World schema, save format, generator, commands, selectors, services, data definitions, indexes, CSS, assets, and save-system implementation are not redesigned.
+Canonical behavior deliberately remains in `app.js`: world validation, persistence calls, state replacement, post-load promotion-objective refresh, and status/error reporting. The UI module does not import `commands/`, `services/`, `state/`, or `core/` and does not directly access browser storage.
 
-The refactor reduces `src/app.js` from approximately **133,136 bytes / 833 physical lines** in v0.4.3.3.2 to approximately **126,116 bytes / 791 physical lines** in v0.4.3.4. The extracted modules make the responsibility boundary explicit without performing a large rewrite.
+`src/app.js` changed from **126,116 bytes / 791 physical lines** in v0.4.3.4 to **124,688 bytes / 824 physical lines** in v0.4.3.5. The byte reduction reflects extracted Save Manager presentation code; the line-count increase is intentional formatting of previously compressed persistence callbacks and is not growth in responsibility.
 
-## Exact runtime containment audit
+## Automated QA results
 
-A recursive SHA-256 comparison against the extracted v0.4.3.3.2 baseline was performed.
+**PASS — 24/24 test scripts.**
 
-**PASS:** every pre-existing runtime file outside the intentionally changed files remained byte-identical.
+The suite includes every v0.4.3.4 regression test plus the new `save-manager-module.mjs` test. The new test verifies:
 
-Intentionally changed/new runtime files:
+- Save and Load mode labels/titles;
+- Autosave remains non-editable/non-deletable from the Save Manager;
+- empty manual slots expose Save Here;
+- populated manual slots expose Overwrite/Delete;
+- overwrite confirmation cancellation prevents writes;
+- successful save triggers refresh;
+- Load mode exposes Load/Delete;
+- successful load closes the dialog;
+- delete confirmation cancellation prevents deletion;
+- successful delete triggers refresh;
+- the controller rejects incomplete required element contracts.
 
-- `README.md`
-- `index.html` — version identity only
-- `src/app.js`
-- `src/core/migrations.js` — current runtime-version normalization only
-- `src/state/initialState.js` — current runtime version only
-- `src/ui/dom.js` — new
-- `src/ui/navigation.js` — new
-- `src/ui/uiStorage.js` — new
+The Phase-2 UI architecture suite additionally verifies that the Save Manager module:
 
-In particular, normal gameplay modules under commands, services, selectors, data, indexes, and the rest of core/state remain unchanged except for the two version-normalization files above.
-
-`src/core/saveSystem.js` remains byte-identical to the stabilized save baseline:
-
-`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
-
-## Automated test results
-
-**PASS — 23/23 test suites.**
-
-The complete legacy suite remains green and a new architecture regression suite was added:
-
-- `tests/ui-module-integrity.mjs`
-
-It verifies:
-
-- `app.js` consumes the centralized DOM/navigation/storage modules;
-- `app.js` no longer directly accesses `localStorage`;
-- new UI modules do not import commands, services, canonical state, or core mutation infrastructure;
-- every static DOM ID referenced by `dom.js` exists in `index.html`;
-- static DOM IDs remain unique;
-- blocked/unavailable local storage remains non-fatal;
-- UI JSON/text persistence round trips correctly;
-- primary navigation and Career/Unit/Personnel subscreen switching preserve expected visibility and `aria-current` behavior;
-- presentation state remains isolated from canonical world state;
-- `app.js` remains below the Phase-1 130 KB regression ceiling.
-
-Existing navigation/smoke tests were updated only where they previously required navigation functions to physically reside inside `app.js`; they now verify the extracted navigation module instead.
+- does not import canonical command/service/state/core layers;
+- does not access localStorage/sessionStorage directly;
+- does not import or call `validateWorldState`, `saveToSlot`, `loadFromSlot`, or `deleteSaveSlot`;
+- does not introduce `.innerHTML =`;
+- is wired through `createSaveManagerController` from `app.js`;
+- keeps `app.js` below the Phase-2 **127 KB** regression ceiling.
 
 ## Full quality harness
 
-`tests/quality.mjs` result: **PASS**
+`tests/quality.mjs`: **PASS**
 
-- Runtime source modules: **97**
+- Runtime source files audited: **98**
 - Deterministic generated worlds validated: **300**
-- Stress population: **10,000 people**
-- Observed 10,000-person index build: **10.32 ms** in this audit environment
-- Primary views: **5**
+- Synthetic stress population: **10,000 people**
+- Observed index build in this environment: **12.06 ms**
 - Deterministic RNG audit: PASS
-- Concrete runtime ID audit: PASS
+- Runtime concrete-ID audit: PASS
 - DOM integrity: PASS
-- Import graph integrity: PASS
+- Static relative-import graph: PASS
 - Render containment: PASS
-- Independent Unit/Personnel UI state: PASS
+- Unit/Personnel state independence: PASS
 - Military presentation DOM: PASS
 - Gameplay definitions/integration: PASS
 - Canonical scheduler: PASS
-- Opportunity/orders integration: PASS
+- Career opportunity/orders integration: PASS
 - Readiness/conflict/recovery integration: PASS
 - Deterministic activities: PASS
-- Selector/index audit: PASS
-- Schema migration coverage: PASS
-- Same-schema version normalization: PASS
-- Current Situation/personnel cross-navigation/disclosure persistence checks: PASS
+- Selector/index audits: PASS
+- schema-12/schema-13/current-schema migration checks: PASS
+- same-schema runtime normalization: PASS
+- stable record references: PASS
+- current-situation display: PASS
+- Personnel ↔ Unit navigation: PASS
+- remembered disclosure UI state: PASS
 
-## Syntax and static source hygiene
+## Syntax and source hygiene
 
-**PASS — 120/120 JS/MJS files** under `src/` and `tests/` pass `node --check` (97 production JS + 23 test MJS files).
+All **122 JS/MJS files** under `src/` and `tests/` pass `node --check`.
 
-Static production-source scan found no:
+Static source sweeps remain clean for:
 
-- `eval(...)`
-- `new Function(...)`
-- `document.write(...)`
-- `.innerHTML = ...`
+- `eval`;
+- `new Function`;
+- `document.write`;
+- runtime `.innerHTML =` assignment.
 
-`src/app.js` contains no direct `localStorage` references after the extraction.
+The Save Manager uses DOM node construction and `textContent` for dynamic slot content.
 
-## Save / migration compatibility
+## Baseline containment / exact-diff review
 
-World schema remains **16** and save format remains **3**, so no schema migration is introduced for this UI refactor.
+Compared recursively with the exact v0.4.3.4 package, production runtime differences are intentionally limited to:
 
-A targeted compatibility probe created a schema-16 world stamped as **v0.4.3.3.2**, passed it through `migratePayload()`, and verified:
+- `index.html` — runtime version text only;
+- `src/app.js` — Save Manager presentation extraction and new controller wiring;
+- `src/ui/dialogs/saveManager.js` — new presentation-only module;
+- `src/state/initialState.js` — runtime version stamp only;
+- `src/core/migrations.js` — same-schema runtime version normalization only.
 
-- save format remains 3;
-- schema remains 16;
-- world seed is preserved;
-- runtime version normalizes to **0.4.3.4**.
+Other production modules remain unchanged. Test-file differences are limited to current-version expectations, the Phase-2 architecture expansion, and the new Save Manager regression suite.
 
-The complete packaged save/migration regression suites also pass.
+## Save-system containment
 
-## Architecture assessment
+`src/core/saveSystem.js` remains unchanged.
 
-This is the intended low-risk first step rather than a wholesale `app.js` rewrite.
+SHA-256:
 
-The project now has explicit boundaries for:
+`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
 
-- DOM discovery;
-- best-effort UI-only persistence;
-- primary/subscreen navigation;
-- the existing controller/composition root.
-
-The new UI modules are deliberately presentation-only. They cannot mutate canonical world state through imports because the architecture test rejects dependencies on commands/services/state/core.
-
-Remaining `app.js` responsibilities — rendering by domain, dialogs, save-manager UI, personnel profile rendering, Soldier Identity rendering, and command event wiring — should be extracted incrementally in later refactor phases, one coherent boundary at a time, with the same before/after regression discipline.
-
-## Real-device limitation
-
-This audit validates source, deterministic simulation, migration/save behavior, DOM/import structure, and headless Node-level UI module behavior. It does **not** replace live iPhone/Safari visual/touch testing. Because the HTML/CSS DOM contract was intentionally preserved and CSS is byte-identical to v0.4.3.3.2, visual risk is low, but a quick live smoke test after GitHub Pages deployment remains appropriate.
+No save key, save format, checksum behavior, slot layout, backup behavior, or persistence implementation was changed by this refactor.
 
 ## Release assessment
 
-**PASS — recommended as the new stable checkpoint after one live-device navigation/save smoke test.**
+**PASS — recommended as the next stable refactor checkpoint after a quick live iPhone smoke test.**
 
-No regression was found in the automated or adversarial checks. The refactor remains contained to presentation/controller architecture and version metadata, and all prior career-boundary integrity protections remain covered by the regression suite.
+This phase meaningfully reduces Save Manager presentation responsibility in `app.js` without moving canonical behavior into the UI layer. No gameplay, deterministic-world, migration, save-format, career-boundary, import, DOM, or syntax regression was found in automated QA.
+
+Recommended manual device smoke test after GitHub deployment: open Save, inspect Autosave/manual slots, save to an empty/manual slot, overwrite after confirmation, cancel an overwrite once, open Load, cancel a load once, load a career, and verify Delete/cancel Delete behavior.

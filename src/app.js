@@ -35,13 +35,14 @@ import { createInsignia, createNamedInsignia, createRankInsignia } from "./ui/in
 import { createDomRegistry } from "./ui/dom.js";
 import { initializeDisclosureState, readUiJson, writeUiJson, readUiText, writeUiText } from "./ui/uiStorage.js";
 import { createNavigationController } from "./ui/navigation.js";
+import { createSaveManagerController } from "./ui/dialogs/saveManager.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], saveMode = "save", selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null, personProfileActivityExpanded = false;
+let achievementQueue = [], selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null, personProfileActivityExpanded = false;
 let activeSoldierTab = "uniform";
 const CAREER_HISTORY_PREVIEW_LIMIT = 5;
 const UNIT_TRAINING_PREVIEW_LIMIT = 4;
@@ -722,27 +723,59 @@ function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { tr
 
 function confirmAction(title, message) { return new Promise(resolve => { els.confirmTitle.textContent = title; els.confirmMessage.textContent = message; const handler = () => { els.confirmDialog.removeEventListener("close", handler); resolve(els.confirmDialog.returnValue === "confirm"); }; els.confirmDialog.addEventListener("close", handler); els.confirmDialog.showModal(); }); }
 
-function renderSaveManager(mode) {
-  saveMode = mode; els.saveModeLabel.textContent = mode === "save" ? "SAVE CAREER" : "LOAD CAREER"; els.saveDialogTitle.textContent = mode === "save" ? "Choose Save Slot" : "Choose Career to Load"; els.saveSlots.replaceChildren();
-  const slots = listSaveSlots();
-  for (const meta of slots) {
-    const card = document.createElement("section"); card.className = `save-slot ${meta.slotId === AUTOSAVE_SLOT ? "autosave-slot" : ""}`.trim();
-    const h = document.createElement("h3"); h.textContent = meta.slotId === AUTOSAVE_SLOT ? "Autosave" : `Save ${Number(meta.slotId.split("_")[1])}`; card.appendChild(h);
-    if (meta.empty) { const p = document.createElement("p"); p.textContent = "Empty"; card.appendChild(p); }
-    else {
-      for (const text of [meta.characterName, `${resolveRankName(meta.rankId)} · ${resolveBranchName(meta.branchId)}`, meta.specialtyId && registries.specialties.has(meta.specialtyId) ? `${registries.specialties.get(meta.specialtyId).code} · ${registries.specialties.get(meta.specialtyId).name}` : null, meta.unitName ? `Unit · ${meta.unitName}` : null, meta.recoveredFromBackup ? "Recovery backup available" : (meta.corrupted ? "Save data is damaged" : null), `Game date ${meta.gameDate}`, `Saved ${formatSavedAt(meta.savedAt)}`, `v${meta.gameVersion} · schema ${meta.worldSchemaVersion}`].filter(Boolean)) { const p = document.createElement("p"); p.textContent = text; card.appendChild(p); }
+const saveManager = createSaveManagerController({
+  elements: { dialog: els.saveDialog, title: els.saveDialogTitle, modeLabel: els.saveModeLabel, slots: els.saveSlots },
+  getSlots: listSaveSlots,
+  autosaveSlotId: AUTOSAVE_SLOT,
+  confirmAction,
+  describeSlot: meta => [
+    meta.characterName,
+    `${resolveRankName(meta.rankId)} · ${resolveBranchName(meta.branchId)}`,
+    meta.specialtyId && registries.specialties.has(meta.specialtyId) ? `${registries.specialties.get(meta.specialtyId).code} · ${registries.specialties.get(meta.specialtyId).name}` : null,
+    meta.unitName ? `Unit · ${meta.unitName}` : null,
+    meta.recoveredFromBackup ? "Recovery backup available" : (meta.corrupted ? "Save data is damaged" : null),
+    `Game date ${meta.gameDate}`,
+    `Saved ${formatSavedAt(meta.savedAt)}`,
+    `v${meta.gameVersion} · schema ${meta.worldSchemaVersion}`,
+  ],
+  onSaveSlot: async meta => {
+    try {
+      const validation = validateWorldState(store.getState(), registries);
+      if (!validation.ok) throw new Error(`Save blocked: ${validation.errors.join(" | ")}`);
+      const saved = saveToSlot(store.getState(), meta.slotId);
+      setStatus(`Saved ${saved.characterName} to ${meta.slotId}.`, "good");
+      return true;
+    } catch (error) {
+      console.error(error);
+      setStatus(error instanceof Error ? error.message : "The save could not be written.", "bad");
+      return false;
     }
-    const actions = document.createElement("div"); actions.className = "actions";
-    if (mode === "save" && meta.slotId !== AUTOSAVE_SLOT) { const button = document.createElement("button"); button.type = "button"; button.textContent = meta.empty ? "Save Here" : "Overwrite"; button.addEventListener("click", async () => { if (!meta.empty && !(await confirmAction("Overwrite Save?", `Replace ${meta.characterName} in this slot?`))) return; try { const validation = validateWorldState(store.getState(), registries); if (!validation.ok) throw new Error(`Save blocked: ${validation.errors.join(" | ")}`); const saved = saveToSlot(store.getState(), meta.slotId); setStatus(`Saved ${saved.characterName} to ${meta.slotId}.`, "good"); renderSaveManager("save"); } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : "The save could not be written.", "bad"); } }); actions.appendChild(button); }
-    if (mode === "load" && !meta.empty) { const button = document.createElement("button"); button.type = "button"; button.textContent = "Load"; button.addEventListener("click", async () => { if (store.getState().playerPersonId && !(await confirmAction("Load Career?", "Unsaved progress in the current session will be replaced."))) return; try { const loaded = loadFromSlot(meta.slotId); if (!loaded) throw new Error("Save slot is empty."); const validation = validateWorldState(loaded.worldState, registries); if (!validation.ok) throw new Error(`Load blocked: ${validation.errors.join(" | ")}`); store.replaceState(loaded.worldState);
-        const loadedPersonId=store.getState().playerPersonId;
-        if(loadedPersonId){const eligibility=evaluatePromotionEligibility(store.getState(),store.getIndexes(),registries,loadedPersonId);store.mutate(draft=>updateCareerObjectivesInDraft(draft,registries,loadedPersonId,{promotionEligible:eligibility.eligible}),["careerGameplay"]);}
-        els.saveDialog.close(); setStatus(loaded.metadata?.recoveredFromBackup ? `Recovered and loaded ${loaded.metadata?.characterName ?? "career"} from the manual-save backup.` : `Loaded ${loaded.metadata?.characterName ?? "career"}.`, "good"); } catch (error) { setStatus(error.message, "bad"); } }); actions.appendChild(button); }
-    if (!meta.empty && meta.slotId !== AUTOSAVE_SLOT) { const del = document.createElement("button"); del.type = "button"; del.className = "secondary"; del.textContent = "Delete"; del.addEventListener("click", async () => { if (!(await confirmAction("Delete Save?", `Permanently delete ${meta.characterName}?`))) return; deleteSaveSlot(meta.slotId); renderSaveManager(mode); }); actions.appendChild(del); }
-    card.appendChild(actions); els.saveSlots.appendChild(card);
-  }
-}
-function openSaveManager(mode) { renderSaveManager(mode); els.saveDialog.showModal(); }
+  },
+  onLoadSlot: async meta => {
+    if (store.getState().playerPersonId && !(await confirmAction("Load Career?", "Unsaved progress in the current session will be replaced."))) return false;
+    try {
+      const loaded = loadFromSlot(meta.slotId);
+      if (!loaded) throw new Error("Save slot is empty.");
+      const validation = validateWorldState(loaded.worldState, registries);
+      if (!validation.ok) throw new Error(`Load blocked: ${validation.errors.join(" | ")}`);
+      store.replaceState(loaded.worldState);
+      const loadedPersonId = store.getState().playerPersonId;
+      if (loadedPersonId) {
+        const eligibility = evaluatePromotionEligibility(store.getState(), store.getIndexes(), registries, loadedPersonId);
+        store.mutate(draft => updateCareerObjectivesInDraft(draft, registries, loadedPersonId, { promotionEligible: eligibility.eligible }), ["careerGameplay"]);
+      }
+      setStatus(loaded.metadata?.recoveredFromBackup ? `Recovered and loaded ${loaded.metadata?.characterName ?? "career"} from the manual-save backup.` : `Loaded ${loaded.metadata?.characterName ?? "career"}.`, "good");
+      return true;
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), "bad");
+      return false;
+    }
+  },
+  onDeleteSlot: async meta => {
+    deleteSaveSlot(meta.slotId);
+    return true;
+  },
+});
 
 els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
 els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
@@ -750,11 +783,11 @@ els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(s
 els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
 els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
 els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
-els.save.addEventListener("click", () => openSaveManager("save")); els.load.addEventListener("click", () => openSaveManager("load")); els.loadFromStart.addEventListener("click", () => openSaveManager("load"));
+els.save.addEventListener("click", () => saveManager.open("save")); els.load.addEventListener("click", () => saveManager.open("load")); els.loadFromStart.addEventListener("click", () => saveManager.open("load"));
 els.resultClose.addEventListener("click",()=>{els.resultDialog.close();showNextAchievement();});
 els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true}));
-els.saveDialogClose.addEventListener("click", () => els.saveDialog.close());
+els.saveDialogClose.addEventListener("click", () => saveManager.close());
 els.personProfileClose.addEventListener("click", () => els.personDialog.close());
 els.newCareer.addEventListener("click", async () => {
   if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return;

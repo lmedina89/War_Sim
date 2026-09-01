@@ -6,7 +6,7 @@ const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const navigation=fs.readFileSync(new URL("../src/ui/navigation.js",import.meta.url),"utf8");
 
-assert.match(html,/War Sim v0\.4\.3\.4/);
+assert.match(html,/War Sim v0\.4\.3\.5/);
 for(const tab of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-tab="${tab}"`));
 for(const screen of ["home","actions","soldier","records","inbox"]) assert.match(html,new RegExp(`data-career-screen="${screen}"`));
 for(const tab of ["overview","roster","readiness","admin"]) assert.match(html,new RegExp(`data-unit-tab="${tab}"`));
