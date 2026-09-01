@@ -1,20 +1,15 @@
-# War Sim v0.4.3.10.2 — Startup Composition Hotfix
+# War Sim v0.4.3.10.3 — Browser Startup Recovery Hotfix
 
-War Sim v0.4.3.10.2 is built directly from the exact v0.4.3.10 UI Architecture Refactor Phase 6 package. It preserves all Phase 5 and Phase 6 architecture work while repairing a startup regression introduced in v0.4.3.9.
+War Sim v0.4.3.10.3 is built from the exact user-uploaded v0.4.3.10.2 package. It preserves the Phase 5 and Phase 6 UI refactors and repairs the browser-startup regression that left GitHub Pages showing only the static Military Career shell.
 
-Runtime **0.4.3.10.2**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.10.3**, world schema **16**, save format **3**, generator **v3**.
 
-## Hotfix scope
+## Fix
 
-- Restored the composition-layer `scrollToCareerTarget()` and `openOpportunityRecord()` callbacks that were accidentally removed during the Phase 5 Inbox extraction.
-- Those callbacks are required by the achievement and Inbox controllers during `app.js` initialization; their absence caused a `ReferenceError` before the initial render, leaving the HTML/CSS shell visible with a blank game body.
-- Preserved the v0.4.3.10 Soldier Identity renderer extraction and all earlier modular UI work.
-- Added a startup-composition regression test that verifies the required opportunity-navigation callbacks exist and remain wired into both controllers.
+Phase 5 extracted UI archive persistence into `src/ui/historyArchive.js`, but the Person Profile controller still required a low-level `writeUiArchive` callback. The controller did not expose `write()` and `src/app.js` passed an undefined `writeUiArchive` identifier while composing the Person Profile controller. Browser execution therefore threw `ReferenceError: writeUiArchive is not defined` before the initial render.
 
-## Compatibility
+v0.4.3.10.3 exposes the existing history archive `write()` operation and explicitly binds it in `app.js` before Person Profile composition. No gameplay, world-generation, schema, save-format, command, service, selector, or canonical-record behavior changes.
 
-No gameplay rules, world schema, save format, generator behavior, commands, services, selectors, canonical records, or save-system behavior changed. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.10.2 through the existing same-schema migration path.
+## Verification improvement
 
-## QA
-
-See `SOFTWARE_QUALITY_REPORT.md` for final exact-package verification.
+A dedicated startup-runtime binding test now verifies the history controller exposes `write()`, verifies round-trip archive persistence, verifies the app composition binding exists before Person Profile construction, and verifies the callback is injected. The final package is additionally exercised in Chromium with the complete application module graph bundled into the browser DOM; the New Career form must visibly render with zero page errors before release.

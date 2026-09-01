@@ -1,31 +1,42 @@
-# War Sim v0.4.3.10.2 — Software Quality Report
+# War Sim v0.4.3.10.3 — Software Quality Report
 
 ## Scope
-Startup Composition Hotfix, built directly from the exact v0.4.3.10 UI Architecture Refactor Phase 6 package.
 
-The v0.4.3.9 Phase 5 Inbox extraction accidentally removed `scrollToCareerTarget()` and `openOpportunityRecord()` from `src/app.js` while the achievement and Inbox controllers still referenced `openOpportunityRecord` during module initialization. That produced a startup `ReferenceError` before the initial render, leaving only the static HTML/CSS shell visible. v0.4.3.10 inherited the same defect because it was built on v0.4.3.9.
+Browser Startup Recovery Hotfix built directly from the exact user-uploaded `War-Sim-v0.4.3.10.2-GitHub(1).zip`.
 
-v0.4.3.10.2 preserves the restored composition-layer navigation callbacks from 0.4.3.10.1 and fixes the remaining browser-blocking startup defect: Phase 5 also imported `formatMilitaryDate` from the presentation toolkit while leaving the old same-name function declaration in `src/app.js`. Because `app.js` is loaded as an ES module, browsers reject that duplicate binding before any application code executes. The hotfix removes the stale duplicate and strengthens startup QA to parse `app.js` explicitly as an ES module. It preserves all Phase 5 and Phase 6 architecture work.
+Runtime **0.4.3.10.3**, world schema **16**, save format **3**, generator **v3**.
 
-Runtime **0.4.3.10.2**, world schema **16**, save format **3**, generator **v3**.
+## Root cause
 
-## Containment
-- No gameplay rule changes.
-- No schema, save-format, generator, command, service, selector, or canonical-record changes.
-- `src/app.js` keeps the two restored presentation/navigation callbacks required by existing controllers and removes only the stale duplicate `formatMilitaryDate` declaration.
-- No Soldier Identity, Inbox, relationship, dialog, save, or simulation behavior is redesigned in this hotfix.
-- `src/core/saveSystem.js` remains byte-identical with SHA-256 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`.
-- All v0.4.3.10 Soldier Identity extraction work remains intact.
+The Phase 5 history/archive extraction moved archive persistence behind `createHistoryArchiveController()`. `src/ui/dialogs/personProfile.js` still requires both `readUiArchive` and `writeUiArchive`, but the controller return object exposed `read` without exposing its existing `write` operation, and `src/app.js` passed `writeUiArchive` to `createPersonProfileController()` without defining that identifier. Real browser startup therefore failed with `ReferenceError: writeUiArchive is not defined` before the initial render, leaving only the static HTML/CSS shell.
 
-## Regression results
-- 30/30 test suites PASS.
-- 137/137 JS/MJS syntax checks PASS.
-- `tests/startup-composition.mjs` PASS and now verifies both required opportunity-navigation wiring and explicit ES-module parsing of `app.js`.
-- The previous classic-script-only syntax gate is supplemented by ES-module syntax validation, which catches duplicate module bindings before packaging.
-- Quality harness PASS.
-- 300 deterministic generated worlds PASS.
-- 10,000-person stress/index audit PASS.
-- Import graph, DOM integrity, deterministic RNG, save/storage, migrations, career-boundary, mobile UI, awards/identity, and architecture checks PASS.
+## Fix
 
-## Device verification target
-On iPhone/GitHub Pages, confirm the initial New Career screen renders immediately instead of showing only the header/background shell. Then create or load a career and open Career → Inbox / an opportunity notification to verify the restored navigation callback works in its intended path.
+- `src/ui/historyArchive.js` now exposes its existing `write` operation.
+- `src/app.js` binds `const writeUiArchive = historyArchive.write;` before Person Profile composition.
+- Added `tests/startup-runtime-bindings.mjs` to verify the archive write contract, round-trip persistence, composition ordering, and Person Profile injection.
+- No gameplay rules, schema, save format, generator behavior, commands, services, selectors, canonical records, or save-system behavior changed.
+
+## Verification
+
+- **31/31** test suites passed.
+- **138/138** JS/MJS files passed ES-module-aware syntax parsing.
+- `tests/quality.mjs`: PASS.
+- **300** deterministic generated worlds validated.
+- **10,000-person** stress/index audit passed.
+- Import graph integrity: PASS.
+- DOM integrity: PASS.
+- Deterministic RNG audit: PASS.
+- Save/migration compatibility: PASS.
+- Career-boundary regression: PASS.
+- Soldier Identity regression: PASS.
+- Mobile UI hardening regression: PASS.
+- Startup composition regression: PASS.
+- New startup runtime-binding regression: PASS.
+- Chromium browser startup proof: PASS with **0 page errors**; visible New Career form rendered with 3 inputs, 4 selects, `Begin Career`, and `Load Existing Career`.
+
+## Stable save implementation
+
+`src/core/saveSystem.js` SHA-256 remains:
+
+`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`

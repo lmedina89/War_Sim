@@ -52,5 +52,5 @@ export function createHistoryArchiveController({ onChange, storage }) {
     return actions;
   }
 
-  return { read, archiveRecord, archiveRecords, clear, createControls };
+  return { read, write, archiveRecord, archiveRecords, clear, createControls };
 }

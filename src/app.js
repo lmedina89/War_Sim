@@ -123,6 +123,7 @@ function openOpportunityRecord(opportunityRecordId) { scrollToCareerTarget(oppor
 
 const historyArchive = createHistoryArchiveController({ onChange: () => render() });
 const readUiArchive = historyArchive.read;
+const writeUiArchive = historyArchive.write;
 const archiveUiRecord = historyArchive.archiveRecord;
 const archiveUiRecords = historyArchive.archiveRecords;
 const createHistoryControls = historyArchive.createControls;
