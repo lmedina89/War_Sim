@@ -9,6 +9,7 @@ import { selectGameplay } from "../src/selectors/selectGameplay.js";
 
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const achievementDialog=fs.readFileSync(new URL("../src/ui/dialogs/achievementDialog.js",import.meta.url),"utf8");
+const historyArchive=fs.readFileSync(new URL("../src/ui/historyArchive.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 
@@ -16,8 +17,8 @@ assert.match(html,/v0\.4\.3/);
 assert.match(html,/data-persist-key="career-activities"/,"activities should be collapsible on long career pages");
 assert.match(app,/CAREER_HISTORY_PREVIEW_LIMIT\s*=\s*5/);
 assert.match(app,/UNIT_TRAINING_PREVIEW_LIMIT\s*=\s*4/);
-assert.match(app,/war-sim:ui:archive:/,"history archive state must remain presentation-only local UI state");
-assert.match(app,/Restore Archived/);
+assert.match(historyArchive,/war-sim:ui:archive:/,"history archive state must remain presentation-only local UI state");
+assert.match(historyArchive,/Restore Archived/);
 assert.match(achievementDialog,/Open Opportunity/);
 assert.match(achievementDialog,/career_opportunity/,"major school opportunities should enter the popup queue");
 assert.match(app,/openOpportunityRecord/);

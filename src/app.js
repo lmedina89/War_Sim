@@ -33,13 +33,17 @@ import { requestSchoolOpportunity } from "./commands/requestSchool.js";
 import { selectSoldierIdentity } from "./selectors/selectSoldierIdentity.js";
 import { createInsignia, createNamedInsignia, createRankInsignia } from "./ui/insignia.js";
 import { createDomRegistry } from "./ui/dom.js";
-import { initializeDisclosureState, readUiJson, writeUiJson, readUiText, writeUiText } from "./ui/uiStorage.js";
+import { initializeDisclosureState, readUiText, writeUiText } from "./ui/uiStorage.js";
 import { createNavigationController } from "./ui/navigation.js";
 import { createSaveManagerController } from "./ui/dialogs/saveManager.js";
 import { createPersonProfileController } from "./ui/dialogs/personProfile.js";
 import { createConfirmDialogController } from "./ui/dialogs/confirmDialog.js";
 import { createAchievementDialogController } from "./ui/dialogs/achievementDialog.js";
 import { createResultDialogController } from "./ui/dialogs/resultDialog.js";
+import { createPresentationToolkit } from "./ui/presentation.js";
+import { createRelationshipsRenderer } from "./ui/render/relationships.js";
+import { createInboxRenderer } from "./ui/render/inbox.js";
+import { createHistoryArchiveController } from "./ui/historyArchive.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
@@ -79,73 +83,33 @@ function setStatus(message, tone = "") {
   els.status.hidden = !message;
   if (message) statusTimer = setTimeout(() => { els.status.hidden = true; els.status.textContent = ""; }, tone === "bad" ? 6000 : 3200);
 }
-function statLine(label, value) { const wrapper = document.createElement("div"); wrapper.className = "statline"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = String(value); wrapper.append(key, val); return wrapper; }
-function progressRow(label, value, max) {
-  const safeMax = Math.max(1, Number(max) || 1), safeValue = Math.max(0, Number(value) || 0), percent = Math.max(0, Math.min(100, Math.round((safeValue / safeMax) * 100)));
-  const wrapper = document.createElement("div"); wrapper.className = "progress-row";
-  const head = document.createElement("div"); head.className = "progress-row-head"; const key = document.createElement("span"), val = document.createElement("strong"); key.textContent = label; val.textContent = `${safeValue.toLocaleString()} / ${safeMax.toLocaleString()}`; head.append(key, val);
-  const track = document.createElement("div"); track.className = "progress-track"; track.setAttribute("role", "progressbar"); track.setAttribute("aria-label", label); track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", String(safeMax)); track.setAttribute("aria-valuenow", String(safeValue));
-  const fill = document.createElement("div"); fill.className = "progress-fill"; fill.style.setProperty("--progress", `${percent}%`); track.appendChild(fill); wrapper.append(head, track); return wrapper;
-}
-const { setSubscreen, restoreSubscreens, setActiveView } = navigation;
-function renderList(container, items, emptyText) { container.replaceChildren(); if (!items.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = emptyText; container.appendChild(p); return; } const ul = document.createElement("ul"); ul.className = "compact-list"; for (const item of items) { const li = document.createElement("li"); li.textContent = item; ul.appendChild(li); } container.appendChild(ul); }
-function uiArchiveKey(kind, personId) { return `war-sim:ui:archive:${kind}:${personId ?? "none"}`; }
-function readUiArchive(kind, personId) { const values=readUiJson(uiArchiveKey(kind,personId),[]); return new Set(Array.isArray(values)?values:[]); }
-function writeUiArchive(kind, personId, values) { writeUiJson(uiArchiveKey(kind,personId), [...values]); }
-function archiveUiRecord(kind, personId, recordId) { archiveUiRecords(kind,personId,[recordId]); }
-function archiveUiRecords(kind, personId, recordIds) { const values=readUiArchive(kind,personId); for(const id of recordIds) values.add(id); writeUiArchive(kind,personId,values); render(); }
-function clearUiArchive(kind, personId) { writeUiArchive(kind,personId,new Set()); render(); }
-function createHistoryControls({ kind, personId, hiddenCount=0, archivedCount=0, expanded=false, onToggle }) {
-  const actions=document.createElement("div"); actions.className="history-actions";
-  if(hiddenCount>0){const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary compact-button";toggle.textContent=expanded?"Recent Only":`Show More (${hiddenCount})`;toggle.addEventListener("click",onToggle);actions.appendChild(toggle);}
-  if(archivedCount>0){const restore=document.createElement("button");restore.type="button";restore.className="secondary compact-button";restore.textContent=`Restore Archived (${archivedCount})`;restore.addEventListener("click",()=>clearUiArchive(kind,personId));actions.appendChild(restore);}
-  return actions;
-}
-function scrollToCareerTarget(targetId) {
-  setActiveView("career", { scroll:false });
-  const target=document.getElementById(targetId);
-  const screen=target?.closest("[data-career-screen]")?.dataset.careerScreen;
-  if(screen) setSubscreen("career",screen,{scroll:false});
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const current=document.getElementById(targetId); if(current){ const top=Math.max(0,window.scrollY+current.getBoundingClientRect().top-150); window.scrollTo({top,behavior:"smooth"}); current.classList.add("attention-flash"); setTimeout(()=>current.classList.remove("attention-flash"),1400); } }));
-}
-function openOpportunityRecord(opportunityRecordId) { scrollToCareerTarget(opportunityRecordId); }
-function resolveRankName(rankId) { return rankId ? `${registries.ranks.get(rankId).abbreviation} · ${registries.ranks.get(rankId).name}` : "—"; }
-function resolveBranchName(branchId) { return branchId ? registries.branches.get(branchId).name : "—"; }
-function formatSavedAt(value) { try { return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); } catch { return value ?? "—"; } }
+const {
+  statLine,
+  progressRow,
+  renderList,
+  resolveRankName,
+  resolveBranchName,
+  formatSavedAt,
+  performanceProfile,
+  feedbackProfile,
+  humanizeStatus,
+  statusProfile,
+  documentProfile,
+  compactReference,
+  statusStamp,
+  metricBlock,
+  recordReference,
+  formatMilitaryDate,
+} = createPresentationToolkit(registries);
 
-function relationshipBand(trust) { return registries.relationshipBands.values().find(band => trust >= band.minimumTrust && trust <= band.maximumTrust) ?? registries.relationshipBands.get("relationship_neutral"); }
-function meter(label, value, minimum = 0, maximum = 100, { signed = false } = {}) {
-  const wrapper=document.createElement("div"); wrapper.className=`relationship-meter${signed?" signed-meter":""}`;
-  const head=document.createElement("div"); head.className="meter-head"; const name=document.createElement("span"), amount=document.createElement("strong"); name.textContent=label; amount.textContent=signed && value>0 ? `+${value}` : String(value); head.append(name,amount);
-  const track=document.createElement("div"); track.className="meter-track"; const fill=document.createElement("div"); fill.className="meter-fill";
-  if(signed){ const numeric=Math.max(-100,Math.min(100,Number(value)||0)); const displacement=Math.sqrt(Math.abs(numeric)/100)*50; fill.classList.add(numeric<0?"negative":"positive"); fill.style.setProperty("--signed-width",`${displacement}%`); track.appendChild(fill); const center=document.createElement("span");center.className="meter-center";center.setAttribute("aria-hidden","true");track.appendChild(center); }
-  else { const percent=Math.max(0,Math.min(100,((Number(value)-minimum)/(maximum-minimum))*100)); fill.style.setProperty("--meter",`${percent}%`); track.appendChild(fill); }
-  wrapper.append(head,track); return wrapper;
-}
-function renderRelationships(relationships) {
-  els.relationships.replaceChildren();
-  if (!relationships.length) { const p=document.createElement("p"); p.className="empty-state"; p.textContent="No relationship records yet."; els.relationships.appendChild(p); return; }
-  for (const rel of relationships) {
-    const band=relationshipBand(rel.trust); const card=document.createElement("button"); card.type="button"; card.className=`relationship-card tone-${band.tone}`;
-    const top=document.createElement("div"); top.className="relationship-card-head"; const identity=document.createElement("div"); const h=document.createElement("strong"); h.textContent=`${rel.otherRank} ${rel.otherName}`; const role=document.createElement("span"); role.textContent=`${rel.otherRole} · ${rel.relationshipType}`; identity.append(h,role); const badge=document.createElement("span"); badge.className=`relationship-badge tone-${band.tone}`; badge.textContent=band.label; top.append(identity,badge);
-    const meters=document.createElement("div"); meters.className="relationship-meters"; meters.append(meter("Trust",rel.trust,-100,100,{signed:true}),meter("Respect",rel.respect??0,-100,100,{signed:true}),meter("Rapport",rel.rapport??0,-100,100,{signed:true}));
-    const context=document.createElement("div");context.className="relationship-context";if(rel.personalityTraits?.length){const traits=document.createElement("small");traits.textContent=`Traits: ${rel.personalityTraits.join(" · ")}`;context.appendChild(traits);}if(rel.memories?.length){const history=document.createElement("div");history.className="relationship-history";const historyLabel=document.createElement("small");historyLabel.className="relationship-history-label";historyLabel.textContent="Recent relationship changes";history.appendChild(historyLabel);for(const item of rel.memories.slice(0,3)){const row=document.createElement("small");row.className="relationship-memory";const changes=[["Trust",item.trustDelta],["Respect",item.respectDelta],["Rapport",item.rapportDelta]].filter(([,delta])=>Number(delta)!==0).map(([name,delta])=>`${name} ${Number(delta)>0?"+":""}${delta}`).join(" · ");row.textContent=`${item.date??"—"} · ${item.summary}${changes?` · ${changes}`:""}`;history.appendChild(row);}context.appendChild(history);}
-    card.append(top,meters,context); card.addEventListener("click",()=>showPersonProfile(rel.otherPersonId)); els.relationships.appendChild(card);
-  }
-}
-function performanceProfile(rating) { return registries.performanceRatings.has(rating) ? registries.performanceRatings.get(rating) : registries.performanceRatings.get("satisfactory"); }
-function feedbackProfile(definition) { return definition?.presentationId && registries.feedbackPresentations.has(definition.presentationId) ? registries.feedbackPresentations.get(definition.presentationId) : registries.feedbackPresentations.get("feedback_routine"); }
-function humanizeStatus(value) { return String(value ?? "unknown").replaceAll("_"," "); }
-function statusProfile(status) { return registries.statusPresentations.has(status) ? registries.statusPresentations.get(status) : { id:String(status??"unknown"), label:humanizeStatus(status).toUpperCase(), tone:"routine", priority:0 }; }
-function documentProfile(id) { return registries.documentPresentations.get(id); }
-function compactReference(prefix, id) {
-  const text = String(id ?? "record"); let hash = 2166136261;
-  for (let i=0;i<text.length;i++) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
-  return `${prefix}-${(hash >>> 0).toString(36).toUpperCase().padStart(7,"0").slice(-7)}`;
-}
-function statusStamp(status, extraClass="") { const profile=statusProfile(status); const stamp=document.createElement("span"); stamp.className=`mil-status-stamp tone-${profile.tone} ${extraClass}`.trim(); stamp.textContent=profile.label; stamp.dataset.status=status; return stamp; }
-function metricBlock(label, value, subtext="") { const box=document.createElement("div"); box.className="mil-metric"; const key=document.createElement("span"); key.textContent=label; const val=document.createElement("strong"); val.textContent=String(value); box.append(key,val); if(subtext){const sub=document.createElement("small");sub.textContent=subtext;box.appendChild(sub);} return box; }
-function recordReference(documentId, entityId) { const profile=documentProfile(documentId); return compactReference(profile?.prefix ?? "REC", entityId); }
+const { setSubscreen, restoreSubscreens, setActiveView } = navigation;
+
+const historyArchive = createHistoryArchiveController({ onChange: () => render() });
+const readUiArchive = historyArchive.read;
+const archiveUiRecord = historyArchive.archiveRecord;
+const archiveUiRecords = historyArchive.archiveRecords;
+const createHistoryControls = historyArchive.createControls;
+
 
 const confirmationDialog = createConfirmDialogController({
   elements: { dialog: els.confirmDialog, title: els.confirmTitle, message: els.confirmMessage },
@@ -172,36 +136,29 @@ const achievementDialog = createAchievementDialogController({
 });
 const queueNotifications = ids => achievementDialog.enqueue(ids);
 
+const renderInboxView = createInboxRenderer({
+  elements: {
+    unreadBadge: els.unreadBadge,
+    navCareerBadge: els.navCareerBadge,
+    careerTabInboxBadge: els.careerTabInboxBadge,
+    markAllRead: els.markAllRead,
+    clearRead: els.clearRead,
+    careerInbox: els.careerInbox,
+  },
+  recordReference,
+  onOpenOpportunity: openOpportunityRecord,
+  onAcknowledge: noticeId => runCommand(() => markNotificationRead(store, noticeId)),
+  onArchive: noticeId => runCommand(() => archiveNotification(store, noticeId)),
+  onMarkReadQuiet: noticeId => { try { markNotificationRead(store, noticeId); } catch {} },
+});
+
 function renderInbox(state, indexes, personId) {
   const notices = selectNotifications(state, indexes, personId);
-  const unread = notices.filter(n => n.readAtElapsedDay == null);
-  const read = notices.filter(n => n.readAtElapsedDay != null);
   const pendingIds = indexes.gameplayEventsByPersonId?.get(personId) ?? [];
-  const pendingDecisionCount = pendingIds.map(id => state.entities.gameplayEventRecords[id]).filter(record => record?.status === "pending").length;
-  const attentionCount = unread.length + pendingDecisionCount;
-  els.unreadBadge.hidden = unread.length === 0;
-  els.unreadBadge.textContent = String(unread.length);
-  els.navCareerBadge.hidden = attentionCount === 0;
-  els.navCareerBadge.textContent = attentionCount > 99 ? "99+" : String(attentionCount);
-  if(els.careerTabInboxBadge){els.careerTabInboxBadge.hidden=unread.length===0;els.careerTabInboxBadge.textContent=unread.length>99?"99+":String(unread.length);}
-  els.markAllRead.disabled = unread.length === 0;
-  els.clearRead.disabled = read.length === 0;
-  els.careerInbox.replaceChildren();
-  if (!notices.length) { const p = document.createElement("p"); p.className = "empty-state military-empty"; p.textContent = "NO ACTIVE PERSONNEL DISPATCHES"; els.careerInbox.appendChild(p); return; }
-  const list = document.createElement("div"); list.className = "inbox-list dispatch-list";
-  for (const notice of notices.slice(0, 30)) {
-    const item = document.createElement("article"); item.className = `inbox-item dispatch-card ${notice.readAtElapsedDay == null ? "unread" : "read"}`.trim();
-    const rail=document.createElement("div"); rail.className="dispatch-rail"; const ref=document.createElement("span"); ref.textContent=recordReference("notification",notice.id); const stateLabel=document.createElement("span"); stateLabel.textContent=notice.readAtElapsedDay==null?"NEW":"READ"; rail.append(ref,stateLabel);
-    const meta = document.createElement("div"); meta.className = "inbox-meta"; const type=document.createElement("span"), date=document.createElement("span"); type.textContent=notice.type.replaceAll("_", " ").toUpperCase(); date.textContent=notice.gameDate; meta.append(type,date);
-    const h = document.createElement("h3"); h.textContent = notice.title; const p = document.createElement("p"); p.textContent = notice.message; item.append(rail, meta, h, p);
-    const actions=document.createElement("div"); actions.className="notice-actions";
-    const opportunityRecordId=notice.references?.opportunityRecordId ?? null;
-    if(opportunityRecordId && state.entities.opportunityRecords?.[opportunityRecordId]) { const open=document.createElement("button"); open.type="button"; open.className="compact-button"; open.textContent="Open Opportunity"; open.addEventListener("click",()=>{ if(notice.readAtElapsedDay==null) try{markNotificationRead(store,notice.id);}catch{} openOpportunityRecord(opportunityRecordId); }); actions.appendChild(open); }
-    if (notice.readAtElapsedDay == null) { const readButton=document.createElement("button"); readButton.type="button"; readButton.className="secondary compact-button"; readButton.textContent="Acknowledge"; readButton.addEventListener("click",()=>runCommand(()=>markNotificationRead(store,notice.id))); actions.appendChild(readButton); }
-    else { const clear=document.createElement("button"); clear.type="button"; clear.className="secondary compact-button"; clear.textContent="Archive"; clear.addEventListener("click",()=>runCommand(()=>archiveNotification(store,notice.id))); actions.appendChild(clear); }
-    item.appendChild(actions); list.appendChild(item);
-  }
-  els.careerInbox.appendChild(list);
+  const pendingDecisionCount = pendingIds
+    .map(id => state.entities.gameplayEventRecords[id])
+    .filter(record => record?.status === "pending").length;
+  renderInboxView({ state, notices, pendingDecisionCount });
 }
 
 function descendantUnitIds(state, indexes, unitId) {
@@ -287,6 +244,11 @@ function getPersonProfileContext(personId) {
 }
 let personProfile;
 function showPersonProfile(personId) { personProfile.open(personId); }
+const renderRelationships = createRelationshipsRenderer({
+  container: els.relationships,
+  relationshipBands: registries.relationshipBands,
+  onOpenPerson: showPersonProfile,
+});
 
 function organizationChain(state, indexes, unitId) {
   const chain = [];

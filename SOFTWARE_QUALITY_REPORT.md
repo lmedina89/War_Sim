@@ -1,79 +1,90 @@
-# War Sim v0.4.3.8 — Software Quality Report
+# War Sim v0.4.3.9 — Software Quality Report
 
 ## Release identity
 
-- Version: **0.4.3.8 — UI Architecture Refactor Phase 4**
-- Baseline: exact verified **v0.4.3.7** package
+- Release: **v0.4.3.9 — UI Architecture Refactor Phase 5**
+- Baseline: exact verified **v0.4.3.8** GitHub package
+- Runtime: **0.4.3.9**
 - World schema: **16**
 - Save format: **3**
 - Generator: **v3**
 
 ## Scope
 
-This is a refactor-only release. It extracts the generic result/AAR, achievement notification, and confirmation dialog responsibilities from `src/app.js` into isolated UI controllers:
+This is a presentation-architecture refactor only. It extracts shared presentation primitives, relationship rendering, presentation-only history archive controls, and Inbox rendering from `src/app.js`. Canonical state, commands, services, selectors, save-format behavior, world schema, gameplay rules, and content definitions are not redesigned.
 
-- `src/ui/dialogs/resultDialog.js`
-- `src/ui/dialogs/achievementDialog.js`
-- `src/ui/dialogs/confirmDialog.js`
+New focused modules:
 
-No gameplay feature, canonical career rule, scheduler rule, world-generation rule, command/service behavior, save format, schema, definition content, or mobile CSS behavior was redesigned.
+- `src/ui/presentation.js`
+- `src/ui/historyArchive.js`
+- `src/ui/render/relationships.js`
+- `src/ui/render/inbox.js`
 
-`src/app.js` remains the composition root and injects state/registry/presentation dependencies into the new UI controllers. The extracted dialog modules do not directly import commands, services, state, core, or selectors.
+`src/app.js` remains the composition root. It continues to own the state store, canonical selectors/actions, command execution, save validation/persistence coordination, and render orchestration. The extracted UI modules receive their dependencies through narrow presentation contracts.
 
 ## app.js reduction
 
-- v0.4.3.7 baseline: **115,299 bytes / 809 physical lines**
-- v0.4.3.8: **103,524 bytes / 785 physical lines**
-- Reduction: **11,775 bytes** from the controller hotspot
+- v0.4.3.8 baseline: **103,524 bytes / 785 lines**
+- v0.4.3.9 final: **91,504 bytes / 747 lines**
+- Reduction this phase: **12,020 bytes**
 
-The extracted code is not deleted; it is reorganized into focused modules with explicit dependency injection.
+The Phase-5 architecture regression ceiling now requires `app.js` to remain below 100 KB.
 
-## Automated QA
+## Automated verification
 
-- **27/27 test suites PASS**
-- **129/129 JS/MJS files pass `node --check`**
-- Quality harness: **PASS**
-- Runtime source modules reported by quality harness: **102**
-- Deterministic generated worlds: **300 PASS**
-- Synthetic index stress: **10,000 people PASS**
-- Import graph integrity: **PASS**
-- DOM integrity: **PASS**
-- Deterministic RNG audit: **PASS**
-- Selector/index audit: **PASS**
-- Schema 12/13 and same-schema migration checks: **PASS**
-- Canonical scheduler/opportunity/orders/readiness checks: **PASS**
-- Static source scan rejects `eval`, `new Function`, `document.write`, and runtime `.innerHTML =`: **PASS**
-- Circular relative-import audit across `src/`: **0 cycles**
-- Extracted dialog canonical-layer boundary audit: **PASS**
+- **28/28 packaged test suites PASS**
+- **134/134 JS/MJS files pass `node --check`**
+- **106 runtime JS modules**
+- `tests/quality.mjs`: **PASS**
+- **300 deterministic generated worlds validated**
+- **10,000-person index stress audit PASS**
+- Observed final source-worktree index build: **10.85 ms** (environment-dependent regression indicator only)
+- deterministic RNG audit PASS
+- concrete runtime-ID audit PASS
+- DOM integrity PASS
+- import graph integrity PASS
+- render containment PASS
+- selector/index audit PASS
+- migrations and same-schema runtime normalization PASS
+- scheduler/opportunity/orders/readiness integration PASS
+- mobile/UI regression suites PASS
+- career-boundary integrity PASS
+- save-storage regression PASS
 
-The dedicated `tests/dialog-controllers-module.mjs` suite exercises:
+## Phase-5 regression coverage
 
-- confirmation-dialog resolution through native dialog `returnValue`;
-- achievement filtering, queueing, mark-read behavior, and opportunity handoff;
-- time-advance result presentation;
-- focused-activity AAR presentation;
-- scheduled-duty AAR presentation;
-- decision-outcome presentation;
-- absence of direct canonical-layer imports and unsafe `innerHTML` assignment in the new dialog modules.
+`tests/presentation-modules.mjs` exercises the extracted modules with a minimal fake DOM and verifies:
 
-Existing regression tests that formerly asserted AAR/achievement presentation strings inside `app.js` were redirected to the extracted modules. The checks were preserved rather than removed.
+- shared rank/branch/status/document formatting;
+- stable compact record references;
+- military date formatting;
+- metric/progress DOM construction;
+- relationship band/meter/card rendering and profile-open callback behavior;
+- UI archive persistence, clear/restore controls, and rerender callback behavior;
+- Inbox unread/attention badges;
+- dispatch rendering;
+- opportunity-open/read acknowledgement/archive action callbacks;
+- presentation modules remain free of canonical command/service imports and unsafe `innerHTML` assignment.
 
-## Baseline diff review
+Existing tests that previously asserted presentation implementation strings inside `app.js` were redirected to the extracted module that now owns that behavior. The checks were preserved rather than removed.
 
-Recursive comparison against the exact v0.4.3.7 baseline found runtime changes only in the intended files:
+## Structural safety checks
 
-- `src/app.js`
-- `src/ui/dialogs/resultDialog.js` (new)
-- `src/ui/dialogs/achievementDialog.js` (new)
-- `src/ui/dialogs/confirmDialog.js` (new)
-- runtime-version normalization/display files: `src/core/migrations.js`, `src/state/initialState.js`, `index.html`
+- **0 circular dependencies** in the runtime `src/` import graph.
+- Static sweep found no runtime `eval`, `new Function`, `document.write`, or `.innerHTML =` assignment.
+- New UI modules do not directly import canonical command/service/state/core mutation infrastructure.
+- History archive state remains presentation-only and is stored through the existing resilient `uiStorage` wrapper.
+- Inbox renderer receives notification mutations through injected callbacks rather than importing commands.
 
-Commands, services, selectors, data definitions, CSS, save implementation, and the remaining runtime modules are unchanged from v0.4.3.7.
+## Save compatibility
 
-`src/core/saveSystem.js` SHA-256 remains:
+`src/core/saveSystem.js` is byte-identical to the stabilized baseline.
 
+SHA-256:
 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
+
+World schema remains 16 and save format remains 3. Existing compatible saves normalize their runtime version to 0.4.3.9 through the existing same-schema migration path.
 
 ## Release assessment
 
-**PASS.** v0.4.3.8 is suitable as the next UI-architecture checkpoint, subject to the normal quick real-device smoke test of result/AAR, achievement, and confirmation dialogs on the target iPhone browser.
+**PASS.** v0.4.3.9 is suitable as the next provisional architecture checkpoint, subject to the user's later cumulative real-device smoke test after several refactor phases.

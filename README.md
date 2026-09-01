@@ -1,29 +1,23 @@
-# War Sim v0.4.3.8 — UI Architecture Refactor Phase 4
+# War Sim v0.4.3.9 — UI Architecture Refactor Phase 5
 
-War Sim v0.4.3.8 is built directly from the verified v0.4.3.7 consolidated mobile-hardening checkpoint. This release continues the conservative `src/app.js` decomposition by extracting the generic result/AAR, achievement notification, and confirmation dialog controllers into isolated UI modules.
+War Sim v0.4.3.9 is built directly from the verified v0.4.3.8 UI Architecture Refactor Phase 4 checkpoint. This release continues the conservative `src/app.js` decomposition by extracting reusable presentation primitives, relationship-card rendering, and presentation-only history archive controls into focused UI modules.
 
-Runtime **0.4.3.8**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.9**, world schema **16**, save format **3**, generator **v3**.
 
-## Refactor scope
+## Phase 5 scope
 
-New UI modules:
-
-- `src/ui/dialogs/resultDialog.js` — activity AARs, unit-duty AARs, decision outcomes, and time-advance summaries.
-- `src/ui/dialogs/achievementDialog.js` — high-visibility career/award/promotion notification queue and opportunity handoff.
-- `src/ui/dialogs/confirmDialog.js` — native confirmation-dialog promise contract.
-
-`src/app.js` remains the composition root. It still owns the state store, canonical selectors/commands/services, save/load behavior, command execution, autosave, and preparation of registry/state dependencies injected into the dialog controllers.
-
-The extracted dialog modules do not import commands, services, selectors, state, or core simulation modules directly. They receive presentation data and callbacks through controller construction.
+- Added `src/ui/presentation.js` for shared DOM presentation primitives and formatting helpers used across the UI.
+- Added `src/ui/render/relationships.js` for relationship-card and trust/respect/rapport meter rendering.
+- Added `src/ui/historyArchive.js` for presentation-only archive/show-more controls backed by the existing resilient UI-storage layer.
+- Added `src/ui/render/inbox.js` for dispatch-card, badge, and Inbox action presentation while canonical notification selection/mutation remains injected from `app.js`.
+- Kept `src/app.js` as the composition root. It injects registries, DOM targets, callbacks, and canonical actions rather than moving simulation ownership into the extracted modules.
+- Added `tests/presentation-modules.mjs` and strengthened UI architecture checks around the new module boundaries.
+- Updated older structural tests to verify behavior at the new module locations instead of assuming those helpers live physically inside `app.js`.
 
 ## Compatibility
 
-There is no world-schema change and no save-format change. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.8 through the existing same-schema migration path.
-
-No gameplay feature, career rule, scheduler rule, promotion rule, reenlistment behavior, definition content, world generation, persistence format, or mobile layout redesign is included in this refactor.
+No gameplay rules, world schema, save format, generator, commands, services, selectors, or save-system behavior were redesigned. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.9 through the existing same-schema migration path.
 
 ## QA
 
-The package includes a dedicated `tests/dialog-controllers-module.mjs` suite that exercises confirmation resolution, achievement filtering/queueing/read handling/opportunity handoff, time-advance summaries, focused-activity AAR rendering, unit-duty AAR rendering, and decision outcome rendering using a minimal DOM contract.
-
-The complete packaged QA results are documented in `SOFTWARE_QUALITY_REPORT.md`.
+See `SOFTWARE_QUALITY_REPORT.md` for exact packaged verification results.

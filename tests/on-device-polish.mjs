@@ -11,6 +11,7 @@ import { evaluateCommendationAwardsInDraft } from "../src/services/awardProgress
 const root=new URL("../",import.meta.url);
 const appSource=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const personProfileSource=fs.readFileSync(new URL("../src/ui/dialogs/personProfile.js",import.meta.url),"utf8");
+const relationshipsSource=fs.readFileSync(new URL("../src/ui/render/relationships.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 
@@ -24,8 +25,8 @@ function makeCareer(seed=433101){
 // Runtime/version and responsive DD214 containment.
 {
   const state=createInitialWorldState({seed:433102});
-  assert.equal(state.gameVersion,"0.4.3.8");
-  assert.match(html,/War Sim v0\.4\.3\.8/);
+  assert.equal(state.gameVersion,"0.4.3.9");
+  assert.match(html,/War Sim v0\.4\.3\.9/);
   assert.match(css,/\.dd214-preview \.mil-metric>strong\{white-space:normal;overflow-wrap:anywhere/);
 }
 
@@ -57,7 +58,7 @@ function makeCareer(seed=433101){
   const selected=view.relationships.find(r=>r.id===relId);
   assert.equal(selected.trust,3);assert.equal(selected.respect,-1);assert.equal(selected.rapport,7);
   assert.deepEqual([selected.memories[0].trustDelta,selected.memories[0].respectDelta,selected.memories[0].rapportDelta],[3,-1,7]);
-  assert.match(appSource,/Math\.sqrt\(Math\.abs\(numeric\)\/100\)\*50/);
+  assert.match(relationshipsSource,/Math\.sqrt\(Math\.abs\(numeric\) \/ 100\) \* 50/);
 }
 
 // Tier-1 NPC personnel files get canonical rank insignia and a uniform action only for Tier 1 NPCs.
@@ -85,4 +86,4 @@ function makeCareer(seed=433101){
   assert.match(appSource,/WHY EARNED/);
 }
 
-console.log("War Sim v0.4.3.8 on-device polish QA passed");
+console.log("War Sim v0.4.3.9 on-device polish QA passed");
