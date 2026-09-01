@@ -1,46 +1,45 @@
-# War Sim v0.4.3.12 — UI Architecture Refactor Phase 8
+# War Sim v0.4.3.13 — UI Architecture Refactor Phase 9
 
-War Sim v0.4.3.12 is built directly from the verified v0.4.3.11 Phase 7 baseline. Runtime **0.4.3.12**, world schema **16**, save format **3**, generator **v3**.
+War Sim v0.4.3.13 is built directly from the verified v0.4.3.12 Phase 8 baseline. Runtime **0.4.3.13**, world schema **16**, save format **3**, generator **v3**.
 
-This is a refactor-only release. It does not intentionally change gameplay, simulation rules, save data, career progression, world generation, or canonical records.
+This is a refactor-only release. It does not intentionally change gameplay, simulation rules, save data, career progression, world generation, RNG behavior, or canonical records.
 
-## Phase 8: Situation / world-context presentation boundary
+## Phase 9: Service Career / retention presentation boundary
 
-The top-level current-situation and persistent world-context presentation has been extracted from `src/app.js` into:
+The Service Career contract and reenlistment-offer DOM presentation has been extracted from `src/app.js` into:
 
-- `src/ui/render/situation.js`
+- `src/ui/render/serviceCareer.js`
 
-The extracted renderer owns DOM presentation for:
+The extracted renderer owns presentation for:
 
-- the persistent military date / training-phase context
-- the Current Situation identity header
-- formation insignia presentation
-- duty, personnel strength, readiness, and morale metrics
-- local presentation-only unit-strength aggregation used by the Situation strip
+- component / MOS / career-field contract summary
+- contract start / ETS / days remaining / bonus fields
+- reenlistment-window button presentation
+- open reenlistment offer cards
+- service-period history list
 
-Selectors, registries, insignia factories, and presentation primitives are injected by `src/app.js`; the renderer imports no commands, services, state, core, or selectors directly.
-
-Phase 8 also removes stale Unit/Personnel helper copies left behind in `src/app.js` after Phase 7. `app.js` now reuses `unitPersonnelRenderer.playerAssignmentUnitId` rather than maintaining a second assignment helper.
+Canonical selectors and mutations remain outside the renderer. `src/app.js` injects `selectServiceCareer`, presentation helpers, registries, and the callback that ultimately invokes the canonical reenlistment command. The module imports no commands, services, state, core, or selectors directly.
 
 ## Architecture result
 
-`src/app.js` changed from **67,134 bytes / 678 lines** in v0.4.3.11 to **63,706 bytes / 641 lines** in v0.4.3.12.
+`src/app.js` changed from **63,706 bytes / 641 lines** in v0.4.3.12 to **61,666 bytes / 627 lines** in v0.4.3.13.
 
-`src/ui/render/situation.js` is **4,229 bytes / 103 lines**.
-
-A new `tests/situation-module.mjs` protects the extraction boundary, and existing situation/smoke tests were updated to follow the code to its canonical module rather than weakening coverage.
+A new `tests/service-career-module.mjs` protects the extraction boundary.
 
 ## Verification policy
 
-The release gate retains the startup protections added after the Phase 5/6 startup regression:
+The release gate includes:
 
-- explicit ES-module parsing
+- all automated test suites
+- explicit ES-module parsing for browser-loaded `.js`
 - relative-import closure checks
 - circular-import detection
-- full deterministic/stress quality harness
-- browser-runtime startup execution
-- browser-runtime New Career creation with a rendered Current Situation strip
-- clean extraction of the final ZIP followed by the same verification
+- deterministic 300-world quality validation
+- 10,000-person stress/index audit
+- static unsafe-runtime scan
+- clean extraction of the final ZIP followed by the same automated verification
+
+Real-device acceptance remains part of the checkpoint process before beginning the next refactor phase.
 
 ## Compatibility
 

@@ -46,6 +46,7 @@ import { createInboxRenderer } from "./ui/render/inbox.js";
 import { createSoldierIdentityRenderer } from "./ui/render/soldierIdentity.js";
 import { createUnitPersonnelRenderer } from "./ui/render/unitPersonnel.js";
 import { createSituationRenderer } from "./ui/render/situation.js";
+import { createServiceCareerRenderer } from "./ui/render/serviceCareer.js";
 import { createHistoryArchiveController } from "./ui/historyArchive.js";
 
 const definitionValidation = validateDefinitions(registries);
@@ -271,29 +272,14 @@ const renderPersonnelBrowser = unitPersonnelRenderer.renderPersonnelBrowser;
 const renderUnitRoster = unitPersonnelRenderer.renderUnitRoster;
 const playerAssignmentUnitId = unitPersonnelRenderer.playerAssignmentUnitId;
 
-function renderServiceCareer(state, indexes, personId) {
-  const view = selectServiceCareer(state, indexes, registries, personId);
-  const contract = view.contract;
-  els.serviceCareer.replaceChildren(
-    statLine("Component", view.component.name),
-    statLine("MOS", `${view.specialty.code} · ${view.specialty.name}`),
-    statLine("Career Field", view.specialty.careerField),
-    statLine("Contract", view.contractDef?.name ?? "—"),
-    statLine("Contract Start", contract?.startDate ?? "—"),
-    statLine("ETS / Contract End", contract?.endDate ?? "—"),
-    statLine("Days Remaining", view.daysRemaining == null ? "—" : view.daysRemaining),
-    statLine("Contract Bonus", contract ? `$${contract.bonus.toLocaleString()}` : "$0")
-  );
-  els.reviewReenlistment.disabled = !view.reenlistmentWindowOpen;
-  els.reviewReenlistment.textContent = view.reenlistmentWindowOpen ? "Review Reenlistment Options" : `Reenlistment Window ${view.daysRemaining > 180 ? `in ${view.daysRemaining - 180} days` : "Closed"}`;
-  els.reenlistmentOffers.replaceChildren();
-  const openOffers = view.offers.filter(x => x.status === "open");
-  if (!openOffers.length) { const p=document.createElement("p"); p.className="muted"; p.textContent=view.reenlistmentWindowOpen ? "No active offers yet. Review options to generate them." : "Reenlistment offers appear within 180 days of ETS."; els.reenlistmentOffers.appendChild(p); }
-  else for (const offer of openOffers) { const card=document.createElement("article"); card.className="offer-card"; const h=document.createElement("h3"); h.textContent=offer.contractName; const p=document.createElement("p"); p.textContent=`Retain ${view.specialty.code} ${view.specialty.name} · ${view.component.name}`; const b=document.createElement("p"); b.className="offer-bonus"; b.textContent=`$${offer.bonus.toLocaleString()} bonus`; const accept=document.createElement("button"); accept.type="button"; accept.textContent="Accept Offer"; accept.addEventListener("click",()=>runCommand(()=>acceptReenlistmentOffer(store,registries,offer.id))); card.append(h,p,b,accept); els.reenlistmentOffers.appendChild(card); }
-  const history = view.periods.map(x => `${x.startDate} → ${x.endDate ?? "Present"} · ${x.branchName} · ${x.componentName} · ${x.specialtyName}`);
-  renderList(els.careerFramework, history, "No service periods recorded.");
-}
-
+const renderServiceCareer = createServiceCareerRenderer({
+  elements: els,
+  registries,
+  selectServiceCareer,
+  statLine,
+  renderList,
+  onAcceptOffer: offerId => runCommand(() => acceptReenlistmentOffer(store, registries, offerId)),
+}).render;
 
 function renderGameplay(state, indexes, personId) {
   const view = selectGameplay(state, indexes, registries, personId);

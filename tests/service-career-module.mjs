@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const mod=fs.readFileSync(new URL("../src/ui/render/serviceCareer.js",import.meta.url),"utf8");
+assert.match(app,/createServiceCareerRenderer/);
+assert.doesNotMatch(app,/function renderServiceCareer\s*\(/);
+assert.match(mod,/export function createServiceCareerRenderer/);
+assert.doesNotMatch(mod,/from\s+["']\.\.\/\.\.\/(?:commands|services|state|core|selectors)\//);
+assert.match(mod,/onAcceptOffer/);
+console.log("War Sim v0.4.3.13 service career presentation module QA passed");

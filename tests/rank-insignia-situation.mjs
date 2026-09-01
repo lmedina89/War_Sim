@@ -16,4 +16,4 @@ assert.match(situation,/formationView = assignment\.chain\.find\(item => item\.f
 assert.match(situation,/createNamedInsignia\(formationView\.formationInsigniaId/);
 assert.match(css,/\.situation-identity>\.named-insignia/);
 assert.match(css,/\.uniform-rank-mark\{width:46px;height:46px/);
-console.log("War Sim v0.4.3.12 rank-insignia and situation-patch QA passed");
+console.log("War Sim v0.4.3.13 rank-insignia and situation-patch QA passed");
