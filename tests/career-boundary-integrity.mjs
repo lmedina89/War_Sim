@@ -174,7 +174,7 @@ function career(seed=991122) {
   state.gameVersion="0.4.3.3.1";
   const priorBonus=state.entities.people[personId].career.bonusEarnings;
   const migrated=migratePayload({saveFormatVersion:3,gameVersion:"0.4.3.3.1",worldState:state});
-  assert.equal(migrated.worldState.gameVersion,"0.4.3.11");
+  assert.equal(migrated.worldState.gameVersion,"0.4.3.12");
   assert.equal(migrated.worldState.entities.serviceRecords[serviceId].currentContractId,contractId);
   assert.equal(migrated.worldState.entities.contractRecords[contractId].status,"active");
   assert.equal(migrated.worldState.entities.contractRecords[newId].status,"pending");
@@ -182,4 +182,4 @@ function career(seed=991122) {
   assert.equal(validateWorldState(migrated.worldState,registries).ok,true);
 }
 
-console.log("War Sim v0.4.3.11 career boundary integrity QA passed");
+console.log("War Sim v0.4.3.12 career boundary integrity QA passed");

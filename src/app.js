@@ -45,6 +45,7 @@ import { createRelationshipsRenderer } from "./ui/render/relationships.js";
 import { createInboxRenderer } from "./ui/render/inbox.js";
 import { createSoldierIdentityRenderer } from "./ui/render/soldierIdentity.js";
 import { createUnitPersonnelRenderer } from "./ui/render/unitPersonnel.js";
+import { createSituationRenderer } from "./ui/render/situation.js";
 import { createHistoryArchiveController } from "./ui/historyArchive.js";
 
 const definitionValidation = validateDefinitions(registries);
@@ -180,58 +181,19 @@ function renderInbox(state, indexes, personId) {
   renderInboxView({ state, notices, pendingDecisionCount });
 }
 
-function descendantUnitIds(state, indexes, unitId) {
-  const result = [unitId], queue = [unitId];
-  for (let cursor=0; cursor<queue.length; cursor++) { const current = queue[cursor]; for (const child of indexes.unitsByParentUnitId.get(current) ?? []) { result.push(child); queue.push(child); } }
-  return result;
-}
-function aggregateStrength(state, indexes, unitId) {
-  const ids = descendantUnitIds(state, indexes, unitId); let authorized = 0, assigned = 0;
-  for (const id of ids) for (const billetId of indexes.billetsByUnitId.get(id) ?? []) { authorized++; if (state.entities.billets[billetId]?.assignedPersonId) assigned++; }
-  return { authorized, assigned, vacancies: authorized - assigned };
-}
-function collectUnitPersonnel(state, indexes, unitId) {
-  const seen = new Set();
-  const members = [];
-  for (const scopedUnitId of descendantUnitIds(state, indexes, unitId)) {
-    for (const member of selectUnitPersonnel(state, indexes, registries, scopedUnitId)) {
-      if (!seen.has(member.id)) { seen.add(member.id); members.push(member); }
-    }
-  }
-  return members;
-}
-function playerAssignmentUnitId(state, indexes, personId = state.playerPersonId) {
-  return selectAssignmentView(state, indexes, registries, personId).chain.at(-1)?.unitId ?? null;
-}
-
-function renderPersistentWorldContext(state) {
-  if(!els.persistentWorldContext) return;
-  if(!state.playerPersonId){els.persistentWorldContext.textContent="";return;}
-  const phaseId=state.world.scheduler?.trainingPhaseId ?? "training_phase_garrison";
-  const phase=registries.trainingPhases.has(phaseId)?registries.trainingPhases.get(phaseId):null;
-  const date=document.createElement("time"); date.dateTime=state.world.date; date.textContent=formatMilitaryDate(state.world.date);
-  const sep=document.createElement("span"); sep.textContent="·";
-  const phaseLabel=document.createElement("span"); phaseLabel.textContent=phase?.shortLabel ?? phase?.name ?? "CAREER";
-  els.persistentWorldContext.replaceChildren(date,sep,phaseLabel);
-}
-
-function renderSituation(state, indexes, personId) {
-  const person=state.entities.people[personId]; if(!person){els.situationStrip.replaceChildren(); return;}
-  const rank=registries.ranks.get(person.affiliation.rankId), specialty=registries.specialties.get(person.affiliation.specialtyId);
-  const assignment=selectAssignmentView(state,indexes,registries,personId); const ownUnitId=assignment.chain.at(-1)?.unitId;
-  const unit=ownUnitId?selectOrganizationView(state,indexes,registries,ownUnitId):null; const strength=ownUnitId?aggregateStrength(state,indexes,ownUnitId):{assigned:0,authorized:0};
-  const identity=document.createElement("div"); identity.className="situation-identity";
-  const copy=document.createElement("div"); copy.className="situation-identity-copy";
-  const kicker=document.createElement("span"); kicker.className="situation-kicker"; kicker.textContent="CURRENT SITUATION";
-  const title=document.createElement("strong"); title.textContent=`${rank.abbreviation} ${person.identity.displayName}`;
-  const sub=document.createElement("span"); sub.textContent=`${specialty.code} ${specialty.name} · ${assignment.chain.map(x=>x.name).join(" / ")}`; copy.append(kicker,title,sub);
-  const formationView=assignment.chain.find(item=>item.formationInsigniaId)??null;
-  if(formationView?.formationInsigniaId)identity.append(copy,createNamedInsignia(formationView.formationInsigniaId,{title:formationView.formationName}));else identity.append(copy);
-  const metrics=document.createElement("div"); metrics.className="situation-metrics";
-  const gameplay=selectGameplay(state,indexes,registries,personId); const dutyLabel=gameplay?.currentDuty?.shortName ?? "AVAILABLE";
-  metrics.append(statusStamp(person.condition.status),metricBlock("DATE",state.world.date),metricBlock("DUTY",dutyLabel),metricBlock("PERS",`${strength.assigned}/${strength.authorized}`),metricBlock("RDY",unit?`${unit.readiness}%`:"—"),metricBlock("MORALE",unit?`${unit.morale}%`:"—"));
-  els.situationStrip.replaceChildren(identity,metrics);
-}
+const situationRenderer = createSituationRenderer({
+  elements: { persistentWorldContext: els.persistentWorldContext, situationStrip: els.situationStrip },
+  registries,
+  selectAssignmentView,
+  selectOrganizationView,
+  selectGameplay,
+  createNamedInsignia,
+  statusStamp,
+  metricBlock,
+  formatMilitaryDate,
+});
+const renderSituation = situationRenderer.renderSituation;
+const renderPersistentWorldContext = situationRenderer.renderPersistentWorldContext;
 
 function createProfileUniform(state,indexes,personId){
   const identity=selectSoldierIdentity(state,indexes,registries,personId),person=state.entities.people[personId];
@@ -307,6 +269,7 @@ const unitPersonnelRenderer = createUnitPersonnelRenderer({
 const renderOrganization = unitPersonnelRenderer.renderOrganization;
 const renderPersonnelBrowser = unitPersonnelRenderer.renderPersonnelBrowser;
 const renderUnitRoster = unitPersonnelRenderer.renderUnitRoster;
+const playerAssignmentUnitId = unitPersonnelRenderer.playerAssignmentUnitId;
 
 function renderServiceCareer(state, indexes, personId) {
   const view = selectServiceCareer(state, indexes, registries, personId);

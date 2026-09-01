@@ -26,8 +26,8 @@ function makeCareer(seed=433101){
 // Runtime/version and responsive DD214 containment.
 {
   const state=createInitialWorldState({seed:433102});
-  assert.equal(state.gameVersion,"0.4.3.11");
-  assert.match(html,/War Sim v0\.4\.3\.11/);
+  assert.equal(state.gameVersion,"0.4.3.12");
+  assert.match(html,/War Sim v0\.4\.3\.12/);
   assert.match(css,/\.dd214-preview \.mil-metric>strong\{white-space:normal;overflow-wrap:anywhere/);
 }
 
@@ -87,4 +87,4 @@ function makeCareer(seed=433101){
   assert.match(soldierIdentitySource,/WHY EARNED/);
 }
 
-console.log("War Sim v0.4.3.11 on-device polish QA passed");
+console.log("War Sim v0.4.3.12 on-device polish QA passed");
