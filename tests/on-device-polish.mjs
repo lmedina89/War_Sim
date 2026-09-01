@@ -13,6 +13,7 @@ const appSource=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8")
 const careerRecordSource=fs.readFileSync(new URL("../src/ui/render/careerRecord.js",import.meta.url),"utf8");
 const soldierIdentitySource=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const personProfileSource=fs.readFileSync(new URL("../src/ui/dialogs/personProfile.js",import.meta.url),"utf8");
+const personProfileUniformSource=fs.readFileSync(new URL("../src/ui/render/personProfileUniform.js",import.meta.url),"utf8");
 const relationshipsSource=fs.readFileSync(new URL("../src/ui/render/relationships.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
@@ -27,8 +28,8 @@ function makeCareer(seed=433101){
 // Runtime/version and responsive DD214 containment.
 {
   const state=createInitialWorldState({seed:433102});
-  assert.equal(state.gameVersion,"0.4.3.16");
-  assert.match(html,/War Sim v0\.4\.3\.16/);
+  assert.equal(state.gameVersion,"0.4.3.17");
+  assert.match(html,/War Sim v0\.4\.3\.17/);
   assert.match(css,/\.dd214-preview \.mil-metric>strong\{white-space:normal;overflow-wrap:anywhere/);
 }
 
@@ -68,7 +69,7 @@ function makeCareer(seed=433101){
   assert.match(personProfileSource,/dog-tag-rank-insignia/);
   assert.match(personProfileSource,/person\.simulationTier === 1/);
   assert.match(personProfileSource,/uniformAction\.textContent = "View Uniform"/);
-  assert.match(appSource,/selectSoldierIdentity\(state,indexes,registries,personId\)/);
+  assert.match(personProfileUniformSource,/selectSoldierIdentity\(state, indexes, registries, personId\)/);
 }
 
 // AAM remains sustained-performance driven and award reason is retained/exposed.
@@ -88,4 +89,4 @@ function makeCareer(seed=433101){
   assert.match(soldierIdentitySource,/WHY EARNED/);
 }
 
-console.log("War Sim v0.4.3.16 on-device polish QA passed");
+console.log("War Sim v0.4.3.17 on-device polish QA passed");

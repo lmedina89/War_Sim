@@ -550,7 +550,7 @@ export function migratePayload(payload) {
   normalizeCareerBoundaryHotfix(next.worldState);
   ensureNamedInfantryFormation(next.worldState);
   initializeUnitTrainingProfiles(next.worldState);
-  next.gameVersion = "0.4.3.16";
-  next.worldState.gameVersion = "0.4.3.16";
+  next.gameVersion = "0.4.3.17";
+  next.worldState.gameVersion = "0.4.3.17";
   return next;
 }

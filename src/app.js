@@ -50,6 +50,8 @@ import { createServiceCareerRenderer } from "./ui/render/serviceCareer.js";
 import { createCareerRecordRenderer } from "./ui/render/careerRecord.js";
 import { createCareerGameplayRenderer } from "./ui/render/careerGameplay.js";
 import { createAdministrationRenderer } from "./ui/render/administration.js";
+import { createPersonProfileUniformRenderer } from "./ui/render/personProfileUniform.js";
+import { awardDeviceLabel } from "./ui/awardPresentation.js";
 import { createHistoryArchiveController } from "./ui/historyArchive.js";
 
 const definitionValidation = validateDefinitions(registries);
@@ -199,19 +201,14 @@ const situationRenderer = createSituationRenderer({
 const renderSituation = situationRenderer.renderSituation;
 const renderPersistentWorldContext = situationRenderer.renderPersistentWorldContext;
 
-function createProfileUniform(state,indexes,personId){
-  const identity=selectSoldierIdentity(state,indexes,registries,personId),person=state.entities.people[personId];
-  const section=document.createElement("section");section.className="profile-section service-file-section npc-uniform-preview";section.hidden=true;
-  const head=document.createElement("div");head.className="identity-subhead";const title=document.createElement("h3");title.textContent="Service Uniform";const meta=document.createElement("span");meta.textContent=`${identity.rank} · ${identity.specialty}`;head.append(title,meta);
-  const blouse=document.createElement("div");blouse.className="uniform-blouse npc-uniform-blouse";
-  const nameTape=document.createElement("div");nameTape.className="uniform-name-tape";nameTape.textContent=identity.name.split(" ").at(-1)?.toUpperCase()??identity.name.toUpperCase();
-  const armyTape=document.createElement("div");armyTape.className="uniform-army-tape";armyTape.textContent="U.S. ARMY";
-  const rankMark=document.createElement("div");rankMark.className="uniform-rank-mark";rankMark.append(createRankInsignia(registries.ranks.get(person.affiliation.rankId)));
-  const ribbons=document.createElement("div");ribbons.className="uniform-ribbon-rack";for(const item of identity.ribbons){const slot=document.createElement("span");slot.className="uniform-ribbon-slot";slot.append(createInsignia(item.definition));const device=awardDeviceLabel(item);if(device){const d=document.createElement("small");d.className="insignia-device";d.textContent=device;slot.appendChild(d);}ribbons.appendChild(slot);}if(!identity.ribbons.length){const empty=document.createElement("span");empty.className="uniform-empty-slot";empty.textContent="NO RIBBONS";ribbons.appendChild(empty);}
-  const badges=document.createElement("div");badges.className="uniform-badge-rack";for(const item of identity.badges){const slot=document.createElement("span");slot.className="uniform-badge-slot";slot.append(createInsignia(item.definition));badges.appendChild(slot);}if(identity.rifleQualification){const slot=document.createElement("span");slot.className="uniform-badge-slot qualification-insignia";slot.append(createInsignia(null,{qualificationResult:identity.rifleQualification.result,badgeClasp:identity.rifleQualification.badgeClasp??"RIFLE"}));badges.appendChild(slot);}
-  const tabs=document.createElement("div");tabs.className="uniform-tab-rack";for(const item of identity.tabs)tabs.append(createInsignia(item.definition));blouse.append(nameTape,armyTape,rankMark,tabs,ribbons,badges);
-  const note=document.createElement("p");note.className="muted compact-note";note.textContent="This Tier 1 Soldier's uniform is generated only from that Soldier's canonical rank, awards, badges, and qualifications.";section.append(head,blouse,note);return section;
-}
+const personProfileUniformRenderer = createPersonProfileUniformRenderer({
+  registries,
+  selectSoldierIdentity,
+  createInsignia,
+  createRankInsignia,
+  awardDeviceLabel,
+});
+const createProfileUniform = personProfileUniformRenderer.render;
 
 function getPersonProfileContext(personId) {
   const state=store.getState(), indexes=store.getIndexes(), person=state.entities.people[personId]; if(!person) return null;
@@ -343,16 +340,6 @@ const administrationRenderer = createAdministrationRenderer({
 });
 const renderAdministration = administrationRenderer.render;
 
-function awardDeviceLabel(item) {
-  if (item.count <= 1) return "";
-  const device=item.definition.repeatDevice;
-  if (!device) return `×${item.count}`;
-  if (device.type === "oak_leaf_cluster") return `${item.count - 1} OLC`;
-  if (device.type === "service_star") return `${item.count - 1} service star${item.count - 1 === 1 ? "" : "s"}`;
-  if (device.type === "numeral") return `Numeral ${item.count}`;
-  if (device.type === "knot") return `${item.count} awards`;
-  return `×${item.count}`;
-}
 
 
 function render() {

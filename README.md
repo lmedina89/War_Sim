@@ -1,47 +1,27 @@
-# War Sim v0.4.3.16 — UI Architecture Refactor Phase 12
+# War Sim v0.4.3.17 — UI Architecture Refactor Phase 13
 
-War Sim v0.4.3.16 is built directly from the verified v0.4.3.15 Phase 11 baseline. Runtime **0.4.3.16**, world schema **16**, save format **3**, generator **v3**.
+War Sim v0.4.3.17 is built directly from the verified v0.4.3.16 Phase 12 baseline. Runtime **0.4.3.17**, world schema **16**, save format **3**, generator **v3**.
 
-## Phase 12 scope
+## Phase 13 scope
 
-Phase 12 extracts the remaining Personnel Administration presentation boundary into `src/ui/render/administration.js`.
+This is the final planned UI-architecture cleanup phase. It extracts the remaining NPC Person Profile uniform DOM builder from `src/app.js` into `src/ui/render/personProfileUniform.js` and moves shared award-repeat device formatting into `src/ui/awardPresentation.js`.
 
-The extracted renderer owns only presentation for:
+The Person Profile context remains controller-owned in `src/app.js`; store/index access, selector composition, navigation, profile opening, commands, autosave, save/load, simulation services, progression rules, and canonical mutation remain unchanged.
 
-- active / vacant / replacement-request / separated manpower summary chips
-- open vacancy and replacement-request list presentation
-- recent personnel-action list presentation
+`src/ui/render/personProfileUniform.js` is dependency-injected with registries, Soldier Identity selection, insignia creation, rank-insignia creation, and award-device formatting. It has no direct imports from commands, services, state, core, or selectors.
 
-Canonical personnel administration state remains selected by `selectPersonnelAdministration`, which is injected into the renderer from `src/app.js`. The renderer has no direct imports from commands, services, state, core, or selectors and performs no state mutation.
+The permanent Chromium regression now explicitly opens a Tier-1 NPC personnel file, clicks **View Uniform**, verifies the uniform is visible and populated, then hides it again.
 
-No gameplay rules, personnel lifecycle behavior, save schema, world schema, generator behavior, RNG behavior, progression rules, or simulation services were changed.
+## Controller size
 
-## Architecture impact
+- v0.4.3.16 `src/app.js`: **32,652 bytes / 497 lines**
+- v0.4.3.17 `src/app.js`: **29,714 bytes / 484 lines**
 
-`src/app.js` changed from **33,373 bytes / 495 lines** in v0.4.3.15 to **32,652 bytes / 497 lines** in v0.4.3.16. The slight line-count increase comes from explicit dependency composition while the remaining inline Administration implementation was removed.
+At this point the remaining `app.js` responsibilities are primarily legitimate application orchestration: store/event-bus composition, selector/context assembly, renderer wiring, command execution, autosave, save/load coordination, navigation, subscriptions, diagnostics, and top-level render sequencing. Further extraction should be justified by a concrete architecture need rather than line-count reduction.
 
-New module:
+## Compatibility invariants
 
-- `src/ui/render/administration.js`
-
-New regression coverage:
-
-- `tests/administration-module.mjs`
-- Phase 12 Administration assertions added to `tests/browser-regression.py`
-
-## Release gate
-
-The source tree and exact packaged ZIP are required to pass:
-
-- all JS/MJS test suites
-- ES-module-aware syntax parsing
-- relative import-target closure
-- circular-import audit
-- deterministic 300-world quality validation
-- 10,000-person stress/index audit
-- unsafe runtime-code scan
-- save-system hash preservation
-- app-wide Chromium browser regression
-- clean extraction and repeat verification of the final ZIP
-
-After Phase 12, the remaining `src/app.js` responsibilities should be audited before deciding whether any further extraction is architecturally justified.
+- World schema: **16**
+- Save format: **3**
+- Generator: **v3**
+- Existing save-system implementation remains unchanged.

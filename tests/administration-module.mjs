@@ -12,4 +12,4 @@ assert.match(mod, /selectPersonnelAdministration/);
 assert.match(mod, /renderList/);
 assert.doesNotMatch(mod, /runCommand|store\.|saveToSlot|advanceWorldDays|promotePerson/);
 
-console.log("War Sim v0.4.3.16 administration presentation module QA passed");
+console.log("War Sim v0.4.3.17 administration presentation module QA passed");

@@ -91,6 +91,7 @@ async def main():
     # Create career
     await page.fill('#first-name','Browser')
     await page.fill('#last-name','Tester')
+    await page.fill('#world-seed','4311701')
     # choose first enabled non-empty options in selects
     for sel in ['#branch-select','#component-select','#specialty-select','#contract-select']:
       loc=page.locator(sel)
@@ -187,16 +188,30 @@ async def main():
     texts=await pbtns.all_inner_texts()
     await check('personnel roster buttons discovered',len(texts)>0,repr(texts[:12]))
     opened=False
+    uniform_profile_opened=False
+    profile_name=''
     for i,t in enumerate(texts):
       if t.strip() and t.strip() not in ['Return to My Unit']:
         try:
           await pbtns.nth(i).click(); await page.wait_for_timeout(100)
           if await visible('#person-dialog'):
-            opened=True; break
+            opened=True
+            profile_name=await page.locator('#person-profile-name').inner_text()
+            if await page.locator('#person-dialog .profile-uniform-button').count():
+              uniform_profile_opened=True
+              break
+            await page.click('#person-profile-close'); await page.wait_for_timeout(60)
         except: pass
-    await check('person profile dialog opens',opened,(await page.locator('#person-profile-name').inner_text()) if opened else '')
-    if opened:
+    await check('person profile dialog opens',opened,profile_name)
+    await check('tier-1 person profile found',uniform_profile_opened,profile_name)
+    if uniform_profile_opened:
       await shot('person-profile')
+      uniform_button=page.locator('#person-dialog .profile-uniform-button')
+      await uniform_button.click(); await page.wait_for_timeout(80)
+      await check('person profile uniform opens',await visible('#person-dialog .npc-uniform-preview'),(await page.locator('#person-dialog .npc-uniform-preview').inner_text())[:240])
+      await check('person profile uniform populated',await page.locator('#person-dialog .npc-uniform-preview .uniform-blouse').count()>0)
+      await uniform_button.click(); await page.wait_for_timeout(50)
+      await check('person profile uniform closes',not await visible('#person-dialog .npc-uniform-preview'))
       await page.click('#person-profile-close'); await page.wait_for_timeout(80)
       await check('person profile closes',not await visible('#person-dialog'))
 
