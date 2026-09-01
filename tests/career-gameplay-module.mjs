@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+const app=fs.readFileSync(path.join(root,"src/app.js"),"utf8");
+const ui=fs.readFileSync(path.join(root,"src/ui/render/careerGameplay.js"),"utf8");
+assert.match(app,/createCareerGameplayRenderer/);
+assert.match(app,/onAcceptOpportunity:\s*id => runCommand/);
+assert.match(app,/onResolveDecision:\s*\(personId, decisionId, choiceId\) => runCommand/);
+assert.match(app,/onPerformActivity:\s*\(personId, activityId\) => runCommand/);
+assert.match(app,/onRequestSchool:\s*schoolId => runCommand/);
+assert.match(ui,/export function createCareerGameplayRenderer/);
+assert.match(ui,/NO IMMEDIATE CAREER ACTIONS REQUIRED/);
+assert.match(ui,/Request Volunteer Slot/);
+assert.doesNotMatch(ui,/from ["']\.\.\/\.\.\/commands\//);
+assert.doesNotMatch(ui,/from ["']\.\.\/\.\.\/services\//);
+assert.doesNotMatch(ui,/from ["']\.\.\/\.\.\/state\//);
+assert.doesNotMatch(ui,/createStateStore|store\.mutate|store\.replaceState/);
+assert.doesNotMatch(ui,/runCommand\(/);
+console.log("War Sim v0.4.3.15 career gameplay presentation module QA passed");

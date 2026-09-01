@@ -1,48 +1,54 @@
-# War Sim v0.4.3.13 — UI Architecture Refactor Phase 9
+# War Sim v0.4.3.15 — UI Architecture Refactor Phase 11
 
-War Sim v0.4.3.13 is built directly from the verified v0.4.3.12 Phase 8 baseline. Runtime **0.4.3.13**, world schema **16**, save format **3**, generator **v3**.
+War Sim v0.4.3.15 is built directly from the verified v0.4.3.14 Phase 10 baseline. Runtime **0.4.3.15**, world schema **16**, save format **3**, generator **v3**.
 
-This is a refactor-only release. It does not intentionally change gameplay, simulation rules, save data, career progression, world generation, RNG behavior, or canonical records.
+## Phase 11 scope
 
-## Phase 9: Service Career / retention presentation boundary
+Phase 11 extracts the Career Gameplay / Actions presentation boundary into `src/ui/render/careerGameplay.js`.
 
-The Service Career contract and reenlistment-offer DOM presentation has been extracted from `src/app.js` into:
+The extracted presentation module owns rendering for:
 
-- `src/ui/render/serviceCareer.js`
+- Career objectives and completed-objective history
+- Next 30 Days lookahead
+- Unit Situation Feed
+- Current Duty and Duty Schedule presentation
+- Recent Unit Training presentation and UI-only archive controls
+- Career Opportunities cards
+- Military School catalog presentation
+- Skill/performance presentation
+- Pending decision cards
+- Focused activity cards and Activity Log presentation
 
-The extracted renderer owns presentation for:
+Canonical behavior remains outside the renderer. `src/app.js` still owns command execution, autosave, state/store access, opportunity acceptance/decline, decision resolution, focused activities, school requests, result dialogs, and render orchestration. These behaviors are injected into the renderer as callbacks.
 
-- component / MOS / career-field contract summary
-- contract start / ETS / days remaining / bonus fields
-- reenlistment-window button presentation
-- open reenlistment offer cards
-- service-period history list
+No gameplay rules, save schema, world schema, generator behavior, RNG behavior, progression rules, or simulation services were changed.
 
-Canonical selectors and mutations remain outside the renderer. `src/app.js` injects `selectServiceCareer`, presentation helpers, registries, and the callback that ultimately invokes the canonical reenlistment command. The module imports no commands, services, state, core, or selectors directly.
+## Architecture impact
 
-## Architecture result
+`src/app.js` changed from **52,148 bytes / 609 lines** in v0.4.3.14 to **33,373 bytes / 495 lines** in v0.4.3.15.
 
-`src/app.js` changed from **63,706 bytes / 641 lines** in v0.4.3.12 to **61,666 bytes / 627 lines** in v0.4.3.13.
+New module:
 
-A new `tests/service-career-module.mjs` protects the extraction boundary.
+- `src/ui/render/careerGameplay.js`
 
-## Verification policy
+New regression coverage:
 
-The release gate includes:
+- `tests/career-gameplay-module.mjs`
+- Phase 11 checks added to `tests/browser-regression.py`
 
-- all automated test suites
-- explicit ES-module parsing for browser-loaded `.js`
-- relative-import closure checks
-- circular-import detection
+The browser regression now explicitly verifies Career objectives, current duty, 30-day lookahead, duty schedule, opportunities, school catalog, skills, activity cards, actual activity execution, time advancement, and zero browser/runtime errors.
+
+## Release gate
+
+The source tree and exact packaged ZIP are required to pass:
+
+- all JS/MJS test suites
+- ES-module-aware syntax parsing
+- relative import-target closure
+- circular-import audit
 - deterministic 300-world quality validation
 - 10,000-person stress/index audit
-- static unsafe-runtime scan
-- clean extraction of the final ZIP followed by the same automated verification
-
-Real-device acceptance remains part of the checkpoint process before beginning the next refactor phase.
-
-## Compatibility
-
-World schema remains **16**. Save format remains **3**. Generator remains **v3**. `src/core/saveSystem.js` is unchanged and retains SHA-256:
-
-`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
+- unsafe runtime-code scan
+- save-system hash preservation
+- app-wide Chromium browser regression
+- clean extraction and repeat verification of the final ZIP

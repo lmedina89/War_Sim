@@ -1,45 +1,55 @@
-# War Sim v0.4.3.13 — Software Quality Report
+# War Sim v0.4.3.15 — Software Quality Report
 
-## Release scope
+## Release
 
-v0.4.3.13 is UI Architecture Refactor Phase 9, built directly from the verified v0.4.3.12 baseline. Runtime **0.4.3.13**, world schema **16**, save format **3**, generator **v3**.
+v0.4.3.15 is UI Architecture Refactor Phase 11, built directly from the verified v0.4.3.14 baseline. Runtime **0.4.3.15**, world schema **16**, save format **3**, generator **v3**.
 
-Scope is intentionally limited to extracting Service Career / retention DOM presentation into `src/ui/render/serviceCareer.js` and updating structural regression coverage and release metadata. Canonical gameplay, state mutation, save behavior, RNG, progression, and simulation rules are unchanged.
+## Scope containment
 
-## Verification results
+The only architectural feature change is extraction of Career Gameplay / Actions presentation into `src/ui/render/careerGameplay.js`.
 
-- 35 / 35 automated test suites: PASS
-- 145 / 145 JS/MJS files parsed with browser `.js` checked under explicit ES-module grammar: PASS
-- 110 runtime JS modules
-- 242 relative-import references checked: PASS
-- 0 missing relative-import targets
-- 0 circular runtime imports
-- 300 deterministic generated worlds validated
-- 10,000-person stress/index audit: PASS
-- static unsafe-runtime scan (`eval`, `new Function`, `document.write`, `innerHTML =`): PASS
-- save/migration compatibility suites: PASS
-- career-boundary integrity suites: PASS
-- mobile navigation/UI regression suites: PASS
-- startup composition/runtime-binding suites: PASS
-- Service Career presentation-boundary regression: PASS
+State mutation and gameplay behavior remain in canonical command/service/store layers. The new renderer receives presentation helpers, selectors, UI-archive functions, and command callbacks by dependency injection. It has no direct imports from commands, services, state, or the state store.
 
-The current container's direct headless-Chromium screenshot command did not terminate reliably, so this report does **not** claim a new automated browser-screenshot pass for Phase 9. The source/package startup protections, ES-module/import-closure checks, and automated suites all pass; the release still requires the normal real-device acceptance check before Phase 10 begins.
+## Source-tree verification
 
-## Refactor containment
+- JS/MJS test suites: **37/37 PASS**
+- ES-module syntax checks: **149/149 PASS**
+- Relative import targets checked: **447**, missing: **0**
+- Runtime source modules: **112**
+- Circular imports: **0**
+- Deterministic generated worlds validated: **300**
+- Stress population: **10,000 people**
+- Unsafe runtime-code scan (`eval`, `new Function`, `document.write`, `innerHTML =`): **0 hits**
+- Save-system SHA-256: `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9` (unchanged)
 
-`src/ui/render/serviceCareer.js` has no direct imports from commands, services, state, core, or selectors. Dependencies are supplied through `src/app.js`.
+## Browser regression
 
-`src/app.js` remains responsible for canonical store/index access, render orchestration, commands, save/autosave, navigation, and state mutation. The extracted renderer only builds Service Career and reenlistment presentation and calls an injected acceptance callback.
+App-wide Chromium regression on the Phase 11 worktree: **74/74 PASS**.
 
-## Size change
+Coverage includes:
 
-- v0.4.3.12 `src/app.js`: 63,706 bytes / 641 lines
-- v0.4.3.13 `src/app.js`: 61,666 bytes / 627 lines
+- startup and New Career creation
+- Career Home / Actions / Soldier / Records / Inbox
+- all Soldier Identity tabs
+- Unit / Personnel / Orders / More navigation
+- Personnel profile dialog and Unit→Personnel navigation
+- Save Manager and Load Manager presentation
+- focused activity execution and AAR
+- 1-day, 7-day, and 30-day advancement
+- achievement dialogs
+- Inbox acknowledge/archive/open-opportunity/mark-all-read/clear-read actions
+- contract/reenlistment presentation
+- Career Record / Promotion / Education & Awards / Service Record
+- Phase 11 Career Gameplay presentation: objectives, current duty, next-30-days, duty schedule, opportunities, school catalog, skills, activity cards
+- app-error surface hidden
+- browser page exceptions: **0**
+- browser console errors: **0**
 
-## Save-system invariant
+## app.js reduction
 
-`src/core/saveSystem.js` SHA-256 remains:
+- v0.4.3.14: **52,148 bytes / 609 lines**
+- v0.4.3.15: **33,373 bytes / 495 lines**
 
-`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
+## Package verification
 
-No world-schema, save-format, or generator-version bump was required.
+The final release ZIP must be extracted to a fresh directory and the full test, syntax/import, deterministic/stress, security, save-hash, and browser-regression gates rerun against that exact extracted artifact before release acceptance.

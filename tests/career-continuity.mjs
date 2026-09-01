@@ -71,12 +71,13 @@ assert.equal(validateWorldState(store.getState(),registries).ok,true);
 
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
 const app=fs.readFileSync(path.join(root,"src/app.js"),"utf8");
+const careerGameplayUi=fs.readFileSync(path.join(root,"src/ui/render/careerGameplay.js"),"utf8");
 const personProfile=fs.readFileSync(path.join(root,"src/ui/dialogs/personProfile.js"),"utf8");
 const css=fs.readFileSync(path.join(root,"src/ui/styles.css"),"utf8");
 assert.match(html,/id="persistent-world-context"/);
 assert.match(app,/formatMilitaryDate/);
-assert.match(app,/NO IMMEDIATE CAREER ACTIONS REQUIRED/);
-assert.match(app,/Completed Objective History/);
+assert.match(careerGameplayUi,/NO IMMEDIATE CAREER ACTIONS REQUIRED/);
+assert.match(careerGameplayUi,/Completed Objective History/);
 assert.match(personProfile,/simulationTierLabel/);
 assert.match(css,/\.persistent-world-context\s*\{/);
 assert.match(css,/\.duty-history-row strong\s*\{[^}]*color:\s*var\(--text\)/s,"training result grades must have explicit readable contrast");

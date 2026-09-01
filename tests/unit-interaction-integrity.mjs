@@ -65,7 +65,8 @@ const resultDialog=fs.readFileSync(new URL("../src/ui/dialogs/resultDialog.js",i
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 assert.match(resultDialog,/PLAYER ONLY/,"manual activity AAR must disclose individual participation");
 assert.match(resultDialog,/UNIT SCHEDULE/,"scheduled duty AAR must disclose unit source");
-assert.match(app,/SERVICE RECORD HIGHLIGHTS/,"career overview must surface earned credentials");
+const careerRecord = fs.readFileSync(new URL("../src/ui/render/careerRecord.js", import.meta.url), "utf8");
+assert.match(careerRecord,/SERVICE RECORD HIGHLIGHTS/,"career overview must surface earned credentials");
 assert.match(app,/UNIT_HISTORY_PREVIEW_LIMIT\s*=\s*5/,"Unit history must be bounded on the main Unit view");
 assert.match(unitPersonnel,/archiveUiRecord\("unit-history"/,"Unit history must support presentation-only archiving");
 assert.match(css,/roster-row td::before\{content:attr\(data-label\)/,"mobile Unit roster must reflow as labeled cards");

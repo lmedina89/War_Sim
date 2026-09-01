@@ -9,6 +9,7 @@ import { selectGameplay } from "../src/selectors/selectGameplay.js";
 
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const achievementDialog=fs.readFileSync(new URL("../src/ui/dialogs/achievementDialog.js",import.meta.url),"utf8");
+const careerGameplayUi=fs.readFileSync(new URL("../src/ui/render/careerGameplay.js",import.meta.url),"utf8");
 const historyArchive=fs.readFileSync(new URL("../src/ui/historyArchive.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
@@ -22,7 +23,7 @@ assert.match(historyArchive,/Restore Archived/);
 assert.match(achievementDialog,/Open Opportunity/);
 assert.match(achievementDialog,/career_opportunity/,"major school opportunities should enter the popup queue");
 assert.match(app,/openOpportunityRecord/);
-assert.match(app,/pt-summary:/,"routine PT should be summarized instead of flooding recent unit training");
+assert.match(careerGameplayUi,/pt-summary:/,"routine PT should be summarized instead of flooding recent unit training");
 assert.match(css,/100dvh/,"mobile dialogs should be bounded by the dynamic viewport");
 assert.match(css,/overflow-wrap:anywhere/,"long military labels should wrap instead of spill");
 assert.match(css,/\.current-duty-card\{grid-template-columns:1fr\}/,"current duty must stack at narrow widths");

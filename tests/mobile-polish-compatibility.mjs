@@ -47,12 +47,13 @@ function payloadFor(worldState,id){return {saveFormatVersion:3,saveId:id,created
 
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const careerGameplayUi=fs.readFileSync(new URL("../src/ui/render/careerGameplay.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 assert.match(html,/class="panel disclosure-panel situation-feed-panel"[^>]*data-persist-key="situation-feed"/);
 assert.match(html,/id="situation-feed-count"/);
 assert.match(app,/const SITUATION_FEED_PREVIEW_LIMIT = 3;/);
-assert.match(app,/Show All \(\$\{feed\.length\}\)/);
-assert.match(app,/Show Recent/);
+assert.match(careerGameplayUi,/Show All \(\$\{feed\.length\}\)/);
+assert.match(careerGameplayUi,/Show Recent/);
 assert.match(css,/\.identity-screen-tabs\{grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/,"Soldier tabs should use five equal-width columns");
 assert.match(css,/@media\(max-width:420px\)\{\.identity-screen-tabs/);
 console.log("War Sim v0.4.3.2 mobile polish and legacy award compatibility QA passed");

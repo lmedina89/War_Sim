@@ -55,10 +55,11 @@ function storeFor(seed=421001){
 }
 
 const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const careerRecord=fs.readFileSync(new URL("../src/ui/render/careerRecord.js",import.meta.url),"utf8");
 const personProfile=fs.readFileSync(new URL("../src/ui/dialogs/personProfile.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../src/ui/styles.css",import.meta.url),"utf8");
 assert.match(app,/Unit Capability Inventory|selectUnitCapabilityInventory/);
-assert.match(app,/achievement-cluster/);
+assert.match(careerRecord,/achievement-cluster/);
 assert.match(personProfile,/person-career-activity/);
 assert.match(css,/situation-identity>span:last-child\{white-space:normal/);
 console.log("War Sim v0.4.3.2 school availability, service-record consolidation, and capability-foundation QA passed");

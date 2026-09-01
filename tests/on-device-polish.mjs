@@ -10,6 +10,7 @@ import { evaluateCommendationAwardsInDraft } from "../src/services/awardProgress
 
 const root=new URL("../",import.meta.url);
 const appSource=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+const careerRecordSource=fs.readFileSync(new URL("../src/ui/render/careerRecord.js",import.meta.url),"utf8");
 const soldierIdentitySource=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const personProfileSource=fs.readFileSync(new URL("../src/ui/dialogs/personProfile.js",import.meta.url),"utf8");
 const relationshipsSource=fs.readFileSync(new URL("../src/ui/render/relationships.js",import.meta.url),"utf8");
@@ -26,8 +27,8 @@ function makeCareer(seed=433101){
 // Runtime/version and responsive DD214 containment.
 {
   const state=createInitialWorldState({seed:433102});
-  assert.equal(state.gameVersion,"0.4.3.13");
-  assert.match(html,/War Sim v0\.4\.3\.13/);
+  assert.equal(state.gameVersion,"0.4.3.15");
+  assert.match(html,/War Sim v0\.4\.3\.15/);
   assert.match(css,/\.dd214-preview \.mil-metric>strong\{white-space:normal;overflow-wrap:anywhere/);
 }
 
@@ -40,7 +41,7 @@ function makeCareer(seed=433101){
   promotion=evaluatePromotionEligibility(store.getState(),store.getIndexes(),registries,personId);
   assert.equal(promotion.nextRank.id,"rank_army_e5");
   assert.equal(promotion.progress.requiredQualifications.some(q=>q.id==="qualification_basic_leader"&&q.held===false),true);
-  assert.match(appSource,/Promotion Progress|promotion-status-grid/);
+  assert.match(careerRecordSource,/Promotion Progress|promotion-status-grid/);
 }
 
 // Relationship provenance exposes distinct trust/respect/rapport deltas.
@@ -87,4 +88,4 @@ function makeCareer(seed=433101){
   assert.match(soldierIdentitySource,/WHY EARNED/);
 }
 
-console.log("War Sim v0.4.3.13 on-device polish QA passed");
+console.log("War Sim v0.4.3.15 on-device polish QA passed");
