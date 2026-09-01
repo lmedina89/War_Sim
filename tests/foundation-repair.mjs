@@ -145,4 +145,4 @@ function makeCareer(seed=433001){
   assert.match(insignia,/lozenge:true/);
 }
 
-console.log("War Sim v0.4.3.3 foundation repair QA passed");
+console.log("War Sim v0.4.3.3.1 foundation repair QA passed");

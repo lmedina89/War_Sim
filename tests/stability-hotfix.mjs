@@ -96,7 +96,7 @@ for (let seed = 1; seed <= 1000; seed++) {
   legacy.world.scheduler.scheduleTemplateId = "schedule_standard_training_cycle";
   const migrated = migratePayload({ saveFormatVersion:3, saveId:"schema13-hotfix", createdAt:"2026-08-31T00:00:00.000Z", savedAt:"2026-08-31T00:00:00.000Z", gameVersion:"0.4.1", worldState:legacy });
   assert.equal(migrated.worldState.schemaVersion, 16);
-  assert.equal(migrated.worldState.gameVersion, "0.4.3.3");
+  assert.equal(migrated.worldState.gameVersion, "0.4.3.3.1");
   assert.equal(migrated.worldState.world.scheduler.trainingPhaseId, "training_phase_garrison");
   assert.equal(validateWorldState(migrated.worldState, registries).ok, true);
 }

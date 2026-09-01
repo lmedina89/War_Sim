@@ -13,7 +13,7 @@ export function grantAwardInDraft(draft,registries,{personId,awardId,sourceType,
   draft.entities.awardRecords[id]={id,schemaVersion:3,personId,awardId,earnedDate:draft.world.date,sourceType,sourceId,reason};
   person.career.prestige=(person.career.prestige??0)+(def.prestigeValue??0);
   const ordinal=existing.length+1;
-  const notificationId=recordNotification(draft,{personId,type:"award_earned",title:"Award Earned",message:`${def.name}${ordinal>1?` · ${ordinal} awards total`:""}`,priority:"high",references:{awardId,awardRecordId:id}});
+  const notificationId=recordNotification(draft,{personId,type:"award_earned",title:"Award Earned",message:`${def.name}${ordinal>1?` · ${ordinal} awards total`:""}${reason?` — ${reason}`:""}`,priority:"high",references:{awardId,awardRecordId:id}});
   return {awardRecordId:id,notificationId,awardId,awardCount:ordinal};
 }
 

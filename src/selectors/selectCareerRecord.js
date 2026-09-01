@@ -40,7 +40,7 @@ export function selectCareerRecord(state, indexes, registries, personId) {
   const awards = awardIds.map(id => {
     const record = state.entities.awardRecords[id];
     const award = registries.awards.get(record.awardId);
-    return { id, awardId:record.awardId, name: award.name, category: award.category, awardGroup:award.awardGroup ?? award.category, earnedDate: record.earnedDate, sourceType:record.sourceType ?? null, sourceId:record.sourceId ?? null };
+    return { id, awardId:record.awardId, name: award.name, category: award.category, awardGroup:award.awardGroup ?? award.category, earnedDate: record.earnedDate, sourceType:record.sourceType ?? null, sourceId:record.sourceId ?? null, reason:record.reason ?? null };
   }).sort((a,b)=>String(b.earnedDate??"").localeCompare(String(a.earnedDate??""))||a.name.localeCompare(b.name));
 
   const relationshipIds = indexes.relationshipsByPersonId.get(personId) ?? [];
@@ -66,7 +66,7 @@ export function selectCareerRecord(state, indexes, registries, personId) {
       rapport: record.rapport ?? 0,
       bond: record.bond,
       personalityTraits: (()=>{ const profileId=indexes.personalityProfileByPersonId?.get(otherId); const profile=profileId?state.entities.personalityProfiles?.[profileId]:null; return (profile?.traitIds??[]).map(id=>registries.personalities.has(id)?registries.personalities.get(id).name:id); })(),
-      memories: (indexes.relationshipMemoriesByPersonId?.get(personId)??[]).map(memoryId=>state.entities.relationshipMemoryRecords?.[memoryId]).filter(memory=>memory && (memory.personId===otherId || memory.otherPersonId===otherId)).sort((a,b)=>(b.elapsedDay??0)-(a.elapsedDay??0)).slice(0,3).map(memory=>({id:memory.id,date:memory.gameDate,summary:memory.summary,type:memory.type}))
+      memories: (indexes.relationshipMemoriesByPersonId?.get(personId)??[]).map(memoryId=>state.entities.relationshipMemoryRecords?.[memoryId]).filter(memory=>memory && (memory.personId===otherId || memory.otherPersonId===otherId)).sort((a,b)=>(b.elapsedDay??0)-(a.elapsedDay??0)).slice(0,3).map(memory=>({id:memory.id,date:memory.gameDate,summary:memory.summary,type:memory.type,trustDelta:memory.trustDelta??0,respectDelta:memory.respectDelta??0,rapportDelta:memory.rapportDelta??0,sourceType:memory.sourceType??null,sourceId:memory.sourceId??null}))
     };
   });
 

@@ -1,83 +1,70 @@
-# War Sim v0.4.3.3 — Save Integrity & Career Consistency
+# War Sim v0.4.3.3.1 — On-Device Career Polish
 
-War Sim v0.4.3.3 is a foundation-repair release built directly from the exact packaged v0.4.3.2.2 baseline. It keeps world schema 16, save format 3, and generator v3 while repairing save recovery, strengthening canonical validation, making state mutation transactional, correcting senior-enlisted progression, preventing unqualified fresh Soldiers from starting in an airborne formation, and upgrading Army rank SVG fidelity.
+War Sim v0.4.3.3.1 is a narrow mobile/on-device polish release built directly from the exact packaged v0.4.3.3 baseline. It keeps world schema 16, save format 3, and generator v3. It does not add the planned v0.4.4 interactive-duty framework; it improves clarity and presentation of systems already present in v0.4.3.3.
 
-Runtime **0.4.3.3**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.3.1**, world schema **16**, save format **3**, generator **v3**.
 
-## v0.4.3.3 changes
+## v0.4.3.3.1 changes
 
-### Save recovery and integrity
+### DD214-style mobile containment
 
-- Manual save slots no longer depend exclusively on the metadata index. If the index is missing or corrupted, valid slot payloads are rediscovered and their metadata is rebuilt.
-- Manual-save backup payloads are now actually used. If a primary manual slot is damaged and its backup is valid, the game can load the backup and restore it to the primary slot.
-- Damaged slots remain visible as damaged/recoverable instead of falsely appearing empty.
-- `qualificationAttemptRecords` is now a required canonical store.
-- Semantic validation now covers formation references and ancestry, loadout/equipment ownership and references, career/promotion records, qualification records, qualification-attempt ranges, award records, and other important canonical relationships.
-- Save operations validate world state before writing. The save UI handles write failures locally and reports a usable status message.
-- Legacy single-save import now checks actual slot/backup storage before deciding a slot is unused.
+- Long UNIT and DECORATIONS / BADGES values now wrap inside their DD214-style metric cards instead of running off the right edge on narrow phones.
+- DD214 metric containers are explicitly width-contained and use mobile-safe wrapping.
 
-### Transactional state mutation
+### Promotion progress visibility
 
-- `stateStore.mutate()` now works on a cloned candidate state and candidate indexes.
-- A mutator or index-refresh failure leaves the committed live state and indexes unchanged and does not notify listeners.
-- `replaceState()` follows the same build-then-commit principle.
-- This safety pass exposed and repaired an older billet-assignment command that had been mutating a captured pre-transaction billet object instead of the draft state.
+- The Records screen now labels the advancement panel **Promotion Progress**.
+- Promotion Progress shows CURRENT rank, NEXT rank, and ELIGIBLE / IN PROGRESS status.
+- Experience, time in service, and time in grade progress remain visible against their actual requirements.
+- Required qualification / PME gates are now listed explicitly with held/missing status.
+- Remaining blockers are shown in a dedicated section.
+- Career Home now includes a direct **Promotion: <rank> · View Progress / Eligible** control that opens the Records promotion section.
 
-### Promotion consistency
+### Relationship readability and provenance
 
-- Promotion progression now uses explicit `promotionTargetRankId` links instead of assuming every higher hierarchy level is the next automatic promotion.
-- Added **Master Sergeant (MSG), E-8** as the normal senior-enlisted progression target from SFC.
-- **First Sergeant (1SG), E-8** remains in the registry for existing company leadership billets but is now explicitly positional and is not the automatic promotion after SFC.
-- SSG→SFC and SFC→MSG now have meaningful experience, time-in-service, time-in-grade, and current leadership-qualification gates instead of effectively ungated progression.
-- 2LT→1LT and 1LT→CPT now have explicit progression gates; CPT is terminal within the currently implemented officer scope.
-- Senior promotion thresholds in this build are game progression scaffolding, not a claim to reproduce every current Army centralized-promotion policy rule.
+- Trust, Respect, and Rapport continue to use their canonical -100..100 values.
+- Signed relationship bars now render around a visible neutral midpoint with a non-linear display displacement, making small early-career differences such as +1, 0, and -2 visually distinguishable without changing the underlying values.
+- Recent relationship memories now show the exact recorded Trust / Respect / Rapport deltas that caused a change.
+- Existing event definitions already affect these dimensions differently (for example teammate help favors Trust/Rapport while counseling primarily affects Respect); this patch preserves those canonical effects and makes them understandable in the UI.
 
-### Formation / airborne consistency
+### Tier-1 NPC Soldier Identity
 
-- Fresh unqualified 11B careers no longer start in the **82d Airborne Division**.
-- Current fresh-start pool: **7th Infantry Division, 5th Infantry Division, and 193d Infantry Brigade**.
-- 82d Airborne Division remains registered and is marked as requiring Airborne qualification for future assignment logic.
-- Existing v0.4.3.x careers already assigned to the 82d are preserved for save compatibility; the release does not retroactively move them.
-- 75th Ranger Regiment and 7th Special Forces Group remain unavailable as generic starts until proper selection/qualification pipelines exist.
+- Every Digital Personnel Record now displays the Soldier's canonical SVG rank insignia on the personnel identification plate.
+- Tier-1 NPCs only receive a **View Uniform** control inside their Digital Personnel Record.
+- Their uniform is generated from that NPC's canonical rank, ribbons/medals, badges/tabs, and current rifle qualification. No cosmetic awards are fabricated for display.
+- The player continues to use the existing Soldier Identity uniform view; lower-detail Tier-2/3 NPCs do not receive the Tier-1 uniform drill-down.
 
-### Rank-insignia fidelity
+### Award provenance
 
-The uniform remains canonical-`rankId` driven, but the SVG rank library has been redrawn from U.S. Army/TIOH grade-insignia structure for better fidelity at mobile game scale:
+- Award selectors now expose the canonical award-record reason.
+- Soldier Identity award cards display **WHY EARNED** when a reason exists.
+- Career/personnel award records surface award provenance where available.
+- New award notifications include the award reason.
+- The Army Achievement Medal remains sustained-performance driven: the current model grants one after each eight qualifying performance records scoring 90 or higher. The teammate-help decision does not directly grant an AAM.
 
-- PVT — no grade insignia
-- PV2 — one chevron
-- PFC — one chevron / one arc
-- SPC — eagle-on-shield device
-- SGT — three chevrons
-- SSG — three chevrons / one arc
-- SFC — three chevrons / two arcs
-- MSG — three chevrons / three arcs
-- 1SG — three chevrons / three arcs / center lozenge
-- 2LT — single gold bar
-- 1LT — single silver bar
-- CPT — joined double silver bars
+### Existing v0.4.3.3 foundation preserved
 
-These are original vector redraws optimized for the game renderer, not embedded raster scans of official insignia artwork.
-
-### Existing v0.4.3.2.2 systems preserved
-
-- Named higher formations and full assignment chains.
-- Six historical formation SVG identities and six original future campaign emblems.
-- Current Situation mini formation patch.
-- Soldier Identity uniform/loadout/awards/catalog/record screens.
-- Qualification, school, award, reenlistment, unit readiness, relationships, personnel, orders, and service-record foundations.
-- Situation Feed compact/collapsible behavior and mobile app-style navigation.
+- Save-index recovery and manual backup restoration.
+- Transactional state mutation and rollback behavior.
+- Strengthened canonical validation including qualification-attempt records.
+- MSG / positional-1SG promotion logic.
+- Fresh-start airborne assignment consistency.
+- Named formations and formation insignia.
+- High-fidelity Army rank SVG library.
+- Awards, qualifications, schools, reenlistment, unit readiness, relationships, personnel, orders, service records, and mobile app navigation.
 
 ## QA summary
 
-- **20/20** test scripts pass on a clean rerun.
-- New `foundation-repair.mjs` covers transactional rollback, save-index recovery, backup restore, validator strengthening, senior-enlisted progression, terminal/positional rank behavior, fresh-start formation rules, and existing-82d compatibility.
-- Dedicated rank/formation tests cover all current rank IDs including MSG and all twelve registered unit/campaign SVG IDs.
+- **21/21** test scripts pass on the final clean rerun.
+- New `tests/on-device-polish.mjs` covers DD214 containment rules, promotion-gate exposure, relationship provenance, Tier-1 NPC uniform/rank wiring, and AAM award-reason behavior.
 - **300** deterministic generated-world seeds validated.
 - **10,000-person** stress/index audit passes.
-- **113** JS/MJS files pass `node --check`.
-- Static production-source sweep passes: no `eval`, `new Function`, `innerHTML =`, or `document.write`.
+- Final `quality.mjs` stress index build: approximately **15.31 ms** in this container run.
+- **114/114** JS/MJS files pass `node --check`.
+- Static production-source sweep finds no `eval`, `new Function`, `.innerHTML =`, or `document.write`.
+- `src/core/saveSystem.js` is byte-identical to the exact packaged v0.4.3.3 baseline (SHA-256 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`).
+- A 390×844 headless Chromium smoke attempt again timed out in the container with DBus/headless-environment errors and produced no reliable screenshot; it is explicitly not counted as passed.
 
 ## Still intentionally out of scope
 
-v0.4.3.3 does not add deployments/combat, new MOS career starts, Ranger/Special Forces selection pipelines, deep equipment, interactive schools, campaign generation, or the planned reusable interactive duty/event framework. Airborne School currently grants its existing qualification/badge; a future reassignment pipeline will be responsible for using that qualification to open airborne assignments.
+v0.4.3.3.1 does not add deployments/combat, new MOS career starts, Ranger/Special Forces selection pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive duty/event framework planned for v0.4.4.

@@ -63,7 +63,8 @@ export function evaluatePromotionEligibility(state, indexes, registries, personI
       gradeDays,
       requiredExperience: requirements.minimumExperience ?? 0,
       requiredServiceDays: requirements.minimumTimeInServiceDays ?? 0,
-      requiredGradeDays: requirements.minimumTimeInGradeDays ?? 0
+      requiredGradeDays: requirements.minimumTimeInGradeDays ?? 0,
+      requiredQualifications: (requirements.requiredQualificationIds ?? []).map(id => ({ id, name: registries.qualifications.get(id).name, held: heldQualifications.has(id) }))
     }
   };
 }
