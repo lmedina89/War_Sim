@@ -2,10 +2,12 @@ import { createEntityId } from "../core/ids.js";
 import { commandResult } from "../core/commandResult.js";
 import { addMonthsIso, daysBetweenIso } from "../services/dateMath.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 export function generateReenlistmentOffers(store, registries, personId) {
   const state = store.getState(), person = state.entities.people[personId];
   if (!person) throw new Error(`Unknown person: ${personId}`);
+  assertActiveServiceAction(state, personId);
   const service = state.entities.serviceRecords[person.serviceRecordId];
   const contract = state.entities.contractRecords[service.currentContractId];
   if (!contract || contract.status !== "active") throw new Error("No active contract found.");
@@ -14,7 +16,10 @@ export function generateReenlistmentOffers(store, registries, personId) {
   if (daysRemaining < -30) throw new Error("Current contract has already expired.");
 
   const offerIdsForPerson = [...(store.getIndexes().reenlistmentOffersByPersonId?.get(personId) ?? [])];
-  const existing = offerIdsForPerson.map(id => state.entities.reenlistmentOfferRecords[id]).filter(x => x?.status === "open");
+  const offerRecords = offerIdsForPerson.map(id => state.entities.reenlistmentOfferRecords[id]).filter(Boolean);
+  const accepted = offerRecords.find(x => x.status === "accepted");
+  if (accepted) return commandResult({ code: "reenlistment_already_accepted", message: "A reenlistment has already been accepted for the current contract.", data: { offerId: accepted.id } });
+  const existing = offerRecords.filter(x => x.status === "open");
   if (existing.length) return commandResult({ code: "offers_existing", message: "Reenlistment offers are already available.", data: { offerIds: existing.map(x => x.id) } });
 
   const specialty = registries.specialties.get(service.specialtyId);
@@ -35,16 +40,20 @@ export function generateReenlistmentOffers(store, registries, personId) {
 export function acceptReenlistmentOffer(store, registries, offerId) {
   const state = store.getState(), offer = state.entities.reenlistmentOfferRecords[offerId];
   if (!offer || offer.status !== "open") throw new Error("This reenlistment offer is no longer available.");
+  assertActiveServiceAction(state, offer.personId);
   const person = state.entities.people[offer.personId], service = state.entities.serviceRecords[person.serviceRecordId];
   const oldContract = state.entities.contractRecords[service.currentContractId], def = registries.contracts.get(offer.contractDefinitionId);
+  if (!oldContract || oldContract.personId !== offer.personId || oldContract.status !== "active") throw new Error("No valid active contract is available for reenlistment.");
+  if (!def) throw new Error("The selected reenlistment contract definition is unavailable.");
   const siblingOfferIds = [...(store.getIndexes().reenlistmentOffersByPersonId?.get(offer.personId) ?? [])];
   let newContractId;
   store.mutate(draft => {
-    draft.entities.contractRecords[oldContract.id].status = "completed";
     newContractId = createEntityId(draft, "contract");
     const startDate = oldContract.endDate;
-    draft.entities.contractRecords[newContractId] = { id: newContractId, schemaVersion: 1, personId: offer.personId, contractDefinitionId: def.id, branchId: service.branchId, componentId: offer.componentId, specialtyId: offer.specialtyId, startDate, endDate: addMonthsIso(startDate, def.termMonths), termMonths: def.termMonths, bonus: offer.bonus, type: "reenlistment", status: "active" };
-    draft.entities.serviceRecords[service.id].currentContractId = newContractId;
+    const effectiveNow = startDate <= draft.world.date;
+    draft.entities.contractRecords[newContractId] = { id: newContractId, schemaVersion: 1, personId: offer.personId, contractDefinitionId: def.id, branchId: service.branchId, componentId: offer.componentId, specialtyId: offer.specialtyId, startDate, endDate: addMonthsIso(startDate, def.termMonths), termMonths: def.termMonths, bonus: offer.bonus, type: "reenlistment", status: effectiveNow ? "active" : "pending" };
+    if (effectiveNow) { draft.entities.contractRecords[oldContract.id].status = "completed"; draft.entities.serviceRecords[service.id].currentContractId = newContractId; }
+    draft.entities.people[offer.personId].career.bonusEarnings = Number(draft.entities.people[offer.personId].career.bonusEarnings ?? 0) + Number(offer.bonus ?? 0);
     draft.entities.reenlistmentOfferRecords[offerId].status = "accepted";
     for (const id of siblingOfferIds) { const other = draft.entities.reenlistmentOfferRecords[id]; if (other && other.id !== offerId && other.status === "open") other.status = "declined"; }
     const eventId = createEntityId(draft, "career");

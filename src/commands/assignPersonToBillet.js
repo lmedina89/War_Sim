@@ -1,9 +1,12 @@
+import { activeServiceBlockReason } from "../services/serviceLifecycle.js";
 export function assignPersonToBillet(store, registries, personId, billetId) {
   const state = store.getState();
   const person = state.entities.people[personId];
   const billet = state.entities.billets[billetId];
 
   if (!person) return { ok: false, code: "PERSON_NOT_FOUND" };
+  const serviceBlockReason = activeServiceBlockReason(state, personId);
+  if (serviceBlockReason) return { ok: false, code: "SERVICE_STATUS_BLOCKED", details: { reason: serviceBlockReason } };
   if (!billet) return { ok: false, code: "BILLET_NOT_FOUND" };
   if (billet.assignedPersonId && billet.assignedPersonId !== personId) {
     return { ok: false, code: "BILLET_OCCUPIED" };

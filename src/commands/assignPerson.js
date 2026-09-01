@@ -1,3 +1,4 @@
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 import { createEntityId } from "../core/ids.js";
 
 export function assignPersonToUnit(store, registries, personId, unitId, roleId) {
@@ -5,6 +6,7 @@ export function assignPersonToUnit(store, registries, personId, unitId, roleId) 
   const person = state.entities.people[personId];
   const unit = state.entities.units[unitId];
   if (!person) throw new Error(`Unknown person: ${personId}`);
+  assertActiveServiceAction(state, personId);
   if (!unit) throw new Error(`Unknown unit: ${unitId}`);
   registries.roles.get(roleId);
 

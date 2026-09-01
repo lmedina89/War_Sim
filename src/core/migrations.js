@@ -458,6 +458,47 @@ function backfillArmyServiceRibbon(worldState) {
   return worldState;
 }
 
+
+function normalizeCareerBoundaryHotfix(worldState) {
+  const contracts = Object.values(worldState.entities?.contractRecords ?? {});
+  for (const person of Object.values(worldState.entities?.people ?? {})) {
+    const service = worldState.entities?.serviceRecords?.[person.serviceRecordId];
+    if (!service || service.personId !== person.id) continue;
+    const current = service.currentContractId ? worldState.entities.contractRecords?.[service.currentContractId] : null;
+    // v0.4.3.3.1 made an accepted future reenlistment active immediately and
+    // prematurely completed the still-effective contract. Restore the intended
+    // current/pending relationship when that save is loaded before the effective date.
+    if (current?.type === "reenlistment" && current.status === "active" && current.startDate > worldState.world.date) {
+      const predecessor = contracts
+        .filter(record => record.personId === person.id && record.id !== current.id && record.endDate === current.startDate && record.status === "completed")
+        .sort((a,b) => b.startDate.localeCompare(a.startDate) || a.id.localeCompare(b.id))[0];
+      if (predecessor) {
+        current.status = "pending";
+        predecessor.status = "active";
+        service.currentContractId = predecessor.id;
+      }
+    }
+    // bonusEarnings is cumulative career accounting; accepted contracts are durable evidence.
+    const contractedBonuses = contracts
+      .filter(record => record.personId === person.id)
+      .reduce((total, record) => total + Math.max(0, Number(record.bonus ?? 0) || 0), 0);
+    person.career ??= {};
+    person.career.bonusEarnings = Math.max(Number(person.career.bonusEarnings ?? 0) || 0, contractedBonuses);
+    if (["separated","retired","deceased"].includes(person.condition?.status)) {
+      for (const schedule of Object.values(worldState.entities?.scheduleRecords ?? {})) {
+        if (schedule.personId === person.id && ["scheduled","in_progress"].includes(schedule.status)) { schedule.status="cancelled"; schedule.cancelledDate ??= worldState.world.date; schedule.cancellationReason ??= "service_separation"; }
+      }
+      for (const opportunity of Object.values(worldState.entities?.opportunityRecords ?? {})) {
+        if (opportunity.personId === person.id && ["open","accepted","in_progress"].includes(opportunity.status)) {
+          opportunity.status="expired"; opportunity.expiredDate ??= worldState.world.date; opportunity.expirationReason ??= "service_separation";
+          const order=opportunity.orderId ? worldState.entities?.orderRecords?.[opportunity.orderId] : null; if(order && ["pending","executing"].includes(order.status)) order.status="cancelled";
+        }
+      }
+    }
+  }
+  return worldState;
+}
+
 export function migratePayload(payload) {
   let next = structuredClone(payload);
 
@@ -506,9 +547,10 @@ export function migratePayload(payload) {
   repairLegacyScheduleTemplateIds(next.worldState);
   normalizeScheduleAvailabilityFlags(next.worldState);
   backfillArmyServiceRibbon(next.worldState);
+  normalizeCareerBoundaryHotfix(next.worldState);
   ensureNamedInfantryFormation(next.worldState);
   initializeUnitTrainingProfiles(next.worldState);
-  next.gameVersion = "0.4.3.3.1";
-  next.worldState.gameVersion = "0.4.3.3.1";
+  next.gameVersion = "0.4.3.3.2";
+  next.worldState.gameVersion = "0.4.3.3.2";
   return next;
 }

@@ -1,70 +1,54 @@
-# War Sim v0.4.3.3.1 — On-Device Career Polish
+# War Sim v0.4.3.3.2 — Career Boundary Integrity Hotfix
 
-War Sim v0.4.3.3.1 is a narrow mobile/on-device polish release built directly from the exact packaged v0.4.3.3 baseline. It keeps world schema 16, save format 3, and generator v3. It does not add the planned v0.4.4 interactive-duty framework; it improves clarity and presentation of systems already present in v0.4.3.3.
+War Sim v0.4.3.3.2 is a narrowly scoped stability release built directly from the exact packaged v0.4.3.3.1 checkpoint. It keeps world schema **16**, save format **3**, and generator **v3**. No v0.4.4 interactive-duty framework, deployments/combat, new MOS starts, Ranger/Special Forces pipelines, deep equipment, interactive schools, or campaign-generation work is included.
 
-Runtime **0.4.3.3.1**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.3.2**, world schema **16**, save format **3**, generator **v3**.
 
-## v0.4.3.3.1 changes
+## v0.4.3.3.2 changes
 
-### DD214-style mobile containment
+### Career/service lifecycle integrity
 
-- Long UNIT and DECORATIONS / BADGES values now wrap inside their DD214-style metric cards instead of running off the right edge on narrow phones.
-- DD214 metric containers are explicitly width-contained and use mobile-safe wrapping.
+- Promotion eligibility now includes canonical service-state validation. Separated, retired, deceased, or otherwise non-active-service personnel cannot be promoted through the normal promotion command.
+- Shared active-service guards protect focused activities, school requests/completions, career-opportunity acceptance, command-scheduled duties, manual training XP, and normal assignment/reassignment commands.
+- Focused activities perform a non-mutating contract/service preflight before schedule generation and require continuous contractual coverage through the activity completion date.
+- Activity completion rechecks service state after time advancement/personnel administration but before applying XP, skills, qualifications, performance records, awards, or completion notifications. State-store transaction semantics ensure interruption rolls back the whole attempted activity.
+- Separation closes open assignments and now also cancels scheduled/in-progress duty plus expires open/accepted/in-progress career opportunities; associated pending/executing school orders are cancelled.
 
-### Promotion progress visibility
+### Reenlistment correctness
 
-- The Records screen now labels the advancement panel **Promotion Progress**.
-- Promotion Progress shows CURRENT rank, NEXT rank, and ELIGIBLE / IN PROGRESS status.
-- Experience, time in service, and time in grade progress remain visible against their actual requirements.
-- Required qualification / PME gates are now listed explicitly with held/missing status.
-- Remaining blockers are shown in a dedicated section.
-- Career Home now includes a direct **Promotion: <rank> · View Progress / Eligible** control that opens the Records promotion section.
+- Accepting a reenlistment before its effective date leaves the current contract active and creates the successor as `pending`.
+- The successor contract activates at the prior contract's ETS date before separation logic runs, preserving continuous service.
+- Reenlistment accepted exactly on the ETS date activates immediately.
+- Multiple accepted reenlistments for the same current contract are prevented.
+- Reenlistment bonuses now accumulate into `person.career.bonusEarnings` consistently with initial-enlistment bonus accounting.
+- Multi-day activities can cross the original ETS only when a valid accepted successor contract provides continuous coverage.
 
-### Relationship readability and provenance
+### Validation and save normalization
 
-- Trust, Respect, and Rapport continue to use their canonical -100..100 values.
-- Signed relationship bars now render around a visible neutral midpoint with a non-linear display displacement, making small early-career differences such as +1, 0, and -2 visually distinguishable without changing the underlying values.
-- Recent relationship memories now show the exact recorded Trust / Respect / Rapport deltas that caused a change.
-- Existing event definitions already affect these dimensions differently (for example teammate help favors Trust/Rapport while counseling primarily affects Respect); this patch preserves those canonical effects and makes them understandable in the UI.
+- `service.currentContractId` must reference a contract belonging to the same person.
+- Active service with a current contract requires that contract to be active.
+- Contract statuses, dates, and bonuses receive semantic validation.
+- Multiple active contracts for one person, future-dated active contracts, stale active contracts beyond ETS, and already-effective pending contracts are rejected.
+- Service-period ownership and opportunity/order ownership are validated.
+- Open assignments must match current affiliation and cannot belong to terminal-status personnel.
+- Terminal-status personnel cannot retain active scheduled duty or active career opportunities.
+- Same-schema v0.4.3.3.1 saves are normalized on load: premature future reenlistment activation is repaired, cumulative contract bonus earnings are backfilled, and terminal-status schedule/opportunity leftovers are cleaned up.
 
-### Tier-1 NPC Soldier Identity
+## Preserved v0.4.3.3.1 foundation
 
-- Every Digital Personnel Record now displays the Soldier's canonical SVG rank insignia on the personnel identification plate.
-- Tier-1 NPCs only receive a **View Uniform** control inside their Digital Personnel Record.
-- Their uniform is generated from that NPC's canonical rank, ribbons/medals, badges/tabs, and current rifle qualification. No cosmetic awards are fabricated for display.
-- The player continues to use the existing Soldier Identity uniform view; lower-detail Tier-2/3 NPCs do not receive the Tier-1 uniform drill-down.
-
-### Award provenance
-
-- Award selectors now expose the canonical award-record reason.
-- Soldier Identity award cards display **WHY EARNED** when a reason exists.
-- Career/personnel award records surface award provenance where available.
-- New award notifications include the award reason.
-- The Army Achievement Medal remains sustained-performance driven: the current model grants one after each eight qualifying performance records scoring 90 or higher. The teammate-help decision does not directly grant an AAM.
-
-### Existing v0.4.3.3 foundation preserved
-
-- Save-index recovery and manual backup restoration.
-- Transactional state mutation and rollback behavior.
-- Strengthened canonical validation including qualification-attempt records.
-- MSG / positional-1SG promotion logic.
-- Fresh-start airborne assignment consistency.
-- Named formations and formation insignia.
-- High-fidelity Army rank SVG library.
-- Awards, qualifications, schools, reenlistment, unit readiness, relationships, personnel, orders, service records, and mobile app navigation.
+The on-device career polish, DD214 mobile containment, Promotion Progress UI, relationship provenance, Tier-1 NPC Soldier Identity, award provenance, save-index recovery, transactional state mutation, deterministic generation, Army service records, military education/school pipeline, named formations, rank SVG library, unit readiness, relationships, personnel/orders navigation, and current mobile-app structure remain intact.
 
 ## QA summary
 
-- **21/21** test scripts pass on the final clean rerun.
-- New `tests/on-device-polish.mjs` covers DD214 containment rules, promotion-gate exposure, relationship provenance, Tier-1 NPC uniform/rank wiring, and AAM award-reason behavior.
-- **300** deterministic generated-world seeds validated.
+- **22/22** test scripts pass, including new `tests/career-boundary-integrity.mjs` adversarial regression coverage.
+- **300** deterministic generated-world seeds validate successfully.
 - **10,000-person** stress/index audit passes.
-- Final `quality.mjs` stress index build: approximately **15.31 ms** in this container run.
-- **114/114** JS/MJS files pass `node --check`.
-- Static production-source sweep finds no `eval`, `new Function`, `.innerHTML =`, or `document.write`.
-- `src/core/saveSystem.js` is byte-identical to the exact packaged v0.4.3.3 baseline (SHA-256 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`).
-- A 390×844 headless Chromium smoke attempt again timed out in the container with DBus/headless-environment errors and produced no reliable screenshot; it is explicitly not counted as passed.
+- **94** production JavaScript source files are included.
+- **116/116** JS/MJS files pass `node --check` (94 production + 22 tests).
+- Static production-source sweep finds no `eval`, `new Function`, `.innerHTML =`, or `document.write` usage.
+- `src/core/saveSystem.js` remains byte-identical to v0.4.3.3.1 and the stabilized v0.4.3.3 save baseline: SHA-256 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`.
+- World schema remains **16** and save format remains **3**; compatibility repair is handled through same-schema load normalization rather than an unnecessary schema bump.
 
 ## Still intentionally out of scope
 
-v0.4.3.3.1 does not add deployments/combat, new MOS career starts, Ranger/Special Forces selection pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive duty/event framework planned for v0.4.4.
+v0.4.3.3.2 does not add deployments/combat, new MOS career starts, Ranger/Special Forces selection pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive duty/event framework planned for v0.4.4.

@@ -68,6 +68,16 @@ export function separatePersonAdministrative(draft, personId, reason = "ets") {
     if (service.currentContractId && draft.entities.contractRecords[service.currentContractId]?.status === "active") draft.entities.contractRecords[service.currentContractId].status = "expired";
     for (const periodId of service.servicePeriodIds ?? []) { const period = draft.entities.servicePeriodRecords[periodId]; if (period?.endDate == null) { period.endDate = draft.world.date; period.status = "completed"; } }
   }
+  for (const schedule of Object.values(draft.entities.scheduleRecords ?? {})) {
+    if (schedule.personId !== personId || !["scheduled","in_progress"].includes(schedule.status)) continue;
+    schedule.status = "cancelled"; schedule.cancelledDate = draft.world.date; schedule.cancellationReason = "service_separation";
+  }
+  for (const opportunity of Object.values(draft.entities.opportunityRecords ?? {})) {
+    if (opportunity.personId !== personId || !["open","accepted","in_progress"].includes(opportunity.status)) continue;
+    opportunity.status = "expired"; opportunity.expiredDate = draft.world.date; opportunity.expirationReason = "service_separation";
+    const order = opportunity.orderId ? draft.entities.orderRecords?.[opportunity.orderId] : null;
+    if (order && ["pending","executing"].includes(order.status)) order.status = "cancelled";
+  }
   const actionId = recordPersonnelAction(draft, { personId, type: person.condition.status, reason, fromUnitId: oldUnitId, fromBilletId: oldBilletId });
   const orderId = createEntityId(draft, "order");
   draft.entities.orderRecords[orderId] = { id: orderId, schemaVersion: 1, personId, type: person.condition.status, status: "executed", issueDate: draft.world.date, effectiveDate: draft.world.date, unitId: null, billetId: null, title: person.condition.status === "retired" ? "Retirement Orders" : "Separation Orders", summary: reason === "ets" ? "Separated at expiration of term of service." : `Separated: ${reason.replaceAll("_", " ")}.` };
@@ -131,10 +141,25 @@ function fillReplacement(draft, registries, request) {
 
 export function processPersonnelAdministration(draft, registries) {
   ensureAdminCollections(draft);
-  // ETS is effective on the contract end date, not the day after it.
-  for (const contract of Object.values(draft.entities.contractRecords)) {
-    if (contract.status !== "active" || daysBetweenIso(contract.endDate, draft.world.date) < 0) continue;
-    separatePersonAdministrative(draft, contract.personId, "ets");
+  // ETS is effective on the contract end date. A previously accepted reenlistment
+  // activates first on that same date so continuous service never briefly separates.
+  for (const service of Object.values(draft.entities.serviceRecords)) {
+    if (service.serviceStatus !== "active" || !service.currentContractId) continue;
+    let current = draft.entities.contractRecords[service.currentContractId];
+    if (!current || current.personId !== service.personId || current.status !== "active") continue;
+    while (service.serviceStatus === "active" && current && daysBetweenIso(current.endDate, draft.world.date) >= 0) {
+      const successor = Object.values(draft.entities.contractRecords)
+        .filter(record => record.personId === service.personId && record.status === "pending" && record.startDate <= current.endDate)
+        .sort((a,b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id))[0];
+      if (!successor) {
+        separatePersonAdministrative(draft, service.personId, "ets");
+        break;
+      }
+      current.status = "completed";
+      successor.status = "active";
+      service.currentContractId = successor.id;
+      current = successor;
+    }
   }
   const existingOpen = new Set(Object.values(draft.entities.replacementRequestRecords).filter(r => r.status === "open").map(r => r.billetId));
   for (const billet of Object.values(draft.entities.billets)) {

@@ -14,6 +14,7 @@ import { evaluatePromotionEligibility } from "../services/careerRules.js";
 import { applyNpcParticipationForDuty, recordDutyQualification, recordUnitEvent } from "../services/livingUnit.js";
 import { describeScheduleConflict, scheduleConflictForActivity } from "../services/scheduleRules.js";
 import { evaluateCommendationAwardsInDraft } from "../services/awardProgression.js";
+import { activeServiceBlockReason, activityCompletionDate, contractCoverageThrough } from "../services/serviceLifecycle.js";
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart <= bEnd && bStart <= aEnd; }
 function clamp(value, min=0, max=100) { return Math.max(min, Math.min(max, Math.round(value))); }
@@ -30,12 +31,19 @@ export function performActivity(store, registries, personId, activityId) {
   if (!activity) throw new Error(`Unknown activity ${activityId}.`);
   let state = store.getState(), indexes = store.getIndexes();
   const initialPerson = state.entities.people[personId];
-  if (initialPerson?.affiliation?.unitId) {
+  if (!initialPerson) throw new Error(`Unknown person ${personId}.`);
+  const serviceBlockReason = activeServiceBlockReason(state, personId);
+  if (serviceBlockReason) throw new Error(serviceBlockReason);
+  const completionDate = activityCompletionDate(state, activity.durationDays);
+  const coverage = contractCoverageThrough(state, personId, completionDate);
+  if (!coverage.covered) throw new Error(`${activity.name} cannot be completed before ETS/contract expiration. ${coverage.reason}`);
+  // Only materialize schedule coverage after all non-mutating lifecycle preflight checks pass.
+  // A rejected activity therefore leaves the canonical world byte-for-byte unchanged.
+  if (initialPerson.affiliation?.unitId) {
     store.mutate(draft => ensureScheduleCoverageInDraft(draft, registries, personId, initialPerson.affiliation.unitId, activity.durationDays + 70), ["careerGameplay"]);
     state = store.getState(); indexes = store.getIndexes();
   }
   const before = state.entities.people[personId];
-  if (!before) throw new Error(`Unknown person ${personId}.`);
   const rank = registries.ranks.get(before.affiliation.rankId);
   const activeSchool = (indexes.opportunityRecordsByPersonId?.get(personId) ?? []).map(id=>state.entities.opportunityRecords[id]).find(record=>record && record.status==="in_progress" && Number.isInteger(record.reportElapsedDay) && Number.isInteger(record.completeElapsedDay) && state.world.clock.elapsedDays>=record.reportElapsedDay && state.world.clock.elapsedDays<=record.completeElapsedDay);
   if (activeSchool && activity.allowedDuringSchool !== true) throw new Error(`${activity.name} is unavailable while attending military school.`);
@@ -89,6 +97,8 @@ export function performActivity(store, registries, personId, activityId) {
     notifications.push(...expiredDecisions.notificationIds);
     simulatePersonnelLifecycle(draft, activity.durationDays, registries, { excludePersonId: personId });
     processPersonnelAdministration(draft, registries);
+    const completionServiceBlock = activeServiceBlockReason(draft, personId);
+    if (completionServiceBlock) throw new Error(`${activity.name} was interrupted because ${completionServiceBlock}`);
     const scaledEffects = (activity.effects ?? []).map(effect => scaleBenefitEffect(effect, effectMultiplier));
     applyEffects(draft, registries, { personId, unitId: person.affiliation.unitId, relationshipIds, effects: scaledEffects });
     const collectiveActivity = activity.participantScope && activity.participantScope !== "individual";

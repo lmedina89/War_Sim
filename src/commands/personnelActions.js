@@ -1,8 +1,10 @@
 import { commandResult } from "../core/commandResult.js";
 import { reassignPersonAdministrative, changePersonnelStatus } from "../services/personnelAdministration.js";
 import { recordAction } from "../services/recordServices.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 export function administrativelyReassignPerson(store, personId, billetId, reason = "reassignment") {
+  assertActiveServiceAction(store.getState(), personId);
   let result;
   store.mutate(draft => {
     result = reassignPersonAdministrative(draft, personId, billetId, reason);

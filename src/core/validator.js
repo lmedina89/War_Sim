@@ -94,11 +94,51 @@ export function validateWorldState(state, registries) {
     if (!event.type || typeof event.type !== "string") errors.push(`${event.id}: invalid career event type.`);
     if (!event.date || Number.isNaN(Date.parse(`${event.date}T00:00:00Z`))) errors.push(`${event.id}: invalid career event date.`);
   }
-  for (const service of Object.values(e.serviceRecords)) { requireRef(errors, e.people, service.personId, `${service.id}.personId`); if (service.branchId && !registries.branches.has(service.branchId)) errors.push(`${service.id}: invalid branchId.`); if (service.componentId && !registries.components.has(service.componentId)) errors.push(`${service.id}: invalid componentId.`); if (service.specialtyId && !registries.specialties.has(service.specialtyId)) errors.push(`${service.id}: invalid specialtyId.`); requireRef(errors, e.contractRecords, service.currentContractId, `${service.id}.currentContractId`); for (const id of service.servicePeriodIds ?? []) requireRef(errors, e.servicePeriodRecords, id, `${service.id}.servicePeriodIds`); }
-  for (const record of Object.values(e.contractRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.contracts.has(record.contractDefinitionId)) errors.push(`${record.id}: invalid contractDefinitionId.`); if (!registries.components.has(record.componentId)) errors.push(`${record.id}: invalid componentId.`); if (!registries.specialties.has(record.specialtyId)) errors.push(`${record.id}: invalid specialtyId.`); }
+  for (const service of Object.values(e.serviceRecords)) {
+    requireRef(errors, e.people, service.personId, `${service.id}.personId`);
+    if (service.branchId && !registries.branches.has(service.branchId)) errors.push(`${service.id}: invalid branchId.`);
+    if (service.componentId && !registries.components.has(service.componentId)) errors.push(`${service.id}: invalid componentId.`);
+    if (service.specialtyId && !registries.specialties.has(service.specialtyId)) errors.push(`${service.id}: invalid specialtyId.`);
+    requireRef(errors, e.contractRecords, service.currentContractId, `${service.id}.currentContractId`);
+    const currentContract = service.currentContractId ? e.contractRecords[service.currentContractId] : null;
+    if (currentContract && currentContract.personId !== service.personId) errors.push(`${service.id}.currentContractId: contract belongs to ${currentContract.personId}, not ${service.personId}.`);
+    if (service.serviceStatus === "active" && currentContract && currentContract.status !== "active") errors.push(`${service.id}: active service must reference an active current contract.`);
+    for (const id of service.servicePeriodIds ?? []) {
+      requireRef(errors, e.servicePeriodRecords, id, `${service.id}.servicePeriodIds`);
+      const period = e.servicePeriodRecords[id];
+      if (period && period.personId !== service.personId) errors.push(`${service.id}.servicePeriodIds: ${id} belongs to another person.`);
+    }
+  }
+  for (const record of Object.values(e.contractRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`);
+    if (!registries.contracts.has(record.contractDefinitionId)) errors.push(`${record.id}: invalid contractDefinitionId.`);
+    if (!registries.components.has(record.componentId)) errors.push(`${record.id}: invalid componentId.`);
+    if (!registries.specialties.has(record.specialtyId)) errors.push(`${record.id}: invalid specialtyId.`);
+    if (!["active","pending","completed","expired"].includes(record.status)) errors.push(`${record.id}: invalid contract status ${record.status}.`);
+    if (!record.startDate || Number.isNaN(Date.parse(`${record.startDate}T00:00:00Z`))) errors.push(`${record.id}: invalid contract startDate.`);
+    if (!record.endDate || Number.isNaN(Date.parse(`${record.endDate}T00:00:00Z`)) || record.endDate <= record.startDate) errors.push(`${record.id}: invalid contract endDate.`);
+    if (!Number.isFinite(Number(record.bonus ?? 0)) || Number(record.bonus ?? 0) < 0) errors.push(`${record.id}: invalid contract bonus.`);
+  }
+  const activeContractsByPerson = new Map();
+  for (const record of Object.values(e.contractRecords)) {
+    if (record.status !== "active") continue;
+    const prior = activeContractsByPerson.get(record.personId);
+    if (prior) errors.push(`${record.personId}: multiple active contracts (${prior}, ${record.id}).`);
+    else activeContractsByPerson.set(record.personId, record.id);
+    if (record.startDate > state.world.date) errors.push(`${record.id}: active contract starts in the future.`);
+    if (record.endDate <= state.world.date) errors.push(`${record.id}: active contract has reached/passed ETS without transition.`);
+  }
+  for (const record of Object.values(e.contractRecords)) if (record.status === "pending" && record.startDate <= state.world.date) errors.push(`${record.id}: pending contract is already effective and should be activated.`);
   for (const record of Object.values(e.servicePeriodRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.branches.has(record.branchId)) errors.push(`${record.id}: invalid branchId.`); if (!registries.components.has(record.componentId)) errors.push(`${record.id}: invalid componentId.`); if (!registries.specialties.has(record.specialtyId)) errors.push(`${record.id}: invalid specialtyId.`); }
   for (const record of Object.values(e.reenlistmentOfferRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); if (!registries.contracts.has(record.contractDefinitionId)) errors.push(`${record.id}: invalid contractDefinitionId.`); }
-  for (const record of Object.values(e.assignmentRecords)) { requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`); }
+  for (const record of Object.values(e.assignmentRecords)) {
+    requireRef(errors, e.people, record.personId, `${record.id}.personId`); requireRef(errors, e.units, record.unitId, `${record.id}.unitId`); requireRef(errors, e.billets, record.billetId, `${record.id}.billetId`);
+    const person = e.people[record.personId];
+    if (record.endDate == null) {
+      if (person && ["separated","retired","deceased"].includes(person.condition.status)) errors.push(`${record.id}: terminal-status person cannot retain an open assignment.`);
+      if (person && (record.unitId !== person.affiliation.unitId || record.billetId !== person.affiliation.billetId)) errors.push(`${record.id}: open assignment does not match current person affiliation.`);
+    }
+  }
   for (const record of Object.values(e.promotionRecords)) {
     requireRef(errors, e.people, record.personId, `${record.id}.personId`);
     if (!registries.ranks.has(record.rankId)) errors.push(`${record.id}: invalid rankId.`);
@@ -174,12 +214,17 @@ export function validateWorldState(state, registries) {
     if (!registries.scheduleTemplates.has(record.sourceTemplateId)) errors.push(`${record.id}: invalid sourceTemplateId ${record.sourceTemplateId}.`);
     if (!Number.isInteger(record.startElapsedDay) || !Number.isInteger(record.endElapsedDay) || record.endElapsedDay < record.startElapsedDay) errors.push(`${record.id}: invalid schedule interval.`);
     if (!["scheduled","in_progress","completed","cancelled"].includes(record.status)) errors.push(`${record.id}: invalid schedule status ${record.status}.`);
+    const person=e.people[record.personId];
+    if (person && ["separated","retired","deceased"].includes(person.condition.status) && ["scheduled","in_progress"].includes(record.status)) errors.push(`${record.id}: terminal-status person cannot retain active scheduled duty.`);
   }
   for (const record of Object.values(e.opportunityRecords ?? {})) {
     requireRef(errors, e.people, record.personId, `${record.id}.personId`);
     if (!registries.opportunities.has(record.definitionId)) errors.push(`${record.id}: invalid opportunity definition ${record.definitionId}.`);
     if (!["open","accepted","in_progress","completed","declined","expired"].includes(record.status)) errors.push(`${record.id}: invalid opportunity status ${record.status}.`);
     requireRef(errors, e.orderRecords, record.orderId, `${record.id}.orderId`);
+    if (record.orderId && e.orderRecords[record.orderId]?.personId !== record.personId) errors.push(`${record.id}: opportunity/order owner mismatch.`);
+    const person=e.people[record.personId];
+    if (person && ["separated","retired","deceased"].includes(person.condition.status) && ["open","accepted","in_progress"].includes(record.status)) errors.push(`${record.id}: terminal-status person cannot retain an active career opportunity.`);
   }
   for (const record of Object.values(e.objectiveRecords ?? {})) {
     requireRef(errors, e.people, record.personId, `${record.id}.personId`);

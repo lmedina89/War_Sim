@@ -12,6 +12,7 @@ import { recordReadinessSnapshot } from "../services/livingUnit.js";
 import { processLivingCareerForDay } from "../services/livingCareer.js";
 import { scheduleRecordBlocksFocusedActivities } from "../services/scheduleRules.js";
 import { evaluateServiceAwardsInDraft, evaluateCommendationAwardsInDraft } from "../services/awardProgression.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 function indexedCount(indexes, indexName, personId) { return indexes[indexName]?.get(personId)?.length ?? 0; }
 function unitSnapshot(state, personId) {
@@ -163,6 +164,7 @@ export function advanceWorldDays(store, requestedDays) {
 export function grantTrainingExperience(store, personId, amount) {
   if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) throw new Error("Invalid experience amount.");
   if (!store.getState().entities.people[personId]) throw new Error(`Unknown person: ${personId}`);
+  assertActiveServiceAction(store.getState(), personId);
   const rounded = Math.floor(amount);
   store.mutate(draft => { draft.entities.people[personId].career.experience += rounded; recordAction(draft, { actorPersonId: personId, commandType: "training", payload: { experience: rounded }, resultCode: "training_completed" }); }, ["actions", "people", "history"]);
   return commandResult({ code: "training_completed", message: `Training complete: +${rounded} experience.`, data: { experience: rounded } });

@@ -1,10 +1,12 @@
 import { commandResult } from "../core/commandResult.js";
 import { requestSchoolOpportunityInDraft, updateCareerObjectivesInDraft } from "../services/careerGameplay.js";
 import { recordAction } from "../services/recordServices.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 export function requestSchoolOpportunity(store, registries, schoolId) {
   const personId=store.getState().playerPersonId;
   if(!personId) throw new Error("Start a career before requesting a school.");
+  assertActiveServiceAction(store.getState(), personId);
   let result;
   store.mutate(draft=>{
     result=requestSchoolOpportunityInDraft(draft,registries,personId,schoolId);

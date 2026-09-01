@@ -1,8 +1,11 @@
 import { commandResult } from "../core/commandResult.js";
 import { acceptCareerOpportunityInDraft, declineCareerOpportunityInDraft, updateCareerObjectivesInDraft } from "../services/careerGameplay.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 export function acceptCareerOpportunity(store, registries, opportunityRecordId) {
+  const initialRecord = store.getState().entities.opportunityRecords?.[opportunityRecordId];
+  if (initialRecord) assertActiveServiceAction(store.getState(), initialRecord.personId);
   let result, noticeId;
   store.mutate(draft => {
     result = acceptCareerOpportunityInDraft(draft, registries, opportunityRecordId);

@@ -1,11 +1,13 @@
 import { commandResult } from "../core/commandResult.js";
 import { scheduleAdditionalDutyInDraft } from "../services/careerGameplay.js";
 import { recordAction, recordNotification } from "../services/recordServices.js";
+import { assertActiveServiceAction } from "../services/serviceLifecycle.js";
 
 export function scheduleUnitDuty(store, registries, personId, dutyDefinitionId) {
   const state = store.getState();
   const person = state.entities.people[personId];
   if (!person) throw new Error("Personnel record not found.");
+  assertActiveServiceAction(state, personId);
   const billet = person.affiliation.billetId ? state.entities.billets[person.affiliation.billetId] : null;
   const billetDef = billet ? registries.billets.get(billet.definitionId) : null;
   const role = billetDef ? registries.roles.get(billetDef.roleId) : null;

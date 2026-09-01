@@ -1,89 +1,85 @@
-# War Sim v0.4.3.3.1 — Software Quality Report
+# War Sim v0.4.3.3.2 — Software Quality Report
 
-## Scope
+## Release assessment
 
-v0.4.3.3.1 was built from the exact packaged `War-Sim-v0.4.3.3-GitHub.zip` baseline (SHA-256 `dd715ee3f2e8ace042e9ccf2dcd27ed5839ed72bda795fd5d90515c14ef53a3c`). It is a narrow on-device polish release for issues observed during iPhone testing. No v0.4.4 gameplay framework or deployment/combat work is included.
+**Result: PASS — recommended stable checkpoint**
 
-- Runtime: **0.4.3.3.1**
-- World schema: **16**
-- Save format: **3**
-- World generator: **v3**
+v0.4.3.3.2 is a targeted career-boundary integrity hotfix built from the exact uploaded v0.4.3.3.1 GitHub package. Runtime is **0.4.3.3.2**, world schema **16**, save format **3**, generator **v3**.
 
-## Implemented changes reviewed
+The release addresses adversarial QA findings that were not detected by the prior 21-script suite: promotion after separation, activity completion across ETS without continued service, premature reenlistment contract activation, missing reenlistment bonus accumulation, and insufficient semantic ownership checks in world-state validation.
 
-- DD214-style long values use mobile-safe wrapping/containment.
-- Promotion Progress now exposes current/next rank, eligibility state, experience/TIS/TIG gates, required qualifications/PME, and blockers; Career Home links directly to the promotion section.
-- Signed Trust/Respect/Rapport meters now make small values visually distinguishable while keeping canonical -100..100 data unchanged.
-- Relationship-memory presentation exposes recorded trust/respect/rapport deltas and source summaries.
-- Every Digital Personnel Record renders canonical SVG rank insignia.
-- Tier-1 NPC Digital Personnel Records provide a View Uniform control driven only by that NPC's canonical Soldier Identity records.
-- Award records/selectors/presentation surface `reason` provenance where present.
-- New award notifications include the recorded reason.
-- AAM progression was audited: teammate-help does not directly award an AAM; AAM remains tied to sustained qualifying performance records.
+## Confirmed fixes
 
-## Regression and targeted test results
+### 1. Promotion after separation — FIXED
 
-**21/21 test scripts PASS.**
+`evaluatePromotionEligibility()` now includes a canonical active-service guard. Terminal or non-active service state is a promotion blocker, so the command layer cannot promote a Soldier merely because XP/TIS/TIG/qualification gates are satisfied.
 
-The new `tests/on-device-polish.mjs` specifically verifies:
-- runtime/version normalization to 0.4.3.3.1;
-- DD214 mobile wrapping source rules;
-- promotion qualification/PME gate exposure;
-- distinct relationship values and relationship-memory deltas;
-- canonical rank-insignia and Tier-1 NPC uniform wiring;
-- AAM sustained-performance generation;
-- canonical award reason selection and notification provenance.
+Regression test deliberately separates an otherwise promotion-eligible E-1 and verifies both eligibility and `promotePerson()` reject the promotion while rank remains unchanged.
 
-All prior v0.4.3.3 regression tests also pass, including save recovery, transaction rollback, formation/start rules, rank insignia, awards/Soldier Identity, career continuity, mobile navigation, scheduler/readiness, service record, migrations, and save storage.
+### 2. Activity crossing ETS without continued service — FIXED
 
-## World generation / stress validation
+`performActivity()` now verifies active-service state and continuous contract coverage through the activity completion date before any schedule-generation mutation occurs. It also rechecks service state after advancing time/personnel administration and before any benefits or completion records are applied.
 
-`tests/quality.mjs` PASS:
-- **300 generated-world seeds validated**
-- **10,000 stress personnel**
-- deterministic RNG audit PASS
-- runtime ID audit PASS
-- DOM/import/render containment audits PASS
-- canonical scheduler/readiness integration PASS
-- selector/index audit PASS
-- same-schema hotfix normalization PASS
+A one-day activity ending on ETS is rejected without a successor contract. A three-day MOS activity beginning immediately before the original ETS succeeds only after an accepted successor contract supplies continuous service, and completion occurs with the Soldier still active.
 
-Final quality-run index build: approximately **15.31 ms** for the 10,000-person stress fixture in this container.
+### 3. Reenlistment contract semantics — FIXED
 
-## Syntax and static-source checks
+Accepting early reenlistment no longer prematurely completes the current contract or makes a future contract current/active. The successor is `pending` until its effective date. Personnel administration transitions current→completed and successor→active before ETS separation logic. Reenlistment on the exact ETS date activates immediately.
 
-- **114/114 JS/MJS files** passed `node --check`.
-- Static production-source sweep found no:
-  - `eval(...)`
-  - `new Function(...)`
-  - `.innerHTML = ...`
-  - `document.write(...)`
+The command also prevents a second accepted reenlistment against the same current contract.
+
+### 4. Reenlistment bonus accounting — FIXED
+
+Accepted reenlistment bonuses are added to `person.career.bonusEarnings`. Same-schema load normalization backfills cumulative contract bonus earnings for older v0.4.3.3.1 saves without decreasing any pre-existing larger value.
+
+### 5. Contract/service ownership validation — FIXED
+
+The validator now rejects a `service.currentContractId` that points to another person's contract. It also validates service-period ownership and career-opportunity/order ownership.
+
+Additional contract invariants reject invalid statuses, invalid dates/bonuses, multiple active contracts per person, future active contracts, stale active contracts at/past ETS, and pending contracts whose effective date has already arrived.
+
+## Additional lifecycle hardening incorporated
+
+A shared `serviceLifecycle.js` layer centralizes terminal-status and active-service checks. Normal gameplay paths for activities, promotions, school requests/completions, opportunity acceptance, scheduled duty, manual training XP, unit assignment, and administrative reassignment now use the shared guard rather than independently assuming the Soldier is still in service.
+
+Separation now closes/cancels incompatible future state: open assignments are closed, scheduled/in-progress duty is cancelled, active career opportunities are expired, and pending/executing linked school orders are cancelled. The validator enforces the corresponding terminal-status invariants.
+
+Same-schema v0.4.3.3.1 load normalization repairs the old early-reenlistment representation and terminal-state leftovers before validation. World schema remains 16 because the entity shape did not require a structural schema change.
+
+## Regression and stress results
+
+- Test scripts: **22/22 PASS**
+- New adversarial suite: `tests/career-boundary-integrity.mjs` — **PASS**
+- Deterministic worlds validated by `quality.mjs`: **300**
+- Stress population: **10,000 personnel**
+- Additional adversarial ETS/reenlistment matrix: **100/100 scenarios PASS**
+- Production JS files: **94**
+- JS/MJS syntax validation: **116/116 PASS**
+- Import graph integrity: **PASS**
+- DOM integrity: **PASS**
+- Deterministic RNG audit: **PASS**
+- Canonical scheduler/readiness/opportunity integration: **PASS**
+- Existing save/migration tests: **PASS**
+- Static production-source sweep for `eval`, `new Function`, `.innerHTML =`, and `document.write`: **clean**
+
+The final `quality.mjs` run reported a **9.53 ms** index build for the 10,000-person stress case in this container. Timing is environment-dependent and is treated as informational rather than a fixed performance guarantee.
 
 ## Save-system containment
 
-`src/core/saveSystem.js` is byte-identical to the exact packaged v0.4.3.3 baseline.
-
-SHA-256 in both builds:
+`src/core/saveSystem.js` was not modified by this hotfix and remains SHA-256:
 
 `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
 
-Therefore the save-recovery and backup-restoration implementation that was stabilized in v0.4.3.3 was not rewritten during this polish pass.
+This matches the stabilized v0.4.3.3/v0.4.3.3.1 save-system file.
 
-## Award-provenance audit
+## Scope containment
 
-Current AAM behavior was traced through `evaluateCommendationAwardsInDraft`:
-- AAM target count is `floor(excellentPerformanceRecords / 8)` where qualifying performance records have score >= 90.
-- Teammate-help decisions modify leadership skill, relationship Trust/Rapport, and fatigue; they do not directly call award granting.
-- Generated AAM records use reason: `Sustained excellent duty and training performance.`
+No v0.4.4 feature work was introduced. Deployments/combat, additional MOS career starts, Ranger/Special Forces selection, deep equipment, interactive schools, campaign generation, and the reusable interactive duty/event framework remain out of scope.
 
-The v0.4.3.3.1 UI now surfaces that reason so the player can distinguish award cause from coincident nearby events.
+## Residual risk / manual QA
 
-## Browser-render smoke
+Automated state, migration, syntax, deterministic-generation, stress, and static-source checks pass. Device-level visual/touch QA remains appropriate after GitHub Pages deployment because browser automation cannot fully substitute for real iPhone/Android safe-area, viewport, keyboard, dialog, and touch behavior.
 
-A local HTTP server and Chromium headless launch were attempted at **390×844**. Chromium timed out after 25 seconds with DBus/headless container-environment errors and did not produce a reliable screenshot. This check is **NOT PASSED / environment-limited** and is not counted among successful QA checks.
+## Recommendation
 
-Actual iPhone/GitHub Pages verification remains recommended for the exact overflow/rank/uniform presentation issues that motivated this patch.
-
-## Result
-
-Within the approved v0.4.3.3.1 scope, targeted tests, the complete regression suite, deterministic generation, stress/index validation, syntax validation, static-source checks, version normalization, and save-system containment all pass. No known automated regression remains from this patch. The only unverified item is automated headless visual rendering because of the container environment.
+Promote **v0.4.3.3.2 — Career Boundary Integrity Hotfix** as the new stable development checkpoint and use it as the baseline for subsequent v0.4.4 work.

@@ -1,3 +1,4 @@
+import { activeServiceBlockReason } from "./serviceLifecycle.js";
 function daysBetween(startIso, endIso) {
   const start = Date.parse(`${startIso}T00:00:00Z`);
   const end = Date.parse(`${endIso}T00:00:00Z`);
@@ -22,6 +23,7 @@ export function evaluatePromotionEligibility(state, indexes, registries, personI
   const person = state.entities.people[personId];
   if (!person) throw new Error(`Unknown person: ${personId}`);
 
+  const serviceBlockReason = activeServiceBlockReason(state, personId);
   const currentRank = registries.ranks.get(person.affiliation.rankId);
   const nextRank = findNextRank(registries, currentRank);
   if (!nextRank) {
@@ -46,6 +48,7 @@ export function evaluatePromotionEligibility(state, indexes, registries, personI
   );
 
   const reasons = [];
+  if (serviceBlockReason) reasons.push(serviceBlockReason);
   if (person.career.experience < (requirements.minimumExperience ?? 0)) reasons.push(`Experience ${person.career.experience}/${requirements.minimumExperience}`);
   if (serviceDays < (requirements.minimumTimeInServiceDays ?? 0)) reasons.push(`Time in service ${serviceDays}/${requirements.minimumTimeInServiceDays} days`);
   if (gradeDays < (requirements.minimumTimeInGradeDays ?? 0)) reasons.push(`Time in grade ${gradeDays}/${requirements.minimumTimeInGradeDays} days`);
