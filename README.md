@@ -1,27 +1,18 @@
-# War Sim v0.4.3.19 — Product Hardening 2: Load & Recovery Resilience
+# War Sim v0.4.3.20 — Product Hardening 3: Mobile UI Resilience
 
-War Sim v0.4.3.19 is built directly from the accepted v0.4.3.18 Product Hardening 1 baseline. Runtime **0.4.3.19**, world schema **16**, save format **3**, generator **v3**.
+Built directly from the accepted v0.4.3.19 Product Hardening 2 baseline. Runtime **0.4.3.20**, world schema **16**, save format **3**, generator **v3**.
 
-## Product Hardening 2
+## Scope
 
-This release strengthens player-facing load and recovery behavior without changing gameplay rules, progression, RNG, world schema, or save format.
+This release is a mobile usability hardening pass only. Gameplay rules, simulation behavior, RNG, world schema, save format, and career progression are unchanged.
 
-- Distinguishes healthy, backup-recoverable, damaged, and incompatible save slots.
-- A valid manual backup remains loadable when the primary copy is damaged.
-- Damaged slots with no valid backup are clearly marked and are not offered a misleading Load action.
-- Unsupported save-format/world-schema slots are classified as incompatible and never partially loaded.
-- Load failures use stable player-facing messages while preserving useful integrity diagnostics.
-- The Save Manager labels backup recovery as **Recover & Load**.
-- Backward compatibility is explicitly tested with a v0.4.3.17 save-format-3 / world-schema-16 fixture.
-- Permanent Chromium regression now injects damaged and unsupported save fixtures and verifies their UI behavior.
+## Changes
 
-## Architecture baseline
-
-The v0.4.3.17 architecture-refactor baseline remains intact. `app.js` remains controller/orchestration code; no gameplay presentation was moved back into it.
-
-## Compatibility
-
-- World schema: **16**
-- Save format: **3**
-- Generator: **v3**
-- Existing compatible v0.4.3.17/v0.4.3.18 careers remain loadable and are normalized to the current runtime version during migration.
+- Raised breadcrumb/unit-link mobile touch targets from 36 px to 44 px.
+- Raised compact-button touch targets from 40 px to 44 px.
+- Raised Inbox compact actions from 36 px-equivalent sizing to 44 px.
+- Preserved 16 px form controls to avoid iOS focus zoom.
+- Preserved dynamic-viewport dialog sizing and iPhone safe-area handling.
+- Added permanent `tests/mobile-resilience.mjs`.
+- Added permanent `tests/mobile-resilience-browser.py` covering 320x568, 375x667, 390x844, 430x932, and 932x430 landscape.
+- Mobile browser audit exercises Career screens, Soldier subtabs, Unit tabs, Personnel tabs, Orders, More, and Save Manager dialog geometry.

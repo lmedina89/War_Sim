@@ -1,39 +1,59 @@
-# War Sim v0.4.3.19 — Software Quality Report
+# War Sim v0.4.3.20 — Software Quality Report
 
 ## Release
 
-v0.4.3.19 is Product Hardening 2: Load & Recovery Resilience, built directly from the accepted v0.4.3.18 Product Hardening 1 baseline. Runtime **0.4.3.19**, world schema **16**, save format **3**, generator **v3**.
+v0.4.3.20 is Product Hardening 3: Mobile UI Resilience, built directly from the accepted v0.4.3.19 Product Hardening 2 baseline. Runtime **0.4.3.20**, world schema **16**, save format **3**, generator **v3**.
 
 ## Scope
 
-This release changes only load/recovery safety and its player-facing Save Manager presentation. Gameplay rules, career progression, RNG behavior, world schema, save format, and the v0.4.3.17 architecture baseline remain unchanged.
+Mobile usability and resilience only. No gameplay, career progression, RNG, world schema, save-format, or save-system logic changes.
 
-### Hardening changes
+## Hardening changes
 
-- Save inspection distinguishes healthy, backup-recoverable, damaged, and incompatible slots.
-- A damaged primary with a valid manual backup remains loadable and is presented as **Recover & Load**.
-- A damaged slot with no valid backup is marked unloadable and no Load action is offered.
-- Unsupported save-format or world-schema data is classified as incompatible and is never partially loaded.
-- Load errors use stable player-facing messages while retaining the phrase **integrity check failed** for diagnostic compatibility.
-- Explicit backward-compatibility QA covers a v0.4.3.17 save-format-3 / world-schema-16 payload.
-- Chromium regression injects damaged and unsupported save fixtures and verifies classification plus blocked Load actions.
+- Breadcrumb and unit-link touch targets are at least 44 px high.
+- Compact buttons, including Inbox compact actions, are at least 44 px high.
+- Existing iOS-safe 16 px form text, dynamic viewport dialog bounds, safe-area padding, and bottom navigation safe-area handling are preserved and regression-tested.
+- Permanent browser geometry audit spans four portrait phone sizes plus phone landscape.
+- Mobile regression checks document/body width, major application views, Soldier subtabs, Unit/Personnel/Orders/More views, and Save Manager dialog containment.
 
 ## Worktree verification
 
-- 41/41 JS/MJS test suites PASS.
-- 156/156 JS/MJS files PASS explicit ES-module syntax parsing.
-- 115 runtime source modules.
-- 247/247 relative runtime imports resolve; 0 missing.
-- 0 circular runtime imports.
-- 300 deterministic generated-world QA PASS (quality harness).
-- 10,000-person stress audit PASS (quality harness).
-- Unsafe runtime-code scan: 0 hits.
-- Browser regression: 85/85 PASS.
+- 42/42 JS/MJS test suites PASS.
+- 157/157 JS/MJS files PASS explicit ES-module syntax parsing.
+- 247/247 runtime relative imports resolved; 0 missing imports; 0 circular imports.
+- Full Chromium regression: 85/85 PASS.
+- Mobile geometry regression: 105/105 overflow checks PASS across 5 viewport/orientation configurations.
+- Save Manager dialog remains within viewport in all 5 configurations.
 - Browser page exceptions: 0.
 - Browser console errors: 0.
-- `src/app.js`: 29,844 bytes / 484 lines (same controller boundary; small wording-only increase in Save Manager status presentation).
-- `src/core/saveSystem.js` SHA-256: `d7e08132195959230e5c92458120fa3ef205bc72a25fb9eab78fff19e198f623`.
+- World schema 16; save format 3; generator v3 unchanged.
+- Save-system logic unchanged from v0.4.3.19.
+- Save-system SHA-256: `d7e08132195959230e5c92458120fa3ef205bc72a25fb9eab78fff19e198f623`.
 
-## Exact-package verification
+## Candidate exact-package verification
 
-Release-candidate clean extraction PASS: 41/41 test suites, 156/156 ES-module syntax checks, 247/247 relative imports, matching save-system hash, and 85/85 Chromium checks with 0 page exceptions / 0 console errors. Final ZIP verification is performed after this report is stamped into the archive.
+Candidate ZIP was clean-extracted and verified independently from the worktree:
+
+- 42/42 JS/MJS test suites PASS.
+- 157/157 explicit ES-module syntax checks PASS.
+- Full Chromium regression: 85/85 PASS, process exit code 0.
+- Mobile geometry regression: 105/105 PASS, process exit code 0.
+- Browser page exceptions: 0.
+- Browser console errors: 0.
+- Save-system SHA-256 matches worktree.
+- `src/app.js` and `src/ui/styles.css` hashes match worktree.
+
+## Final exact-package verification
+
+A final ZIP was clean-extracted and subjected to the complete gate:
+
+- 42/42 JS/MJS test suites PASS.
+- 157/157 explicit ES-module syntax checks PASS.
+- Full Chromium regression: 85/85 PASS, process exit code 0.
+- Mobile geometry regression: 105/105 PASS, process exit code 0.
+- Browser page exceptions: 0.
+- Browser console errors: 0.
+- Save Manager dialog contained within every tested viewport.
+- Runtime source hashes match the verified worktree/candidate.
+
+After recording these verified results in this report, the release archive is rebuilt once and the complete exact-artifact gate is repeated so the published ZIP contains this stamped report.

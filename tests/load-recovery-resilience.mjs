@@ -22,7 +22,7 @@ const legacyWorld=structuredClone(store.getState()); legacyWorld.gameVersion="0.
 const legacyBase={saveFormatVersion:3,saveId:"save_legacy_4317",createdAt:new Date().toISOString(),savedAt:new Date().toISOString(),gameVersion:"0.4.3.17",worldState:legacyWorld};
 localStorage.setItem("warSim_save_v3_slot_01",JSON.stringify({...legacyBase,checksum:fnv1a32(stableStringify(legacyBase))}));
 const legacyLoaded=loadFromSlot("slot_01");
-assert.equal(legacyLoaded.worldState.gameVersion,"0.4.3.19");
+assert.equal(legacyLoaded.worldState.gameVersion,"0.4.3.20");
 assert.equal(legacyLoaded.worldState.schemaVersion,16);
 
 // A damaged primary with a good backup is clearly recoverable and remains loadable.

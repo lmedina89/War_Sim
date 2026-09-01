@@ -13,7 +13,7 @@ const firstUse = app.indexOf("openOpportunity: openOpportunityRecord");
 const definition = app.indexOf("function openOpportunityRecord");
 assert.ok(definition >= 0 && firstUse >= 0, "opportunity callback definition and use must both exist");
 
-console.log("War Sim v0.4.3.19 startup composition QA passed");
+console.log("War Sim v0.4.3.20 startup composition QA passed");
 
 // Browser startup gate: app.js is served via <script type="module">.
 const moduleParse = spawnSync(process.execPath, ["--input-type=module", "--check"], { input: app, encoding: "utf8" });

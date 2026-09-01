@@ -7,4 +7,4 @@ assert.doesNotMatch(app,/function renderServiceCareer\s*\(/);
 assert.match(mod,/export function createServiceCareerRenderer/);
 assert.doesNotMatch(mod,/from\s+["']\.\.\/\.\.\/(?:commands|services|state|core|selectors)\//);
 assert.match(mod,/onAcceptOffer/);
-console.log("War Sim v0.4.3.19 service career presentation module QA passed");
+console.log("War Sim v0.4.3.20 service career presentation module QA passed");

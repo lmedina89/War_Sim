@@ -6,7 +6,7 @@ const app=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
 const soldierIdentity=fs.readFileSync(new URL("../src/ui/render/soldierIdentity.js",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 
-assert.match(html,/War Sim v0\.4\.3\.19/);
+assert.match(html,/War Sim v0\.4\.3\.20/);
 
 // Shared military metrics carry dynamic content. Long values must be allowed to wrap
 // instead of forcing a narrow grid/card to grow beyond the viewport.
@@ -35,4 +35,4 @@ for(const pattern of [
 // Fixed labels may stay nowrap; dynamic military metric values may not regress back to it.
 assert.match(css,/\.screen-tabs button\{[^}]*white-space:nowrap/s);
 
-console.log("War Sim v0.4.3.19 mobile UI hardening QA passed");
+console.log("War Sim v0.4.3.20 mobile UI hardening QA passed");
