@@ -37,13 +37,16 @@ import { initializeDisclosureState, readUiJson, writeUiJson, readUiText, writeUi
 import { createNavigationController } from "./ui/navigation.js";
 import { createSaveManagerController } from "./ui/dialogs/saveManager.js";
 import { createPersonProfileController } from "./ui/dialogs/personProfile.js";
+import { createConfirmDialogController } from "./ui/dialogs/confirmDialog.js";
+import { createAchievementDialogController } from "./ui/dialogs/achievementDialog.js";
+import { createResultDialogController } from "./ui/dialogs/resultDialog.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null;
+let selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null;
 let activeSoldierTab = "uniform";
 const CAREER_HISTORY_PREVIEW_LIMIT = 5;
 const UNIT_TRAINING_PREVIEW_LIMIT = 4;
@@ -143,6 +146,31 @@ function compactReference(prefix, id) {
 function statusStamp(status, extraClass="") { const profile=statusProfile(status); const stamp=document.createElement("span"); stamp.className=`mil-status-stamp tone-${profile.tone} ${extraClass}`.trim(); stamp.textContent=profile.label; stamp.dataset.status=status; return stamp; }
 function metricBlock(label, value, subtext="") { const box=document.createElement("div"); box.className="mil-metric"; const key=document.createElement("span"); key.textContent=label; const val=document.createElement("strong"); val.textContent=String(value); box.append(key,val); if(subtext){const sub=document.createElement("small");sub.textContent=subtext;box.appendChild(sub);} return box; }
 function recordReference(documentId, entityId) { const profile=documentProfile(documentId); return compactReference(profile?.prefix ?? "REC", entityId); }
+
+const confirmationDialog = createConfirmDialogController({
+  elements: { dialog: els.confirmDialog, title: els.confirmTitle, message: els.confirmMessage },
+});
+const confirmAction = confirmationDialog.confirm;
+
+const resultDialog = createResultDialogController({
+  elements: { dialog: els.resultDialog, reference: els.resultReference, kicker: els.resultKicker, title: els.resultTitle, body: els.resultBody },
+  getState: () => store.getState(),
+  getActivityDefinition: id => registries.activities.get(id),
+  getDutyDefinition: id => registries.duties.get(id),
+  getSkillName: id => registries.skills.get(id)?.name,
+  getGameplayEventDefinition: id => registries.gameplayEvents.get(id),
+  getPerformanceRatingLabel: id => registries.performanceRatings.get(id)?.label,
+  performanceProfile, feedbackProfile, compactReference, recordReference, statusStamp, metricBlock,
+});
+
+const achievementDialog = createAchievementDialogController({
+  elements: { dialog: els.achievementDialog, type: els.achievementType, title: els.achievementTitle, message: els.achievementMessage, ok: els.achievementOk },
+  getNoticesByIds: ids => { const state=store.getState(); return ids.map(id => state.entities.notificationRecords[id]).filter(Boolean); },
+  markRead: id => markNotificationRead(store,id),
+  openOpportunity: openOpportunityRecord,
+  isBlocked: () => els.resultDialog.open || els.personDialog.open || els.saveDialog.open || els.confirmDialog.open,
+});
+const queueNotifications = ids => achievementDialog.enqueue(ids);
 
 function renderInbox(state, indexes, personId) {
   const notices = selectNotifications(state, indexes, personId);
@@ -447,7 +475,7 @@ function renderGameplay(state, indexes, personId) {
     if(pt.length){ const newest=pt[0], oldest=pt.at(-1); rows.push({...newest,id:`pt-summary:${pt.map(x=>x.id).join(",")}`,isPtSummary:true,summaryIds:pt.map(x=>x.id),name:`Unit Physical Training · ${pt.length} session${pt.length===1?"":"s"}`,completedDate:pt.length===1?newest.completedDate:`${oldest.completedDate} → ${newest.completedDate}`}); }
     const heading=document.createElement("h3");heading.className="schedule-history-heading";heading.textContent="Recent Unit Training";els.dutySchedule.appendChild(heading);
     const history=document.createElement("div");history.className="duty-history"; const shown=expanded?rows:rows.slice(0,UNIT_TRAINING_PREVIEW_LIMIT);
-    for(const item of shown){const row=document.createElement("div");row.className="history-row-shell";const button=document.createElement("button");button.type="button";button.className="duty-history-row";const text=document.createElement("span");text.textContent=`${item.completedDate} · ${item.name}`;const result=document.createElement("strong");result.textContent=item.isPtSummary?"ROUTINE":item.performanceRating?`${registries.performanceRatings.get(item.performanceRating)?.label ?? item.performanceRating} · ${item.performanceScore ?? "—"}/100`:"COMPLETED";button.append(text,result);if(!item.isPtSummary)button.addEventListener("click",()=>showDutyResult(item.id));else button.disabled=true;const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecords("unit-training",personId,item.isPtSummary?item.summaryIds:[item.id]));row.append(button,archive);history.appendChild(row);}els.dutySchedule.appendChild(history);
+    for(const item of shown){const row=document.createElement("div");row.className="history-row-shell";const button=document.createElement("button");button.type="button";button.className="duty-history-row";const text=document.createElement("span");text.textContent=`${item.completedDate} · ${item.name}`;const result=document.createElement("strong");result.textContent=item.isPtSummary?"ROUTINE":item.performanceRating?`${registries.performanceRatings.get(item.performanceRating)?.label ?? item.performanceRating} · ${item.performanceScore ?? "—"}/100`:"COMPLETED";button.append(text,result);if(!item.isPtSummary)button.addEventListener("click",()=>resultDialog.showDuty(item.id));else button.disabled=true;const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecords("unit-training",personId,item.isPtSummary?item.summaryIds:[item.id]));row.append(button,archive);history.appendChild(row);}els.dutySchedule.appendChild(history);
     const controls=createHistoryControls({kind:"unit-training",personId,hiddenCount:Math.max(0,rows.length-UNIT_TRAINING_PREVIEW_LIMIT),archivedCount,expanded,onToggle:()=>{els.dutySchedule.dataset.historyExpanded=expanded?"false":"true";render();}}); if(controls.childElementCount)els.dutySchedule.appendChild(controls);
   }
 
@@ -487,53 +515,8 @@ function renderGameplay(state, indexes, personId) {
   els.activityHistory.replaceChildren();
   const activityArchive=readUiArchive("activity-history",personId); const visibleActivities=view.recentActivities.filter(record=>!activityArchive.has(record.id)); const archivedActivityCount=view.recentActivities.length-visibleActivities.length; const activityExpanded=els.activityHistory.dataset.expanded==="true";
   if (!visibleActivities.length) { const p=document.createElement("p"); p.className="muted"; p.textContent=archivedActivityCount?"All recent activity records are archived from this view.":"No focused training activities completed yet."; els.activityHistory.appendChild(p); }
-  else for (const record of (activityExpanded?visibleActivities:visibleActivities.slice(0,CAREER_HISTORY_PREVIEW_LIMIT))) { const def=registries.activities.get(record.activityDefinitionId), shell=document.createElement("div");shell.className="history-row-shell"; const item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); const outcome=record.qualificationResult?`${record.qualificationResult.label.toUpperCase()} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`:`${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""}`; text.textContent=`${def.name} · ${outcome} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>showActivityResult(record.id)); const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecord("activity-history",personId,record.id));shell.append(item,archive);els.activityHistory.appendChild(shell); }
+  else for (const record of (activityExpanded?visibleActivities:visibleActivities.slice(0,CAREER_HISTORY_PREVIEW_LIMIT))) { const def=registries.activities.get(record.activityDefinitionId), shell=document.createElement("div");shell.className="history-row-shell"; const item=document.createElement("button"); item.type="button"; item.className="activity-item training-record activity-log-button"; const time=document.createElement("time"); time.textContent=record.endDate; const text=document.createElement("span"); const outcome=record.qualificationResult?`${record.qualificationResult.label.toUpperCase()} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`:`${(record.performanceRating ?? "completed").toUpperCase()}${record.performanceScore!=null?` ${record.performanceScore}/100`:""}`; text.textContent=`${def.name} · ${outcome} · ${record.durationDays} day${record.durationDays===1?"":"s"}${record.eventRecordId?" · event":""}`; item.append(time,text); item.addEventListener("click",()=>resultDialog.showActivity(record.id)); const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>archiveUiRecord("activity-history",personId,record.id));shell.append(item,archive);els.activityHistory.appendChild(shell); }
   const activityControls=createHistoryControls({kind:"activity-history",personId,hiddenCount:Math.max(0,visibleActivities.length-CAREER_HISTORY_PREVIEW_LIMIT),archivedCount:archivedActivityCount,expanded:activityExpanded,onToggle:()=>{els.activityHistory.dataset.expanded=activityExpanded?"false":"true";render();}}); if(activityControls.childElementCount)els.activityHistory.appendChild(activityControls);
-}
-
-function resultLabel(key) { const labels={experience:"Experience",prestige:"Prestige",health:"Health",morale:"Morale",readiness:"Readiness",fatigue:"Fatigue",unitReadiness:"Unit Readiness",unitCohesion:"Unit Cohesion"}; return labels[key] ?? key; }
-function formatResultValue(key,value){ return ["health","morale","readiness","unitReadiness","unitCohesion"].includes(key) ? `${value}%` : String(value); }
-function appendChangeRow(container,{label,before,after,delta,key=""}){ const row=document.createElement("div"); row.className=`aar-change ${delta>0?"positive":delta<0?"negative":"neutral"}`; const name=document.createElement("strong"); name.textContent=label; const values=document.createElement("span"); values.className="aar-change-values"; values.textContent=`${formatResultValue(key,before)} → ${formatResultValue(key,after)}`; const change=document.createElement("b"); change.textContent=`${delta>0?"+":""}${delta}`; row.append(name,values,change); container.appendChild(row); }
-function showActivityResult(activityRecordId) {
-  const state=store.getState(), record=state.entities.activityRecords[activityRecordId]; if(!record)return; const def=registries.activities.get(record.activityDefinitionId); const perf=performanceProfile(record.performanceRating??"satisfactory");
-  els.resultDialog.dataset.tone=perf.tone; els.resultReference.textContent=recordReference("aar",record.id); els.resultKicker.textContent="AFTER ACTION REPORT"; els.resultTitle.textContent=def.name; els.resultBody.replaceChildren();
-  const header=document.createElement("div"); header.className="aar-header"; const date=document.createElement("span"); date.className="aar-date"; date.textContent=`${record.startDate} → ${record.endDate}`;
-  if(record.qualificationResult){
-    const q=record.qualificationResult;
-    const grade=document.createElement("span"); grade.className=`performance-badge tone-${q.qualified?"good":"warning"}`; grade.textContent=`${q.label} · ${q.score}/${q.maxScore}`; header.append(grade,date); els.resultBody.appendChild(header);
-    const box=document.createElement("div");box.className="aar-performance";box.append(statusStamp(q.qualified?"filled":"blocked"),metricBlock("QUALIFICATION RESULT",q.qualified?"QUALIFIED":"UNQUALIFIED"),metricBlock("TRAINING PERFORMANCE",record.performanceScore!=null?`${perf.label} · ${record.performanceScore}/100`:perf.label));els.resultBody.appendChild(box);
-    const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=q.qualified?"Weapon qualification standard met. The 0–100 training score is supporting performance context.":"Weapon qualification standard was not met. The 0–100 training score does not override the qualification result."; els.resultBody.appendChild(desc);
-  } else {
-    const grade=document.createElement("span"); grade.className=`performance-badge tone-${perf.tone}`; grade.textContent=record.performanceScore!=null?`${perf.label} · ${record.performanceScore}/100`:perf.label; header.append(grade,date); const desc=document.createElement("p"); desc.className="performance-description"; desc.textContent=perf.description; els.resultBody.append(header,desc);
-  }
-  const participation=document.createElement("div"); participation.className="aar-participation"; const scope=record.participantScope ?? "individual"; const participantCount=(record.participantPersonIds ?? [record.personId]).length; participation.append(metricBlock("ACTIVITY SOURCE",record.sourceType==="player_activity"?"PLAYER INITIATED":String(record.sourceType??"ACTIVITY").replaceAll("_"," ").toUpperCase()),metricBlock("PARTICIPATION",scope==="individual"&&participantCount===1?"PLAYER ONLY":`${scope.toUpperCase()} · ${participantCount} PERSONNEL`)); els.resultBody.appendChild(participation);
-  const changes=document.createElement("div"); changes.className="aar-change-grid";
-  for(const [key,delta] of Object.entries(record.deltas??{})){ if(key==="skills" || !delta) continue; const before=record.before?.[key],after=record.after?.[key]; if(before!=null && after!=null) appendChangeRow(changes,{label:resultLabel(key),before,after,delta,key}); }
-  for(const [id,delta] of Object.entries(record.deltas?.skills??{})){ if(!delta) continue; const before=record.before?.skills?.[id],after=record.after?.skills?.[id]; if(before!=null && after!=null) appendChangeRow(changes,{label:registries.skills.get(id)?.name??id,before,after,delta,key:"skill"}); }
-  if(changes.childElementCount){const heading=document.createElement("h3");heading.className="aar-subheading";heading.textContent="Recorded Changes";els.resultBody.append(heading,changes);} else {const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No measurable changes recorded.";els.resultBody.appendChild(empty);}
-  if(record.repetitionMultiplier != null && record.repetitionMultiplier < 1){const rep=document.createElement("p");rep.className="aar-advisory";rep.textContent=`Repeated training reduced learning efficiency to ${Math.round(record.repetitionMultiplier*100)}%. Rotate activities for better gains.`;els.resultBody.appendChild(rep);}
-  if(record.eventRecordId){const ev=state.entities.gameplayEventRecords[record.eventRecordId], defEv=ev?registries.gameplayEvents.get(ev.definitionId):null; if(defEv){const feedback=feedbackProfile(defEv);const box=document.createElement("section");box.className=`aar-event tone-${feedback.tone}`;const kicker=document.createElement("span");kicker.className="event-kicker";kicker.textContent=feedback.label;const title=document.createElement("strong");title.textContent=defEv.title;const message=document.createElement("p");message.textContent=defEv.message;box.append(kicker,title,message);els.resultBody.appendChild(box);}}
-  els.resultDialog.showModal();
-}
-function showDutyResult(scheduleRecordId) {
-  const state=store.getState(), record=state.entities.scheduleRecords[scheduleRecordId]; if(!record)return; const duty=registries.duties.get(record.dutyDefinitionId); const perf=performanceProfile(record.performanceRating??"satisfactory");
-  els.resultDialog.dataset.tone=perf.tone; els.resultReference.textContent=compactReference("DUTY",record.id); els.resultKicker.textContent="UNIT TRAINING AAR"; els.resultTitle.textContent=duty.name; els.resultBody.replaceChildren();
-  const header=document.createElement("div");header.className="aar-performance";
-  if(record.qualificationResult && typeof record.qualificationResult === "object") { const q=record.qualificationResult; header.append(statusStamp(q.qualified?"filled":"blocked"),metricBlock("QUALIFICATION",`${q.label} · ${q.score}/${q.maxScore}`),metricBlock("TRAINING PERFORMANCE",record.performanceScore!=null?`${registries.performanceRatings.get(record.performanceRating)?.label ?? record.performanceRating} · ${record.performanceScore}/100`:"—")); }
-  else header.append(statusStamp(record.performanceRating??"completed"),metricBlock("SCORE",record.performanceScore!=null?`${record.performanceScore}/100`:"—"),metricBlock("PERIOD",record.startDate===record.endDate?record.startDate:`${record.startDate} → ${record.endDate}`));
-  els.resultBody.appendChild(header);
-  const participantCount=(record.participantPersonIds??[]).length; const participation=document.createElement("div");participation.className="aar-participation";participation.append(metricBlock("ACTIVITY SOURCE","UNIT SCHEDULE"),metricBlock("PARTICIPANTS",participantCount?`${participantCount} PERSONNEL`:"UNIT EVENT"));els.resultBody.appendChild(participation);
-  const changes=document.createElement("div");changes.className="aar-change-grid";for(const key of ["readiness","morale","fatigue","unitReadiness","unitCohesion"]){const before=record.before?.[key],after=record.after?.[key];if(before!=null&&after!=null&&before!==after)appendChangeRow(changes,{label:resultLabel(key),before,after,delta:after-before,key});}
-  for(const [key,after] of Object.entries(record.after?.training??{})){const before=record.before?.training?.[key];if(before!=null&&after!==before)appendChangeRow(changes,{label:`Unit ${key.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase())}`,before,after,delta:after-before,key:"skill"});}
-  if(changes.childElementCount){const heading=document.createElement("h3");heading.className="aar-subheading";heading.textContent="Recorded Changes";els.resultBody.append(heading,changes);}
-  if(record.outcomeEventRecordId){const ev=state.entities.gameplayEventRecords[record.outcomeEventRecordId],defEv=ev?registries.gameplayEvents.get(ev.definitionId):null;if(defEv){const feedback=feedbackProfile(defEv);const box=document.createElement("section");box.className=`aar-event tone-${feedback.tone}`;const kicker=document.createElement("span");kicker.className="event-kicker";kicker.textContent=feedback.label;const title=document.createElement("strong");title.textContent=defEv.title;const message=document.createElement("p");message.textContent=defEv.message;box.append(kicker,title,message);els.resultBody.appendChild(box);}}
-  els.resultDialog.showModal();
-}
-
-function showCommandResult(result) {
-  if(!result)return; if(result.code==="activity_completed") return showActivityResult(result.data.activityRecordId);
-  if(result.code==="decision_resolved"){ els.resultDialog.dataset.tone="routine"; els.resultReference.textContent=compactReference("DEC",result.data.eventRecordId); els.resultKicker.textContent="DECISION OUTCOME"; els.resultTitle.textContent=result.data.title ?? "Decision Resolved"; els.resultBody.replaceChildren(); const choice=document.createElement("div");choice.className="aar-performance";choice.append(statusStamp("completed"),metricBlock("ACTION",result.data.choiceLabel ?? result.message),metricBlock("TEAMMATE",result.data.targetPersonName ?? "—"));els.resultBody.appendChild(choice); const changes=document.createElement("div");changes.className="aar-change-grid";for(const item of result.data.changes??[])appendChangeRow(changes,{label:item.label,before:item.before,after:item.after,delta:item.delta,key:item.label==="Morale"?"morale":""});if(changes.childElementCount){const heading=document.createElement("h3");heading.className="aar-subheading";heading.textContent="Recorded Changes";els.resultBody.append(heading,changes);}else{const empty=document.createElement("p");empty.className="empty-state";empty.textContent="Decision recorded. No measurable stat change was generated.";els.resultBody.appendChild(empty);}els.resultDialog.showModal(); return; }
-  if(result.code==="time_advanced" || result.code==="time_interrupted"){ els.resultDialog.dataset.tone="routine"; els.resultReference.textContent=compactReference("SITREP",`${result.data.startDate}-${result.data.endDate}`); els.resultKicker.textContent="TIME ADVANCE SUMMARY"; els.resultTitle.textContent=result.code==="time_interrupted"?`${result.data.days} Day${result.data.days===1?"":"s"} Advanced · HOLD`:`${result.data.days} Day${result.data.days===1?"":"s"} Advanced`; els.resultBody.replaceChildren(); const p=document.createElement("p");p.className="result-grade";p.textContent=`${result.data.startDate} → ${result.data.endDate}`;els.resultBody.appendChild(p); const list=document.createElement("div");list.className="time-summary-list"; for(const item of result.data.summaryItems??[]){const row=document.createElement("div");row.className=`time-summary-item tone-${item.tone??"routine"}`;row.textContent=item.label;list.appendChild(row);} if(!list.childElementCount){const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No major career or unit events occurred.";list.appendChild(empty);} els.resultBody.appendChild(list); els.resultDialog.showModal(); }
 }
 
 function renderSchoolCatalog(state,indexes,personId){
@@ -690,19 +673,12 @@ function auditNpcProgression(days){
   els.diagnostics.textContent=`NPC SIMULATION AUDIT (${days} DAYS, NON-MUTATING)\n${before.identity.displayName} · Tier ${before.simulationTier}\nExperience ${before.career.experience} → ${after.career.experience}\nReadiness ${before.condition.readiness}% → ${after.condition.readiness}%\nFatigue ${before.condition.fatigue}% → ${after.condition.fatigue}%\nMorale ${before.condition.morale}% → ${after.condition.morale}%\nRank ${before.affiliation.rankId} → ${after.affiliation.rankId}\n\nThis audit ran on a cloned world and did not alter the save.`;
 }
 
-function getNoticesByIds(ids) { const state = store.getState(); return ids.map(id => state.entities.notificationRecords[id]).filter(Boolean); }
-function queueNotifications(ids) { achievementQueue.push(...getNoticesByIds(ids).filter(n => ["career_opportunity", "qualification_completed", "award_earned", "promotion", "memorial"].includes(n.type))); queueMicrotask(showNextAchievement); }
-function showNextAchievement() { if (els.achievementDialog.open || els.resultDialog.open || els.personDialog.open || els.saveDialog.open || els.confirmDialog.open || achievementQueue.length === 0) return; const notice = achievementQueue.shift(); els.achievementType.textContent = notice.type.replaceAll("_", " ").toUpperCase(); els.achievementTitle.textContent = notice.title; els.achievementMessage.textContent = notice.message; els.achievementDialog.dataset.notificationId = notice.id; els.achievementDialog.dataset.opportunityRecordId = notice.references?.opportunityRecordId ?? ""; els.achievementOk.textContent=notice.references?.opportunityRecordId?"Open Opportunity":"Continue"; els.achievementDialog.showModal(); }
-els.achievementOk.addEventListener("click", () => { const id = els.achievementDialog.dataset.notificationId, opportunityRecordId=els.achievementDialog.dataset.opportunityRecordId; if (id) { try { markNotificationRead(store, id); } catch {} } els.achievementDialog.close(); if(opportunityRecordId)openOpportunityRecord(opportunityRecordId); showNextAchievement(); });
-
 function autosave() { if (!store.getState().playerPersonId) return; const validation = validateWorldState(store.getState(), registries); if (!validation.ok) return; try { saveToSlot(store.getState(), AUTOSAVE_SLOT); } catch(error) { console.warn("Autosave skipped",error); setStatus(error instanceof Error?error.message:"Autosave storage is unavailable.","bad"); } }
 function pulseFeedback(result) {
   const targets = result?.code === "activity_completed" ? [els.careerSummary, els.skillSummary, els.activityHistory] : result?.code === "time_advanced" ? [els.careerSummary, els.promotionCard] : [];
   for (const target of targets.filter(Boolean)) { target.classList.remove("feedback-pulse"); void target.offsetWidth; target.classList.add("feedback-pulse"); setTimeout(() => target.classList.remove("feedback-pulse"), 700); }
 }
-function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { try { const result = fn(); if (result?.notifications?.length) queueNotifications(result.notifications); eventBus.publish({ type: "command_completed", result }); showCommandResult(result); pulseFeedback(result); if (autosaveAfter) autosave(); setStatus(result?.message ?? "Command completed.", statusTone); return result; } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : String(error), "bad"); return null; } }
-
-function confirmAction(title, message) { return new Promise(resolve => { els.confirmTitle.textContent = title; els.confirmMessage.textContent = message; const handler = () => { els.confirmDialog.removeEventListener("close", handler); resolve(els.confirmDialog.returnValue === "confirm"); }; els.confirmDialog.addEventListener("close", handler); els.confirmDialog.showModal(); }); }
+function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { try { const result = fn(); if (result?.notifications?.length) queueNotifications(result.notifications); eventBus.publish({ type: "command_completed", result }); resultDialog.showCommandResult(result); pulseFeedback(result); if (autosaveAfter) autosave(); setStatus(result?.message ?? "Command completed.", statusTone); return result; } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : String(error), "bad"); return null; } }
 
 const saveManager = createSaveManagerController({
   elements: { dialog: els.saveDialog, title: els.saveDialogTitle, modeLabel: els.saveModeLabel, slots: els.saveSlots },
@@ -769,7 +745,7 @@ els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(
 els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
 els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
 els.save.addEventListener("click", () => saveManager.open("save")); els.load.addEventListener("click", () => saveManager.open("load")); els.loadFromStart.addEventListener("click", () => saveManager.open("load"));
-els.resultClose.addEventListener("click",()=>{els.resultDialog.close();showNextAchievement();});
+els.resultClose.addEventListener("click",()=>{els.resultDialog.close();achievementDialog.showNext();});
 els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.saveDialogClose.addEventListener("click", () => saveManager.close());

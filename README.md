@@ -1,33 +1,29 @@
-# War Sim v0.4.3.7 — Consolidated UI Architecture + Mobile Hardening
+# War Sim v0.4.3.8 — UI Architecture Refactor Phase 4
 
-War Sim v0.4.3.7 is built directly from the verified v0.4.3.6 checkpoint. It consolidates the completed Personnel Profile architecture refactor with a narrow mobile/UI containment hardening pass discovered during real-device iPhone testing.
+War Sim v0.4.3.8 is built directly from the verified v0.4.3.7 consolidated mobile-hardening checkpoint. This release continues the conservative `src/app.js` decomposition by extracting the generic result/AAR, achievement notification, and confirmation dialog controllers into isolated UI modules.
 
-Runtime **0.4.3.7**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.8**, world schema **16**, save format **3**, generator **v3**.
 
-## Included from v0.4.3.6
+## Refactor scope
 
-- `src/ui/dialogs/personProfile.js` remains the presentation-only Personnel Profile controller.
-- Canonical lookup/state ownership remains in `src/app.js` through the injected profile context.
-- The dialog module does not directly import commands, services, state, core, or selectors.
-- Save/persistence architecture remains unchanged.
+New UI modules:
 
-## Mobile/UI hardening
+- `src/ui/dialogs/resultDialog.js` — activity AARs, unit-duty AARs, decision outcomes, and time-advance summaries.
+- `src/ui/dialogs/achievementDialog.js` — high-visibility career/award/promotion notification queue and opportunity handoff.
+- `src/ui/dialogs/confirmDialog.js` — native confirmation-dialog promise contract.
 
-- Long values in shared military metric blocks now wrap instead of forcing horizontal overflow.
-- Soldier Identity Awards/Insignia cards explicitly constrain dynamic metric values, including long `WHY EARNED` provenance text.
-- Award Catalog copy/title grid children are explicitly shrinkable and wrap safely.
-- Existing narrow-screen containment rules for DD214/service-record fields, record strips, unit metrics, school cards, situation text, dialogs, and navigation remain preserved.
-- Added `tests/mobile-ui-hardening.mjs` to guard the concrete iPhone overflow regression and related containment rules.
+`src/app.js` remains the composition root. It still owns the state store, canonical selectors/commands/services, save/load behavior, command execution, autosave, and preparation of registry/state dependencies injected into the dialog controllers.
+
+The extracted dialog modules do not import commands, services, selectors, state, or core simulation modules directly. They receive presentation data and callbacks through controller construction.
 
 ## Compatibility
 
-- World schema remains **16**.
-- Save format remains **3**.
-- Generator remains **v3**.
-- Existing schema-16 saves continue through the existing same-schema normalization path.
-- `src/core/saveSystem.js` is unchanged from the stabilized baseline.
-- No gameplay rules, commands, services, selectors, data definitions, canonical entity schemas, save keys, checksums, or slot behavior changed.
+There is no world-schema change and no save-format change. Existing schema-16/save-format-3 careers remain compatible and normalize to runtime version 0.4.3.8 through the existing same-schema migration path.
 
-## Still intentionally out of scope
+No gameplay feature, career rule, scheduler rule, promotion rule, reenlistment behavior, definition content, world generation, persistence format, or mobile layout redesign is included in this refactor.
 
-This release does not add deployments/combat, additional MOS starts, Ranger/Special Forces pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive-duty/event framework planned for later feature work.
+## QA
+
+The package includes a dedicated `tests/dialog-controllers-module.mjs` suite that exercises confirmation resolution, achievement filtering/queueing/read handling/opportunity handoff, time-advance summaries, focused-activity AAR rendering, unit-duty AAR rendering, and decision outcome rendering using a minimal DOM contract.
+
+The complete packaged QA results are documented in `SOFTWARE_QUALITY_REPORT.md`.

@@ -78,7 +78,7 @@ function careerStore(seed=416001){
   assert.ok(notice.message.includes(`${record.qualificationResult.label} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`));
   const perf=Object.values(state.entities.performanceRecords).find(r=>r.sourceId===record.id);
   assert.ok(perf.notes.includes(`${record.qualificationResult.label} ${record.qualificationResult.score}/${record.qualificationResult.maxScore}`));
-  const ui=fs.readFileSync(new URL("../src/app.js",import.meta.url),"utf8");
+  const ui=fs.readFileSync(new URL("../src/ui/dialogs/resultDialog.js",import.meta.url),"utf8");
   assert.match(ui,/QUALIFICATION RESULT/); assert.match(ui,/TRAINING PERFORMANCE/);
 }
 
