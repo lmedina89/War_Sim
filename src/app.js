@@ -389,7 +389,7 @@ const saveManager = createSaveManagerController({
     `${resolveRankName(meta.rankId)} · ${resolveBranchName(meta.branchId)}`,
     meta.specialtyId && registries.specialties.has(meta.specialtyId) ? `${registries.specialties.get(meta.specialtyId).code} · ${registries.specialties.get(meta.specialtyId).name}` : null,
     meta.unitName ? `Unit · ${meta.unitName}` : null,
-    meta.recoveredFromBackup ? "Recovery backup available" : (meta.corrupted ? "Save data is damaged" : null),
+    meta.recoveredFromBackup ? "Recovery backup available · primary copy needs repair" : (meta.incompatible ? "Save version is not compatible with this build" : (meta.corrupted ? "Save data is damaged · no valid recovery backup" : null)),
     `Game date ${meta.gameDate}`,
     `Saved ${formatSavedAt(meta.savedAt)}`,
     `v${meta.gameVersion} · schema ${meta.worldSchemaVersion}`,

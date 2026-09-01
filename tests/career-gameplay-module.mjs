@@ -19,4 +19,4 @@ assert.doesNotMatch(ui,/from ["']\.\.\/\.\.\/services\//);
 assert.doesNotMatch(ui,/from ["']\.\.\/\.\.\/state\//);
 assert.doesNotMatch(ui,/createStateStore|store\.mutate|store\.replaceState/);
 assert.doesNotMatch(ui,/runCommand\(/);
-console.log("War Sim v0.4.3.17 career gameplay presentation module QA passed");
+console.log("War Sim v0.4.3.19 career gameplay presentation module QA passed");

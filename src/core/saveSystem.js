@@ -61,8 +61,53 @@ function metadataFromRaw(raw, slotId, { recoveredFromBackup = false } = {}) {
   const payload = verifyAndMigrateRaw(raw);
   return {
     ...buildMetadata(payload.worldState, slotId, payload.savedAt ?? payload.createdAt ?? null, payload.saveId ?? null),
-    recoveredFromBackup
+    recoveredFromBackup,
+    loadable: true,
+    loadIssue: recoveredFromBackup ? "recovery" : null
   };
+}
+
+function classifyLoadError(error) {
+  const message = error instanceof Error ? error.message : String(error ?? "Unknown save error.");
+  if (/Unsupported save format:/i.test(message) || /Unsupported world schema:/i.test(message)) {
+    return {
+      kind: "incompatible",
+      userMessage: "This save was created by an unsupported version of War Sim and cannot be loaded by this build. Update War Sim or load a compatible backup."
+    };
+  }
+  if (/integrity check failed/i.test(message)) return { kind: "corrupted", userMessage: "Save integrity check failed. This save appears to be damaged." };
+  if (/not valid JSON|not a valid object|payload is missing/i.test(message)) return { kind: "corrupted", userMessage: "This save contains damaged or incomplete data." };
+  if (/Save validation failed:/i.test(message)) return { kind: "corrupted", userMessage: "This save contains invalid world data and cannot be loaded safely." };
+  return { kind: "corrupted", userMessage: "This save could not be validated and cannot be loaded safely." };
+}
+
+function unavailableMetadata(slotId, index, errors) {
+  const classifications = errors.filter(Boolean).map(classifyLoadError);
+  const incompatible = classifications.some(entry => entry.kind === "incompatible");
+  return {
+    ...(index[slotId] ?? {}),
+    slotId,
+    empty: false,
+    loadable: false,
+    corrupted: !incompatible,
+    incompatible,
+    loadIssue: incompatible ? "incompatible" : "corrupted",
+    loadIssueMessage: incompatible
+      ? "This save requires a different War Sim save/schema version."
+      : "Save data is damaged and no valid recovery backup is available."
+  };
+}
+
+function friendlyLoadFailure(primaryError, backupError = null) {
+  const primary = primaryError ? classifyLoadError(primaryError) : null;
+  const backup = backupError ? classifyLoadError(backupError) : null;
+  if (backupError) {
+    if (primary?.kind === "incompatible" || backup?.kind === "incompatible") {
+      return new Error("This save and its recovery backup are not compatible with this War Sim build. Update War Sim or use another save slot.");
+    }
+    return new Error("The primary save is damaged and its recovery backup is also invalid. This slot cannot be loaded safely.");
+  }
+  return new Error(primary?.userMessage ?? "This save slot could not be loaded safely.");
 }
 
 function inspectSlot(slotId, index = readIndex()) {
@@ -75,14 +120,14 @@ function inspectSlot(slotId, index = readIndex()) {
     catch (primaryError) {
       if (backupRaw) {
         try { return { metadata: metadataFromRaw(backupRaw, slotId, { recoveredFromBackup: true }), source: "backup", primaryError }; }
-        catch (backupError) { return { metadata: { ...(index[slotId] ?? {}), slotId, empty: false, corrupted: true }, source: null, primaryError, backupError }; }
+        catch (backupError) { return { metadata: unavailableMetadata(slotId, index, [primaryError, backupError]), source: null, primaryError, backupError }; }
       }
-      return { metadata: { ...(index[slotId] ?? {}), slotId, empty: false, corrupted: true }, source: null, primaryError };
+      return { metadata: unavailableMetadata(slotId, index, [primaryError]), source: null, primaryError };
     }
   }
 
   try { return { metadata: metadataFromRaw(backupRaw, slotId, { recoveredFromBackup: true }), source: "backup" }; }
-  catch (backupError) { return { metadata: { ...(index[slotId] ?? {}), slotId, empty: false, corrupted: true }, source: null, backupError }; }
+  catch (backupError) { return { metadata: unavailableMetadata(slotId, index, [backupError]), source: null, backupError }; }
 }
 
 function repairIndexFromStoredSlots() {
@@ -109,22 +154,38 @@ function isQuotaError(error) {
   return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED" || message.includes("quota") || message.includes("storage");
 }
 
+function isValidStoredSave(raw) {
+  if (!raw) return false;
+  try { verifyAndMigrateRaw(raw); return true; }
+  catch { return false; }
+}
+
 export function saveToSlot(state, slotId) {
   if (!ALL_SAVE_SLOTS.includes(slotId)) throw new Error(`Invalid save slot: ${slotId}`);
   const validation = validateWorldState(state, registries);
   if (!validation.ok) throw new Error(`Save blocked: ${validation.errors.join(" | ")}`);
 
   const key = slotKey(slotId), backup = backupKey(slotId), previous = localStorage.getItem(key);
+  const existingBackup = slotId === AUTOSAVE_SLOT ? null : localStorage.getItem(backup);
+  const previousIsValid = isValidStoredSave(previous);
+  const existingBackupIsValid = isValidStoredSave(existingBackup);
+  const recoveryRaw = previousIsValid ? previous : (existingBackupIsValid ? existingBackup : null);
   const savedAt = new Date().toISOString(), saveId = createExternalId("save");
   const payloadBase = { saveFormatVersion: CURRENT_SAVE_FORMAT_VERSION, saveId, createdAt: savedAt, savedAt, gameVersion: state.gameVersion, worldState: state };
   const checksum = fnv1a32(stableStringify(payloadBase));
   const serialized = JSON.stringify({ ...payloadBase, checksum });
   try {
     if (slotId === AUTOSAVE_SLOT) localStorage.removeItem(backup);
-    else if (previous) localStorage.setItem(backup, previous);
+    else if (recoveryRaw && recoveryRaw !== existingBackup) localStorage.setItem(backup, recoveryRaw);
     localStorage.setItem(key, serialized);
   } catch (error) {
     if (isQuotaError(error)) {
+      // Never discard the only known-good recovery copy merely to force a new write.
+      // When the current primary is valid, it remains safe to drop the duplicate backup
+      // and retry because localStorage.setItem is atomic for that primary key.
+      if (!previousIsValid && existingBackupIsValid) {
+        throw new Error("Save storage is full. Your existing recovery backup was preserved; delete another manual save, then try again.", { cause: error });
+      }
       try { localStorage.removeItem(backup); localStorage.setItem(key, serialized); }
       catch (retryError) { throw new Error("Save storage is full. Delete an older manual save, then try again.", { cause: retryError }); }
     } else throw error;
@@ -158,12 +219,11 @@ export function loadFromSlot(slotId) {
       recoveredFromBackup = true;
       try { localStorage.setItem(slotKey(slotId), backupRaw); } catch { /* Recovery can still proceed in-memory. */ }
     } catch (backupError) {
-      const primaryMessage = primaryError instanceof Error ? primaryError.message : "Primary save is unavailable.";
-      throw new Error(`Primary save could not be loaded (${primaryMessage}) and its recovery backup is also invalid (${backupError.message}).`);
+      throw friendlyLoadFailure(primaryError, backupError);
     }
   }
 
-  if (!payload) throw primaryError ?? new Error("Save slot could not be loaded.");
+  if (!payload) throw friendlyLoadFailure(primaryError ?? new Error("Save slot could not be loaded."));
   const metadata = {
     ...buildMetadata(payload.worldState, slotId, payload.savedAt ?? payload.createdAt ?? null, payload.saveId ?? null),
     recoveredFromBackup
@@ -175,6 +235,7 @@ export function loadFromSlot(slotId) {
 }
 
 export function deleteSaveSlot(slotId) {
+  if (!ALL_SAVE_SLOTS.includes(slotId)) throw new Error(`Invalid save slot: ${slotId}`);
   localStorage.removeItem(slotKey(slotId));
   localStorage.removeItem(backupKey(slotId));
   const index = readIndex();

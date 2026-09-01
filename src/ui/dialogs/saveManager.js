@@ -66,13 +66,18 @@ export function createSaveManagerController({
         }));
       }
 
-      if (mode === "load" && !meta.empty) {
-        actions.appendChild(makeButton("Load", {
+      if (mode === "load" && !meta.empty && meta.loadable !== false) {
+        actions.appendChild(makeButton(meta.recoveredFromBackup ? "Recover & Load" : "Load", {
           onClick: async () => {
             const completed = await onLoadSlot(meta);
             if (completed !== false) elements.dialog.close();
           },
         }));
+      } else if (mode === "load" && !meta.empty && meta.loadable === false) {
+        const unavailable = document.createElement("p");
+        unavailable.className = "save-slot-warning";
+        unavailable.textContent = meta.incompatible ? "Update War Sim or use another save." : "No valid recovery copy is available.";
+        actions.appendChild(unavailable);
       }
 
       if (!meta.empty && meta.slotId !== autosaveSlotId) {

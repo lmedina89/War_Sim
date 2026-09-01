@@ -50,8 +50,8 @@ legacy.entities.units.unit_company_001.parentUnitId=null;
 delete legacy.world.formationIdentityId;
 legacy.gameVersion="0.4.3.2";
 const migrated=migratePayload({saveFormatVersion:3,saveId:"legacy",createdAt:"2046-01-01T00:00:00.000Z",savedAt:"2046-01-01T00:00:00.000Z",gameVersion:"0.4.3.2",worldState:legacy});
-assert.equal(migrated.worldState.gameVersion,"0.4.3.17");
+assert.equal(migrated.worldState.gameVersion,"0.4.3.19");
 assert.ok(migrated.worldState.entities.units.unit_company_001.parentUnitId,"same-schema legacy load should backfill named formation parents");
 assert.ok(formationIdentityForUnit(migrated.worldState,migrated.worldState.world.careerStartUnitByBranchId.branch_army)?.insigniaId,"legacy backfill should resolve a patch");
 
-console.log("War Sim v0.4.3.17 formation identity and SVG asset QA passed");
+console.log("War Sim v0.4.3.19 formation identity and SVG asset QA passed");

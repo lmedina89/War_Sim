@@ -1,27 +1,27 @@
-# War Sim v0.4.3.17 — UI Architecture Refactor Phase 13
+# War Sim v0.4.3.19 — Product Hardening 2: Load & Recovery Resilience
 
-War Sim v0.4.3.17 is built directly from the verified v0.4.3.16 Phase 12 baseline. Runtime **0.4.3.17**, world schema **16**, save format **3**, generator **v3**.
+War Sim v0.4.3.19 is built directly from the accepted v0.4.3.18 Product Hardening 1 baseline. Runtime **0.4.3.19**, world schema **16**, save format **3**, generator **v3**.
 
-## Phase 13 scope
+## Product Hardening 2
 
-This is the final planned UI-architecture cleanup phase. It extracts the remaining NPC Person Profile uniform DOM builder from `src/app.js` into `src/ui/render/personProfileUniform.js` and moves shared award-repeat device formatting into `src/ui/awardPresentation.js`.
+This release strengthens player-facing load and recovery behavior without changing gameplay rules, progression, RNG, world schema, or save format.
 
-The Person Profile context remains controller-owned in `src/app.js`; store/index access, selector composition, navigation, profile opening, commands, autosave, save/load, simulation services, progression rules, and canonical mutation remain unchanged.
+- Distinguishes healthy, backup-recoverable, damaged, and incompatible save slots.
+- A valid manual backup remains loadable when the primary copy is damaged.
+- Damaged slots with no valid backup are clearly marked and are not offered a misleading Load action.
+- Unsupported save-format/world-schema slots are classified as incompatible and never partially loaded.
+- Load failures use stable player-facing messages while preserving useful integrity diagnostics.
+- The Save Manager labels backup recovery as **Recover & Load**.
+- Backward compatibility is explicitly tested with a v0.4.3.17 save-format-3 / world-schema-16 fixture.
+- Permanent Chromium regression now injects damaged and unsupported save fixtures and verifies their UI behavior.
 
-`src/ui/render/personProfileUniform.js` is dependency-injected with registries, Soldier Identity selection, insignia creation, rank-insignia creation, and award-device formatting. It has no direct imports from commands, services, state, core, or selectors.
+## Architecture baseline
 
-The permanent Chromium regression now explicitly opens a Tier-1 NPC personnel file, clicks **View Uniform**, verifies the uniform is visible and populated, then hides it again.
+The v0.4.3.17 architecture-refactor baseline remains intact. `app.js` remains controller/orchestration code; no gameplay presentation was moved back into it.
 
-## Controller size
-
-- v0.4.3.16 `src/app.js`: **32,652 bytes / 497 lines**
-- v0.4.3.17 `src/app.js`: **29,714 bytes / 484 lines**
-
-At this point the remaining `app.js` responsibilities are primarily legitimate application orchestration: store/event-bus composition, selector/context assembly, renderer wiring, command execution, autosave, save/load coordination, navigation, subscriptions, diagnostics, and top-level render sequencing. Further extraction should be justified by a concrete architecture need rather than line-count reduction.
-
-## Compatibility invariants
+## Compatibility
 
 - World schema: **16**
 - Save format: **3**
 - Generator: **v3**
-- Existing save-system implementation remains unchanged.
+- Existing compatible v0.4.3.17/v0.4.3.18 careers remain loadable and are normalized to the current runtime version during migration.

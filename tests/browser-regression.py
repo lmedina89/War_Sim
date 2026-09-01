@@ -238,9 +238,28 @@ async def main():
           except: pass
       if await page.locator('#save-dialog').evaluate('(d)=>d.open'): await page.click('#save-dialog-close'); await page.wait_for_timeout(80)
     if await visible('#load-game'):
+      # Hardening fixtures: one damaged slot and one future/unsupported save format.
+      await page.evaluate("""() => {
+        localStorage.setItem('warSim_save_v3_slot_05','{damaged');
+        localStorage.setItem('warSim_save_v3_slot_06',JSON.stringify({saveFormatVersion:999,worldState:{}}));
+      }""")
       await page.click('#load-game'); await page.wait_for_timeout(100)
       await check('save manager opens in load mode',await page.locator('#save-dialog').evaluate('(d)=>d.open'),(await page.locator('#save-dialog-title').inner_text()))
+      cards=page.locator('#save-slots .save-slot')
+      card5=cards.filter(has=page.locator('h3',has_text='Save 5')).first
+      card6=cards.filter(has=page.locator('h3',has_text='Save 6')).first
+      text5=await card5.inner_text(); text6=await card6.inner_text()
+      await check('damaged save classified', 'damaged' in text5.lower() and 'no valid recovery' in text5.lower(), text5)
+      await check('damaged save load blocked', await card5.locator('button',has_text='Load').count()==0, text5)
+      await check('unsupported save classified', 'not compatible' in text6.lower() and 'update war sim' in text6.lower(), text6)
+      await check('unsupported save load blocked', await card6.locator('button',has_text='Load').count()==0, text6)
       if await page.locator('#save-dialog').evaluate('(d)=>d.open'): await page.click('#save-dialog-close'); await page.wait_for_timeout(80)
+      await page.evaluate("""() => {
+        for (const slot of ['slot_05','slot_06']) {
+          localStorage.removeItem(`warSim_save_v3_${slot}`);
+          localStorage.removeItem(`warSim_save_backup_v3_${slot}`);
+        }
+      }""")
 
     # Career actions: activity execution and AAR
     await page.click('#bottom-nav [data-view="career"]'); await page.click('[data-career-tab="actions"]'); await page.wait_for_timeout(120)

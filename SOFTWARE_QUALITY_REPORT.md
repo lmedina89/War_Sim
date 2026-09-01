@@ -1,63 +1,39 @@
-# War Sim v0.4.3.17 — Software Quality Report
+# War Sim v0.4.3.19 — Software Quality Report
 
 ## Release
 
-v0.4.3.17 is UI Architecture Refactor Phase 13, built directly from the verified v0.4.3.16 baseline. Runtime **0.4.3.17**, world schema **16**, save format **3**, generator **v3**.
+v0.4.3.19 is Product Hardening 2: Load & Recovery Resilience, built directly from the accepted v0.4.3.18 Product Hardening 1 baseline. Runtime **0.4.3.19**, world schema **16**, save format **3**, generator **v3**.
 
-## Scope containment
+## Scope
 
-Phase 13 extracts only the remaining Tier-1 NPC Person Profile uniform presentation and shared award-repeat device label formatting. `getPersonProfileContext()` intentionally remains in `src/app.js` because it is controller-side state/selector composition.
+This release changes only load/recovery safety and its player-facing Save Manager presentation. Gameplay rules, career progression, RNG behavior, world schema, save format, and the v0.4.3.17 architecture baseline remain unchanged.
 
-No gameplay rules, command behavior, personnel lifecycle behavior, save schema, world schema, generator behavior, RNG behavior, career progression, or simulation services were changed.
+### Hardening changes
 
-## Architecture additions
-
-- `src/ui/render/personProfileUniform.js`
-- `src/ui/awardPresentation.js`
-- `tests/person-profile-presentation.mjs`
-- deterministic Tier-1 NPC uniform interaction coverage in `tests/browser-regression.py`
-
-The new uniform renderer is dependency-injected and has no direct imports from commands, services, state, core, or selectors. The shared award-device formatter is presentation-only and has no dependencies.
+- Save inspection distinguishes healthy, backup-recoverable, damaged, and incompatible slots.
+- A damaged primary with a valid manual backup remains loadable and is presented as **Recover & Load**.
+- A damaged slot with no valid backup is marked unloadable and no Load action is offered.
+- Unsupported save-format or world-schema data is classified as incompatible and is never partially loaded.
+- Load errors use stable player-facing messages while retaining the phrase **integrity check failed** for diagnostic compatibility.
+- Explicit backward-compatibility QA covers a v0.4.3.17 save-format-3 / world-schema-16 payload.
+- Chromium regression injects damaged and unsupported save fixtures and verifies classification plus blocked Load actions.
 
 ## Worktree verification
 
-- JS/MJS test suites: **39/39 PASS**
-- ES-module syntax checks: **154/154 PASS**
-- Runtime relative import targets checked: **247**, missing: **0**
-- Runtime source modules: **115**
-- Circular imports: **0**
-- Deterministic generated worlds validated: **300**
-- Stress population: **10,000 people**
-- Unsafe runtime-code scan (`eval`, `new Function`, `document.write`, `innerHTML =`): **0 hits**
-- Save-system SHA-256: `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9` (unchanged)
-- App-wide Chromium regression: **81/81 PASS**
-- Browser page exceptions: **0**
-- Browser console errors: **0**
+- 41/41 JS/MJS test suites PASS.
+- 156/156 JS/MJS files PASS explicit ES-module syntax parsing.
+- 115 runtime source modules.
+- 247/247 relative runtime imports resolve; 0 missing.
+- 0 circular runtime imports.
+- 300 deterministic generated-world QA PASS (quality harness).
+- 10,000-person stress audit PASS (quality harness).
+- Unsafe runtime-code scan: 0 hits.
+- Browser regression: 85/85 PASS.
+- Browser page exceptions: 0.
+- Browser console errors: 0.
+- `src/app.js`: 29,844 bytes / 484 lines (same controller boundary; small wording-only increase in Save Manager status presentation).
+- `src/core/saveSystem.js` SHA-256: `d7e08132195959230e5c92458120fa3ef205bc72a25fb9eab78fff19e198f623`.
 
-The Chromium regression uses a fixed world seed and explicitly finds a Tier-1 NPC personnel file, opens **View Uniform**, verifies the uniform is visible and populated, hides it, and closes the profile.
+## Exact-package verification
 
-## app.js reduction
-
-- v0.4.3.16: **32,652 bytes / 497 lines**
-- v0.4.3.17: **29,714 bytes / 484 lines**
-
-The remaining `app.js` is primarily application orchestration. Further extraction is not recommended merely to reduce line count.
-
-## Exact package verification
-
-The release candidate ZIP was extracted into a fresh directory and independently rerun through the complete gate:
-
-- **39/39** JS/MJS suites PASS
-- **154/154** explicit ES-module syntax checks PASS
-- **115** runtime JS modules
-- **247/247** relative imports resolved; **0** missing
-- **0** circular imports
-- **300** deterministic generated worlds PASS
-- **10,000-person** stress/index audit PASS
-- unsafe runtime-code scan: **0 hits**
-- save-system SHA-256 unchanged
-- deterministic app-wide Chromium regression: **81/81 PASS**
-- browser page exceptions: **0**
-- browser console errors: **0**
-
-The final ZIP differs from the verified candidate only by this QA-report status text and is subjected to a final clean-extraction gate before release.
+Release-candidate clean extraction PASS: 41/41 test suites, 156/156 ES-module syntax checks, 247/247 relative imports, matching save-system hash, and 85/85 Chromium checks with 0 page exceptions / 0 console errors. Final ZIP verification is performed after this report is stamped into the archive.
