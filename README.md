@@ -1,34 +1,33 @@
-# War Sim v0.4.3.5 — UI Architecture Refactor Phase 2
+# War Sim v0.4.3.7 — Consolidated UI Architecture + Mobile Hardening
 
-War Sim v0.4.3.5 is a refactor-only release built directly from the verified v0.4.3.4 UI Architecture Refactor Phase 1 checkpoint. It keeps world schema **16**, save format **3**, and generator **v3**. No canonical gameplay rules, career progression, world generation, save format, combat/deployment systems, MOS starts, or interactive-duty features were added in this release.
+War Sim v0.4.3.7 is built directly from the verified v0.4.3.6 checkpoint. It consolidates the completed Personnel Profile architecture refactor with a narrow mobile/UI containment hardening pass discovered during real-device iPhone testing.
 
-Runtime **0.4.3.5**, world schema **16**, save format **3**, generator **v3**.
+Runtime **0.4.3.7**, world schema **16**, save format **3**, generator **v3**.
 
-## v0.4.3.5 changes
+## Included from v0.4.3.6
 
-### UI architecture Phase 2 — Save Manager extraction
+- `src/ui/dialogs/personProfile.js` remains the presentation-only Personnel Profile controller.
+- Canonical lookup/state ownership remains in `src/app.js` through the injected profile context.
+- The dialog module does not directly import commands, services, state, core, or selectors.
+- Save/persistence architecture remains unchanged.
 
-- Added `src/ui/dialogs/saveManager.js` as a presentation-only controller for the Save Manager dialog.
-- The extracted module owns Save/Load mode presentation, save-slot card construction, button wiring, confirmation flow delegation, dialog opening/closing, and re-rendering after successful save/delete actions.
-- Canonical persistence behavior remains in the composition root: `src/app.js` still owns world validation, calls to `saveToSlot`, `loadFromSlot`, and `deleteSaveSlot`, state replacement, post-load career-objective refresh, and status/error reporting.
-- The Save Manager module receives persistence actions through injected callbacks and does **not** import commands, services, state, core persistence, or validation infrastructure.
-- `src/app.js` shrank from **126,116 bytes** in v0.4.3.4 to **124,688 bytes** in v0.4.3.5. Its physical line count increases because the retained persistence callbacks are now expanded into readable multi-line code instead of compressed one-line handlers.
-- Added `tests/save-manager-module.mjs` for isolated Save Manager presentation/interaction regression coverage.
-- Expanded `tests/ui-module-integrity.mjs` with Phase-2 dependency-boundary checks and a tighter `app.js` size ceiling.
+## Mobile/UI hardening
+
+- Long values in shared military metric blocks now wrap instead of forcing horizontal overflow.
+- Soldier Identity Awards/Insignia cards explicitly constrain dynamic metric values, including long `WHY EARNED` provenance text.
+- Award Catalog copy/title grid children are explicitly shrinkable and wrap safely.
+- Existing narrow-screen containment rules for DD214/service-record fields, record strips, unit metrics, school cards, situation text, dialogs, and navigation remain preserved.
+- Added `tests/mobile-ui-hardening.mjs` to guard the concrete iPhone overflow regression and related containment rules.
 
 ## Compatibility
 
 - World schema remains **16**.
 - Save format remains **3**.
 - Generator remains **v3**.
-- Existing v0.4.3.4 and earlier schema-16 saves continue through the existing same-schema normalization path.
-- `src/core/saveSystem.js` is byte-identical to the stabilized baseline; the refactor does not alter save payloads, keys, checksums, slots, or migration semantics.
-- `index.html` retains the same DOM contract. Only visible runtime version text changes from v0.4.3.4 to v0.4.3.5.
-
-## QA summary
-
-The final package is accepted only after all legacy suites plus the new Save Manager/module-boundary tests pass from a freshly extracted ZIP. See `SOFTWARE_QUALITY_REPORT.md` for exact-package verification results.
+- Existing schema-16 saves continue through the existing same-schema normalization path.
+- `src/core/saveSystem.js` is unchanged from the stabilized baseline.
+- No gameplay rules, commands, services, selectors, data definitions, canonical entity schemas, save keys, checksums, or slot behavior changed.
 
 ## Still intentionally out of scope
 
-This release does not add deployments/combat, new MOS career starts, Ranger/Special Forces selection pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive duty/event framework planned for a later feature release.
+This release does not add deployments/combat, additional MOS starts, Ranger/Special Forces pipelines, deep equipment, interactive schools, campaign generation, or the reusable interactive-duty/event framework planned for later feature work.

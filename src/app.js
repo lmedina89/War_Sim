@@ -36,13 +36,14 @@ import { createDomRegistry } from "./ui/dom.js";
 import { initializeDisclosureState, readUiJson, writeUiJson, readUiText, writeUiText } from "./ui/uiStorage.js";
 import { createNavigationController } from "./ui/navigation.js";
 import { createSaveManagerController } from "./ui/dialogs/saveManager.js";
+import { createPersonProfileController } from "./ui/dialogs/personProfile.js";
 
 const definitionValidation = validateDefinitions(registries);
 if (!definitionValidation.ok) throw new Error(`Definition validation failed: ${definitionValidation.errors.join(" | ")}`);
 
 const store = createStateStore(createInitialWorldState());
 const eventBus = createEventBus();
-let achievementQueue = [], selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null, personProfileActivityExpanded = false;
+let achievementQueue = [], selectedOrganizationUnitId = null, personnelFilterUnitId = null, statusTimer = null;
 let activeSoldierTab = "uniform";
 const CAREER_HISTORY_PREVIEW_LIMIT = 5;
 const UNIT_TRAINING_PREVIEW_LIMIT = 4;
@@ -248,37 +249,17 @@ function createProfileUniform(state,indexes,personId){
   const note=document.createElement("p");note.className="muted compact-note";note.textContent="This Tier 1 Soldier's uniform is generated only from that Soldier's canonical rank, awards, badges, and qualifications.";section.append(head,blouse,note);return section;
 }
 
-function showPersonProfile(personId) {
-  const state = store.getState(), indexes = store.getIndexes(), person = state.entities.people[personId]; if (!person) return;
-  const rank = registries.ranks.get(person.affiliation.rankId), billet = state.entities.billets[person.affiliation.billetId], billetDef = billet ? registries.billets.get(billet.definitionId) : null, unit = state.entities.units[person.affiliation.unitId];
-  const branch = registries.branches.get(person.affiliation.branchId), specialty = registries.specialties.get(person.affiliation.specialtyId), assignment=selectAssignmentView(state,indexes,registries,personId);
+function getPersonProfileContext(personId) {
+  const state=store.getState(), indexes=store.getIndexes(), person=state.entities.people[personId]; if(!person) return null;
+  const rank=registries.ranks.get(person.affiliation.rankId), billet=state.entities.billets[person.affiliation.billetId], billetDef=billet?registries.billets.get(billet.definitionId):null, unit=state.entities.units[person.affiliation.unitId];
+  const branch=registries.branches.get(person.affiliation.branchId), specialty=registries.specialties.get(person.affiliation.specialtyId), assignment=selectAssignmentView(state,indexes,registries,personId);
   const career=selectCareerRecord(state,indexes,registries,personId), loadout=state.entities.loadouts[person.loadoutId], primary=loadout?state.entities.equipmentInstances[loadout.slots.primaryWeaponInstanceId]:null, equipment=primary?registries.equipment.get(primary.definitionId):null;
-  els.personProfileAuthority.textContent=`${branch?.name?.toUpperCase() ?? "SERVICE"} PERSONNEL COMMAND`;
-  els.personProfileRef.textContent=recordReference("personnel_file",personId);
-  els.personProfileName.textContent = `${rank.abbreviation} ${person.identity.displayName}${personId === state.playerPersonId ? " · YOU" : ""}`;
-  els.personDogTag.replaceChildren();els.personDogTag.classList.add("has-rank-insignia");const dogRank=document.createElement("div");dogRank.className="dog-tag-rank-insignia";dogRank.setAttribute("aria-label",`${rank.name} rank insignia`);dogRank.append(createRankInsignia(rank));els.personDogTag.appendChild(dogRank);
-  const formationName=assignment.chain[0]?.formationName ?? assignment.chain[0]?.name ?? "—";
-  for (const [label, value] of [["NAME", person.identity.displayName.toUpperCase()], ["SERVICE", branch?.name ?? "—"], ["GRADE", `${rank.abbreviation} / ${rank.payGrade}`], ["MOS", specialty ? `${specialty.code} ${specialty.name}` : "—"], ["FORMATION", formationName], ["UNIT", unit?.name ?? "Unassigned"]]) {
-    const row=document.createElement("div"); row.className="dog-tag-row"; const key=document.createElement("span"), val=document.createElement("strong"); key.textContent=label; val.textContent=value; row.append(key,val); els.personDogTag.appendChild(row);
-  }
-  els.personProfileBreadcrumbs.replaceChildren(...assignment.chain.map(item=>{const b=document.createElement("button");b.type="button";b.className="profile-breadcrumb";b.textContent=item.name;b.addEventListener("click",()=>{selectedOrganizationUnitId=item.unitId;els.personDialog.close();setActiveView("unit");render();});return b;}));
-  const status=document.createElement("div"); status.className="profile-status-strip"; status.append(statusStamp(person.condition.status),metricBlock("READY",`${person.condition.readiness}%`),metricBlock("MORALE",`${person.condition.morale}%`),metricBlock("HEALTH",`${person.condition.health}%`));
-  const tierOneUniform=personId!==state.playerPersonId && person.simulationTier===1 ? createProfileUniform(state,indexes,personId) : null;
-  if(tierOneUniform){const uniformAction=document.createElement("button");uniformAction.type="button";uniformAction.className="secondary profile-uniform-button";uniformAction.textContent="View Uniform";uniformAction.addEventListener("click",()=>{tierOneUniform.hidden=!tierOneUniform.hidden;uniformAction.textContent=tierOneUniform.hidden?"View Uniform":"Hide Uniform";if(!tierOneUniform.hidden)requestAnimationFrame(()=>{const top=Math.max(0,window.scrollY+tierOneUniform.getBoundingClientRect().top-20);window.scrollTo({top,behavior:"smooth"});});});status.appendChild(uniformAction);}
-  const assignmentSection=document.createElement("section"); assignmentSection.className="profile-section service-file-section"; const assignmentTitle=document.createElement("h3"); assignmentTitle.textContent="Assignment"; const openUnit=document.createElement("button");openUnit.type="button";openUnit.className="secondary compact-button profile-unit-link";openUnit.textContent="Open Unit";openUnit.addEventListener("click",()=>{selectedOrganizationUnitId=person.affiliation.unitId;els.personDialog.close();setActiveView("unit");render();}); assignmentSection.append(assignmentTitle,statLine("Duty Position", billetDef?.name ?? "Unassigned"),statLine("Formation", formationName),statLine("Unit", unit?.name ?? "Unassigned"),openUnit);
-  const conditionSection=document.createElement("section"); conditionSection.className="profile-section service-file-section"; const conditionTitle=document.createElement("h3"); conditionTitle.textContent="Condition"; conditionSection.append(conditionTitle,statLine("Fatigue", `${person.condition.fatigue}%`),statLine("Experience", person.career.experience),statLine("Prestige", person.career.prestige));
-  const equipmentSection=document.createElement("section");equipmentSection.className="profile-section service-file-section";const equipmentTitle=document.createElement("h3");equipmentTitle.textContent="Assigned Equipment";equipmentSection.append(equipmentTitle,statLine("Primary",equipment?.name??"Unassigned"),statLine("Condition",primary?.condition!=null?`${primary.condition}%`:"—"));
-  const skillsSection=document.createElement("section"); skillsSection.className="profile-section service-file-section"; const skillsTitle=document.createElement("h3"); skillsTitle.textContent="Proficiency"; skillsSection.appendChild(skillsTitle);
-  const gameplay=selectGameplay(state, indexes, registries, person.id); for (const skill of gameplay?.skills ?? []) skillsSection.appendChild(progressRow(skill.name,skill.value,100));
-  const recordSection=document.createElement("section");recordSection.className="profile-section service-file-section";const recordTitle=document.createElement("h3");recordTitle.textContent="Education, Qualifications & Awards";recordSection.appendChild(recordTitle);
-  if(!career.education.length&&!career.qualifications.length&&!career.awards.length){const empty=document.createElement("p");empty.className="empty-state military-empty";empty.textContent="NO MILITARY EDUCATION, QUALIFICATIONS, OR AWARDS RECORDED";recordSection.appendChild(empty);} else {const usedQualifications=new Set(),usedAwards=new Set();for(const e of career.education){const cluster=document.createElement("div");cluster.className="achievement-cluster";const head=statLine(e.name,`GRADUATED · ${e.completedDate??"—"}`);cluster.appendChild(head);const linkedQualifications=career.qualifications.filter(q=>q.schoolId===e.schoolId);for(const q of linkedQualifications){usedQualifications.add(q.id);const detail=[q.result?.toUpperCase(),q.score!=null&&q.maxScore!=null?`${q.score}/${q.maxScore}`:null,q.expiresDate?`EXP ${q.expiresDate}`:null].filter(Boolean).join(" · ");const line=statLine(`↳ ${q.name}`,detail||q.completedDate);line.classList.add("achievement-child");cluster.appendChild(line);}const linkedAwards=career.awards.filter(a=>a.sourceId===e.id || registries.awards.get(a.awardId)?.eligibilitySource===e.schoolId);for(const a of linkedAwards){usedAwards.add(a.id);const line=statLine(`↳ ${a.name}`,a.earnedDate);line.classList.add("achievement-child");cluster.appendChild(line);if(a.reason){const reason=document.createElement("p");reason.className="muted award-provenance achievement-child";reason.textContent=`Why earned: ${a.reason}`;cluster.appendChild(reason);}}recordSection.appendChild(cluster);}for(const q of career.qualifications.filter(q=>!usedQualifications.has(q.id))){const detail=[q.result?.toUpperCase(),q.score!=null&&q.maxScore!=null?`${q.score}/${q.maxScore}`:null,q.expiresDate?`EXP ${q.expiresDate}`:null].filter(Boolean).join(" · ");recordSection.appendChild(statLine(q.name,detail||q.completedDate));}for(const a of career.awards.filter(a=>!usedAwards.has(a.id))){const cluster=document.createElement("div");cluster.className="achievement-cluster";cluster.appendChild(statLine(a.name,a.earnedDate));if(a.reason){const reason=document.createElement("p");reason.className="muted award-provenance";reason.textContent=`Why earned: ${a.reason}`;cluster.appendChild(reason);}recordSection.appendChild(cluster);}}
-  const activitySection=document.createElement("section");activitySection.className="profile-section service-file-section";const activityTitle=document.createElement("h3");activityTitle.textContent="Recent Career Activity";activitySection.appendChild(activityTitle);const profileArchiveKey=`${personId}`;const profileArchive=readUiArchive("person-career-activity",profileArchiveKey);const profileVisible=(gameplay?.recentCareerActivity??[]).filter(item=>!profileArchive.has(item.id));const profileExpanded=personProfileActivityExpanded;const profileShown=profileExpanded?profileVisible:profileVisible.slice(0,4);
-  if(!profileShown.length){const empty=document.createElement("p");empty.className="empty-state compact-empty";empty.textContent=profileArchive.size?"RECENT CAREER ACTIVITY ARCHIVED FROM THIS VIEW":"NO RECENT CAREER ACTIVITY";activitySection.appendChild(empty);} else for(const item of profileShown){const shell=document.createElement("div");shell.className="history-row-shell";shell.appendChild(statLine(item.date,item.title));const archive=document.createElement("button");archive.type="button";archive.className="secondary compact-button history-archive";archive.textContent="Archive";archive.addEventListener("click",()=>{const values=readUiArchive("person-career-activity",profileArchiveKey);values.add(item.id);writeUiArchive("person-career-activity",profileArchiveKey,values);showPersonProfile(personId);});shell.appendChild(archive);activitySection.appendChild(shell);}const profileActions=document.createElement("div");profileActions.className="history-actions";if(profileVisible.length>4){const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary compact-button";toggle.textContent=profileExpanded?"Recent Only":"Show More";toggle.addEventListener("click",()=>{personProfileActivityExpanded=!personProfileActivityExpanded;showPersonProfile(personId);});profileActions.appendChild(toggle);}if(profileArchive.size){const restore=document.createElement("button");restore.type="button";restore.className="secondary compact-button";restore.textContent=`Restore Archived (${profileArchive.size})`;restore.addEventListener("click",()=>{writeUiArchive("person-career-activity",profileArchiveKey,new Set());showPersonProfile(personId);});profileActions.appendChild(restore);}activitySection.appendChild(profileActions);
-  activitySection.appendChild(statLine("Simulation Detail",gameplay?.simulationTierLabel ?? "Background Simulation"));
-  if(gameplay?.simulationTierDescription){const simNote=document.createElement("p");simNote.className="simulation-detail-note";simNote.textContent=gameplay.simulationTierDescription;activitySection.appendChild(simNote);}
-  els.personProfileBody.replaceChildren(status,...(tierOneUniform?[tierOneUniform]:[]),assignmentSection,conditionSection,equipmentSection,skillsSection,recordSection,activitySection);
-  els.personDialog.showModal();
+  const gameplay=selectGameplay(state,indexes,registries,person.id);
+  return {state,indexes,person,rank,billetDef,unit,branch,specialty,assignment,career,primary,equipment,gameplay,getAwardDefinition:id=>registries.awards.get(id)};
 }
+let personProfile;
+function showPersonProfile(personId) { personProfile.open(personId); }
+
 function organizationChain(state, indexes, unitId) {
   const chain = [];
   let cursor = state.entities.units[unitId];
@@ -776,6 +757,10 @@ const saveManager = createSaveManagerController({
     return true;
   },
 });
+personProfile = createPersonProfileController({
+  els, getProfileContext:getPersonProfileContext, createProfileUniform, createRankInsignia, statLine, progressRow, statusStamp, metricBlock, recordReference, readUiArchive, writeUiArchive,
+  onOpenUnit: unitId => { selectedOrganizationUnitId=unitId; personProfile.close(); setActiveView("unit"); render(); }
+});
 
 els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
 els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
@@ -788,7 +773,7 @@ els.resultClose.addEventListener("click",()=>{els.resultDialog.close();showNextA
 els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true}));
 els.saveDialogClose.addEventListener("click", () => saveManager.close());
-els.personProfileClose.addEventListener("click", () => els.personDialog.close());
+els.personProfileClose.addEventListener("click", () => personProfile.close());
 els.newCareer.addEventListener("click", async () => {
   if (!(await confirmAction("Start New Career?", "The current session will be replaced. Your manual save slots will not be deleted."))) return;
   const seed = freshWorldSeed(); const scenario = registries.careerStartScenarios.values().find(item => item.enabled);

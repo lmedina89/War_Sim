@@ -1,116 +1,110 @@
-# War Sim v0.4.3.5 — Software Quality Report
+# War Sim v0.4.3.7 — Software Quality Report
 
 ## Release identity
 
-- Version: **0.4.3.5 — UI Architecture Refactor Phase 2**
-- Baseline: exact packaged **v0.4.3.4 — UI Architecture Refactor Phase 1**
+- Version: **0.4.3.7 — Consolidated UI Architecture + Mobile Hardening**
+- Baseline: exact packaged **v0.4.3.6**
 - World schema: **16**
 - Save format: **3**
 - Generator: **v3**
-- Scope: Save Manager UI extraction only; no gameplay feature or canonical-state redesign
+- Scope: preserve the v0.4.3.6 Personnel Profile refactor and harden mobile presentation/containment only
 
-## Refactor reviewed
+## Real-device defect addressed
 
-The existing Save Manager rendering and dialog orchestration were extracted from `src/app.js` into `src/ui/dialogs/saveManager.js` behind an injected controller contract. The module handles presentation concerns only: mode labels, slot cards, buttons, confirmations, dialog visibility, and successful-action refreshes.
+An iPhone screenshot exposed horizontal overflow in Soldier Identity → Awards & Insignia: a long `WHY EARNED` value for the Army Service Ribbon extended beyond its metric/card boundary.
 
-Canonical behavior deliberately remains in `app.js`: world validation, persistence calls, state replacement, post-load promotion-objective refresh, and status/error reporting. The UI module does not import `commands/`, `services/`, `state/`, or `core/` and does not directly access browser storage.
+Root cause was the shared `.mil-metric > strong` rule forcing `white-space: nowrap`. Existing containment rules already supplied `min-width:0` / `overflow-wrap` in several surfaces, but the explicit no-wrap value rule overrode the intended behavior for long dynamic text.
 
-`src/app.js` changed from **126,116 bytes / 791 physical lines** in v0.4.3.4 to **124,688 bytes / 824 physical lines** in v0.4.3.5. The byte reduction reflects extracted Save Manager presentation code; the line-count increase is intentional formatting of previously compressed persistence callbacks and is not growth in responsibility.
+The fix is data-agnostic rather than ribbon-specific:
 
-## Automated QA results
+- shared military metric values now permit normal wrapping and `overflow-wrap:anywhere`;
+- Award/Insignia cards explicitly constrain dynamic metric values to their card width;
+- Award Catalog copy/title grid children are explicitly shrinkable and wrap safely;
+- existing mobile rules for DD214 fields, record strips, situation text, unit metrics, school cards, dialogs, and navigation remain preserved.
 
-**PASS — 24/24 test scripts.**
+No award text was shortened or altered.
 
-The suite includes every v0.4.3.4 regression test plus the new `save-manager-module.mjs` test. The new test verifies:
+## Consolidated architecture scope
 
-- Save and Load mode labels/titles;
-- Autosave remains non-editable/non-deletable from the Save Manager;
-- empty manual slots expose Save Here;
-- populated manual slots expose Overwrite/Delete;
-- overwrite confirmation cancellation prevents writes;
-- successful save triggers refresh;
-- Load mode exposes Load/Delete;
-- successful load closes the dialog;
-- delete confirmation cancellation prevents deletion;
-- successful delete triggers refresh;
-- the controller rejects incomplete required element contracts.
+The v0.4.3.6 Personnel Profile extraction is retained unchanged. `src/ui/dialogs/personProfile.js` remains presentation-only and canonical state/selector ownership remains behind the `app.js` composition root and injected profile context.
 
-The Phase-2 UI architecture suite additionally verifies that the Save Manager module:
+This release does not perform another app.js architecture extraction. That separation is intentional so the mobile hardening has a small, auditable blast radius.
 
-- does not import canonical command/service/state/core layers;
-- does not access localStorage/sessionStorage directly;
-- does not import or call `validateWorldState`, `saveToSlot`, `loadFromSlot`, or `deleteSaveSlot`;
-- does not introduce `.innerHTML =`;
-- is wired through `createSaveManagerController` from `app.js`;
-- keeps `app.js` below the Phase-2 **127 KB** regression ceiling.
+## Automated QA
+
+**PASS — 26/26 test scripts** in the source worktree.
+
+New `tests/mobile-ui-hardening.mjs` permanently checks:
+
+- current runtime/HTML release identity;
+- shared military metric values cannot regress to `white-space:nowrap`;
+- long Soldier Identity `WHY EARNED` content is generated through the same dynamic metric path;
+- insignia cards have explicit width/wrapping containment;
+- Award Catalog grid copy/title content is shrinkable/wrappable;
+- existing narrow-screen containment gates remain present for record strips, DD214 values, situation text, school titles, unit metrics, and dialogs.
 
 ## Full quality harness
 
 `tests/quality.mjs`: **PASS**
 
-- Runtime source files audited: **98**
+- Runtime source modules: **99**
 - Deterministic generated worlds validated: **300**
 - Synthetic stress population: **10,000 people**
-- Observed index build in this environment: **12.06 ms**
+- Observed 10,000-person index build: **10.38 ms** in this container run (informational, environment-dependent)
 - Deterministic RNG audit: PASS
-- Runtime concrete-ID audit: PASS
 - DOM integrity: PASS
-- Static relative-import graph: PASS
+- Static import graph: PASS
 - Render containment: PASS
-- Unit/Personnel state independence: PASS
-- Military presentation DOM: PASS
-- Gameplay definitions/integration: PASS
-- Canonical scheduler: PASS
-- Career opportunity/orders integration: PASS
-- Readiness/conflict/recovery integration: PASS
-- Deterministic activities: PASS
-- Selector/index audits: PASS
-- schema-12/schema-13/current-schema migration checks: PASS
-- same-schema runtime normalization: PASS
-- stable record references: PASS
-- current-situation display: PASS
-- Personnel ↔ Unit navigation: PASS
-- remembered disclosure UI state: PASS
+- canonical scheduler/opportunity/readiness/activity checks: PASS
+- selector/index audits: PASS
+- migration/same-schema normalization checks: PASS
+- stable record-reference and cross-navigation checks: PASS
 
 ## Syntax and source hygiene
 
-All **122 JS/MJS files** under `src/` and `tests/` pass `node --check`.
+- Runtime JS modules: **99**
+- Test modules: **26**
+- JS/MJS files checked: **125**
+- All **125/125** pass `node --check`.
+- Static source sweep is clean for `eval(`, `new Function`, `document.write`, and runtime `.innerHTML =` assignment.
+- `src/app.js` remains **115,299 bytes / 809 lines**; this release does not grow or restructure it.
+- `src/ui/styles.css` is **75,067 bytes / 837 lines** after the containment hardening.
 
-Static source sweeps remain clean for:
+## White-space audit
 
-- `eval`;
-- `new Function`;
-- `document.write`;
-- runtime `.innerHTML =` assignment.
+Remaining `white-space:nowrap` rules were inspected. They are limited to intentional fixed/compact presentation surfaces such as the seed-control button, roster ellipsis rows, fixed navigation labels, timestamps, and desktop duty-history presentation. Existing mobile overrides convert dynamic duty text and situation content to wrapping behavior where required. Dynamic `.mil-metric > strong` values no longer use nowrap.
 
-The Save Manager uses DOM node construction and `textContent` for dynamic slot content.
+## Baseline containment
 
-## Baseline containment / exact-diff review
+Compared with exact v0.4.3.6, intended runtime changes are limited to:
 
-Compared recursively with the exact v0.4.3.4 package, production runtime differences are intentionally limited to:
-
-- `index.html` — runtime version text only;
-- `src/app.js` — Save Manager presentation extraction and new controller wiring;
-- `src/ui/dialogs/saveManager.js` — new presentation-only module;
+- `src/ui/styles.css` — mobile/dynamic-text containment fix;
 - `src/state/initialState.js` — runtime version stamp only;
-- `src/core/migrations.js` — same-schema runtime version normalization only.
+- `src/core/migrations.js` — same-schema runtime-version normalization only;
+- `index.html` — displayed runtime version only.
 
-Other production modules remain unchanged. Test-file differences are limited to current-version expectations, the Phase-2 architecture expansion, and the new Save Manager regression suite.
+`src/app.js`, commands, services, selectors, definitions, and save-system implementation remain unchanged from v0.4.3.6.
+
+Test changes consist of current-version expectation normalization plus the new mobile-hardening suite. README/quality documentation are release metadata.
 
 ## Save-system containment
 
-`src/core/saveSystem.js` remains unchanged.
+`src/core/saveSystem.js` remains byte-identical.
 
-SHA-256:
+SHA-256: `c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
 
-`c10353acf52a3156264154b1b80c5eaeead840fb9a112271879a610ec848a3d9`
+No save format, save key, slot, checksum, backup, or persistence behavior changed.
 
-No save key, save format, checksum behavior, slot layout, backup behavior, or persistence implementation was changed by this refactor.
+## Compatibility and scope
 
-## Release assessment
+World schema remains **16**, save format remains **3**, and generator remains **v3**. Existing schema-16 saves remain compatible through the existing same-schema normalization path.
 
-**PASS — recommended as the next stable refactor checkpoint after a quick live iPhone smoke test.**
+No gameplay rules, career progression, awards logic, commands, services, selectors, world generation, or planned v0.4.4 feature work were changed.
 
-This phase meaningfully reduces Save Manager presentation responsibility in `app.js` without moving canonical behavior into the UI layer. No gameplay, deterministic-world, migration, save-format, career-boundary, import, DOM, or syntax regression was found in automated QA.
+## Device verification note
 
-Recommended manual device smoke test after GitHub deployment: open Save, inspect Autosave/manual slots, save to an empty/manual slot, overwrite after confirmation, cancel an overwrite once, open Load, cancel a load once, load a career, and verify Delete/cancel Delete behavior.
+Automated/source-level QA can verify the CSS contract and regression structure, but final Safari viewport/rendering behavior should still be confirmed on the target iPhone. The specific real-device regression to retest is Soldier → Awards → Army Service Ribbon `WHY EARNED`, followed by a quick scan of Catalog, Record/DD214, Personnel Profile, Unit, Orders, and dialogs for horizontal scrolling.
+
+## Exact packaged-artifact verification
+
+The release candidate ZIP was extracted into a clean directory and verified independently after packaging. The extracted artifact passed **26/26 test scripts** and **125/125 JS/MJS syntax checks**. The packaged `quality.mjs` run again validated **300 deterministic generated worlds** and the **10,000-person** stress/index case; the observed packaged-copy index build was **18 ms** in this environment. Archive integrity reported no compressed-data errors.

@@ -11,6 +11,7 @@ const dom=fs.readFileSync(path.join(rootDir,"src/ui/dom.js"),"utf8");
 const nav=fs.readFileSync(path.join(rootDir,"src/ui/navigation.js"),"utf8");
 const storageSource=fs.readFileSync(path.join(rootDir,"src/ui/uiStorage.js"),"utf8");
 const saveManagerSource=fs.readFileSync(path.join(rootDir,"src/ui/dialogs/saveManager.js"),"utf8");
+const personProfileSource=fs.readFileSync(path.join(rootDir,"src/ui/dialogs/personProfile.js"),"utf8");
 const html=fs.readFileSync(path.join(rootDir,"index.html"),"utf8");
 
 // Phase-1 boundary: app remains the composition root while low-level UI concerns move out.
@@ -18,11 +19,12 @@ assert.match(app,/createDomRegistry/);
 assert.match(app,/createNavigationController/);
 assert.match(app,/initializeDisclosureState/);
 assert.match(app,/createSaveManagerController/);
-assert.ok(Buffer.byteLength(app,"utf8") < 127_000,`app.js should remain below the Phase-2 127 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
+assert.match(app,/createPersonProfileController/);
+assert.ok(Buffer.byteLength(app,"utf8") < 119_000,`app.js should remain below the Phase-3 119 KB regression ceiling; got ${Buffer.byteLength(app,"utf8")} bytes`);
 assert.doesNotMatch(app,/\blocalStorage\b/,"app.js should use the resilient UI-storage module instead of direct localStorage access");
 
 // UI-only modules must stay presentation-only and never reach into canonical mutation layers.
-for(const [name,source] of [["dom.js",dom],["navigation.js",nav],["uiStorage.js",storageSource],["dialogs/saveManager.js",saveManagerSource]]){
+for(const [name,source] of [["dom.js",dom],["navigation.js",nav],["uiStorage.js",storageSource],["dialogs/saveManager.js",saveManagerSource],["dialogs/personProfile.js",personProfileSource]]){
   assert.doesNotMatch(source,/from\s+["']\.\.\/(?:commands|services|state|core)\//,`${name} must not import canonical mutation/state infrastructure`);
   assert.doesNotMatch(source,/\.innerHTML\s*=/,`${name} must not introduce innerHTML assignment`);
 }
@@ -89,4 +91,7 @@ assert.equal(controller.getActiveSubscreen("career"),"home");
 
 assert.doesNotMatch(saveManagerSource,/localStorage|sessionStorage/,"Save Manager presentation module must not access storage directly");
 assert.doesNotMatch(saveManagerSource,/validateWorldState|saveToSlot|loadFromSlot|deleteSaveSlot/,"Save Manager presentation module must receive persistence actions through its controller contract");
-console.log("War Sim UI architecture Phase 2 integrity QA passed");
+console.log("War Sim UI architecture Phase 3 integrity QA passed");
+
+assert.doesNotMatch(personProfileSource,/localStorage|sessionStorage/,"Personnel Profile presentation module must use injected UI archive helpers");
+assert.doesNotMatch(personProfileSource,/from\s+["\']\.\.\/\.\.\/(?:commands|services|state|core|selectors)\//,"Personnel Profile must stay behind the presentation boundary");
