@@ -1,18 +1,20 @@
-# War Sim v0.4.3.20 — Product Hardening 3: Mobile UI Resilience
+# War Sim v0.4.3.22 — Product Hardening 5: Interaction & State Consistency
 
-Built directly from the accepted v0.4.3.19 Product Hardening 2 baseline. Runtime **0.4.3.20**, world schema **16**, save format **3**, generator **v3**.
+Built directly from the exact verified v0.4.3.21 Product Hardening 4 package. Runtime **0.4.3.22**, world schema **16**, save format **3**, generator **v3**.
 
 ## Scope
 
-This release is a mobile usability hardening pass only. Gameplay rules, simulation behavior, RNG, world schema, save format, and career progression are unchanged.
+This release hardens rapid/repeated interaction behavior only. Gameplay rules, simulation outcomes, RNG, world schema, save format, career progression, and the accepted architecture remain unchanged.
 
 ## Changes
 
-- Raised breadcrumb/unit-link mobile touch targets from 36 px to 44 px.
-- Raised compact-button touch targets from 40 px to 44 px.
-- Raised Inbox compact actions from 36 px-equivalent sizing to 44 px.
-- Preserved 16 px form controls to avoid iOS focus zoom.
-- Preserved dynamic-viewport dialog sizing and iPhone safe-area handling.
-- Added permanent `tests/mobile-resilience.mjs`.
-- Added permanent `tests/mobile-resilience-browser.py` covering 320x568, 375x667, 390x844, 430x932, and 932x430 landscape.
-- Mobile browser audit exercises Career screens, Soldier subtabs, Unit tabs, Personnel tabs, Orders, More, and Save Manager dialog geometry.
+- Added semantic interaction guards at the controller command boundary so rapid duplicate activation of the same action is suppressed.
+- Time advance, activities, opportunities, decisions, school requests, promotion, reenlistment, duty scheduling, and Inbox mutations use stable interaction keys.
+- Hardened queued Achievement/Opportunity acknowledgement so a rapid second tap cannot consume the next newly displayed notice.
+- Preserved the state store's existing atomic rollback behavior for command failures.
+- Added permanent `tests/interaction-state-hardening.mjs`.
+- Strengthened `tests/browser-regression.py` with a real rapid duplicate Advance activation check that verifies world time moves only once and only one result dialog is produced.
+
+## Compatibility
+
+Existing compatible saves remain loadable. World schema **16**, save format **3**, and generator **v3** are unchanged.

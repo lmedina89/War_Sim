@@ -60,6 +60,7 @@ async def main():
         removeItem(k){ data.delete(String(k)); },
         clear(){ data.clear(); }
       };
+      window.__warSimTestStorage = storage;
       Object.defineProperty(window, 'localStorage', {value: storage, configurable: true});
       Object.defineProperty(window, 'sessionStorage', {value: storage, configurable: true});
     }''')
@@ -261,6 +262,28 @@ async def main():
         }
       }""")
 
+      # Startup/persistence hardening: deny storage while the career is live, then restore it.
+      await page.evaluate("""() => {
+        Object.defineProperty(window, 'localStorage', {
+          configurable: true,
+          get(){ throw new Error('SecurityError: storage denied by browser'); }
+        });
+      }""")
+      await page.click('#load-game'); await page.wait_for_timeout(100)
+      denied_open=await page.locator('#save-dialog').evaluate('(d)=>d.open')
+      denied_text=await page.locator('#save-slots').inner_text()
+      await check('storage denial save manager contained', denied_open and 'Save Storage Unavailable' in denied_text, denied_text)
+      await check('storage denial app error hidden', not await visible('#app-error'))
+      if denied_open: await page.click('#save-dialog-close'); await page.wait_for_timeout(80)
+      await page.evaluate("""() => {
+        Object.defineProperty(window, 'localStorage', {value: window.__warSimTestStorage, configurable: true});
+      }""")
+      await page.click('#load-game'); await page.wait_for_timeout(100)
+      restored_cards=await page.locator('#save-slots .save-slot').count()
+      await check('storage access recovery without reload', restored_cards == 7, str(restored_cards))
+      await check('storage recovery app error hidden', not await visible('#app-error'))
+      if await page.locator('#save-dialog').evaluate('(d)=>d.open'): await page.click('#save-dialog-close'); await page.wait_for_timeout(80)
+
     # Career actions: activity execution and AAR
     await page.click('#bottom-nav [data-view="career"]'); await page.click('[data-career-tab="actions"]'); await page.wait_for_timeout(120)
     abtns=page.locator('#activity-options button')
@@ -379,6 +402,23 @@ async def main():
       await school_details.locator('summary').click(); await page.wait_for_timeout(50)
     school_text=(await page.locator('#school-catalog').inner_text()).strip()
     await check('phase11 school catalog rendered', len(school_text)>0, school_text[:260].replace('\n',' | '))
+
+    # Interaction consistency: two immediate activations of the same command count once.
+    await page.click('[data-career-tab="actions"]'); await page.wait_for_timeout(50)
+    before_days=await page.evaluate("() => JSON.parse(document.querySelector('#diagnostics').textContent).worldClock.elapsedDays")
+    if await visible('#advance-1') and await page.locator('#advance-1').is_enabled():
+      await page.evaluate("() => { const b=document.querySelector('#advance-1'); b.click(); b.click(); }")
+      await page.wait_for_timeout(150)
+      after_days=await page.evaluate("() => JSON.parse(document.querySelector('#diagnostics').textContent).worldClock.elapsedDays")
+      await check('rapid duplicate command suppressed', after_days-before_days == 1, f'{before_days} -> {after_days}')
+      await check('rapid duplicate command leaves one result dialog', await visible('#result-dialog'))
+      if await visible('#result-dialog'): await page.click('#result-close'); await page.wait_for_timeout(80)
+      for _ in range(10):
+        if not await visible('#achievement-dialog'): break
+        await page.click('#achievement-ok'); await page.wait_for_timeout(500)
+    else:
+      await check('rapid duplicate command suppression available', True, 'advance control unavailable in generated state')
+
     # Final state / browser errors
     await check('final app error hidden' ,not await visible('#app-error'),(await page.locator('#app-error-message').inner_text()) if await visible('#app-error') else '')
     await check('zero page exceptions',len(results['errors'])==0,repr(results['errors']))

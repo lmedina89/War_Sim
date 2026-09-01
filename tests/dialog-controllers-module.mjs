@@ -43,6 +43,22 @@ try {
   await achievementEls.ok.click();
   assert.deepEqual(marked,["award"]); assert.deepEqual(opened,["opp_1"]); assert.equal(achievementEls.dialog.open,false);
 
+  // Rapid repeated acknowledgement must not consume the next queued achievement.
+  const queuedEls={dialog:new FakeElement("dialog"),type:new FakeElement(),title:new FakeElement(),message:new FakeElement(),ok:new FakeElement("button")};
+  const queuedNotices={a:{id:"a",type:"award_earned",title:"First Award",message:"one",references:{}},b:{id:"b",type:"promotion",title:"Second Notice",message:"two",references:{}}};
+  const queuedMarked=[];
+  const queued=createAchievementDialogController({elements:queuedEls,getNoticesByIds:ids=>ids.map(id=>queuedNotices[id]).filter(Boolean),markRead:id=>queuedMarked.push(id),defer:fn=>fn()});
+  queued.enqueue(["a","b"]);
+  assert.equal(queuedEls.title.textContent,"First Award");
+  await queuedEls.ok.click();
+  assert.equal(queuedEls.dialog.open,true); assert.equal(queuedEls.title.textContent,"Second Notice");
+  await queuedEls.ok.click();
+  assert.deepEqual(queuedMarked,["a"],"a rapid second acknowledgement must not consume the next queued notice");
+  assert.equal(queuedEls.dialog.open,true,"the next queued notice must remain visible after a duplicate tap");
+  await new Promise(resolve=>setTimeout(resolve,475));
+  await queuedEls.ok.click();
+  assert.deepEqual(queuedMarked,["a","b"]); assert.equal(queuedEls.dialog.open,false);
+
   // Result dialog exercises command, focused-activity, and scheduled-duty presentation without owning canonical state.
   const resultEls={dialog:new FakeElement("dialog"),reference:new FakeElement(),kicker:new FakeElement(),title:new FakeElement(),body:new FakeElement()};
   const metric=(label,value)=>{const el=new FakeElement();el.textContent=`${label}:${value}`;return el;};

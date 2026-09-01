@@ -12,15 +12,27 @@ export const MANUAL_SAVE_SLOTS = Object.freeze(["slot_01", "slot_02", "slot_03",
 export const AUTOSAVE_SLOT = "autosave";
 const ALL_SAVE_SLOTS = Object.freeze([...MANUAL_SAVE_SLOTS, AUTOSAVE_SLOT]);
 
+function getSaveStorage() {
+  try {
+    const storage = globalThis.localStorage;
+    if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function" || typeof storage.removeItem !== "function") {
+      throw new Error("Storage API is unavailable.");
+    }
+    return storage;
+  } catch (error) {
+    throw new Error("Save storage is unavailable in this browser session. Your current career is still running, but saves cannot be read or written until storage access is restored.", { cause: error });
+  }
+}
+
 function readIndex() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(INDEX_KEY) ?? "{}");
+    const parsed = JSON.parse(getSaveStorage().getItem(INDEX_KEY) ?? "{}");
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
-function writeIndex(index) { localStorage.setItem(INDEX_KEY, JSON.stringify(index)); }
+function writeIndex(index) { getSaveStorage().setItem(INDEX_KEY, JSON.stringify(index)); }
 function slotKey(slotId) { return `${SLOT_PREFIX}${slotId}`; }
 function backupKey(slotId) { return `${BACKUP_PREFIX}${slotId}`; }
 
@@ -111,8 +123,8 @@ function friendlyLoadFailure(primaryError, backupError = null) {
 }
 
 function inspectSlot(slotId, index = readIndex()) {
-  const primaryRaw = localStorage.getItem(slotKey(slotId));
-  const backupRaw = slotId === AUTOSAVE_SLOT ? null : localStorage.getItem(backupKey(slotId));
+  const primaryRaw = getSaveStorage().getItem(slotKey(slotId));
+  const backupRaw = slotId === AUTOSAVE_SLOT ? null : getSaveStorage().getItem(backupKey(slotId));
   if (!primaryRaw && !backupRaw) return { metadata: { slotId, empty: true }, source: null };
 
   if (primaryRaw) {
@@ -165,8 +177,8 @@ export function saveToSlot(state, slotId) {
   const validation = validateWorldState(state, registries);
   if (!validation.ok) throw new Error(`Save blocked: ${validation.errors.join(" | ")}`);
 
-  const key = slotKey(slotId), backup = backupKey(slotId), previous = localStorage.getItem(key);
-  const existingBackup = slotId === AUTOSAVE_SLOT ? null : localStorage.getItem(backup);
+  const key = slotKey(slotId), backup = backupKey(slotId), previous = getSaveStorage().getItem(key);
+  const existingBackup = slotId === AUTOSAVE_SLOT ? null : getSaveStorage().getItem(backup);
   const previousIsValid = isValidStoredSave(previous);
   const existingBackupIsValid = isValidStoredSave(existingBackup);
   const recoveryRaw = previousIsValid ? previous : (existingBackupIsValid ? existingBackup : null);
@@ -175,9 +187,9 @@ export function saveToSlot(state, slotId) {
   const checksum = fnv1a32(stableStringify(payloadBase));
   const serialized = JSON.stringify({ ...payloadBase, checksum });
   try {
-    if (slotId === AUTOSAVE_SLOT) localStorage.removeItem(backup);
-    else if (recoveryRaw && recoveryRaw !== existingBackup) localStorage.setItem(backup, recoveryRaw);
-    localStorage.setItem(key, serialized);
+    if (slotId === AUTOSAVE_SLOT) getSaveStorage().removeItem(backup);
+    else if (recoveryRaw && recoveryRaw !== existingBackup) getSaveStorage().setItem(backup, recoveryRaw);
+    getSaveStorage().setItem(key, serialized);
   } catch (error) {
     if (isQuotaError(error)) {
       // Never discard the only known-good recovery copy merely to force a new write.
@@ -186,7 +198,7 @@ export function saveToSlot(state, slotId) {
       if (!previousIsValid && existingBackupIsValid) {
         throw new Error("Save storage is full. Your existing recovery backup was preserved; delete another manual save, then try again.", { cause: error });
       }
-      try { localStorage.removeItem(backup); localStorage.setItem(key, serialized); }
+      try { getSaveStorage().removeItem(backup); getSaveStorage().setItem(key, serialized); }
       catch (retryError) { throw new Error("Save storage is full. Delete an older manual save, then try again.", { cause: retryError }); }
     } else throw error;
   }
@@ -201,8 +213,8 @@ export function saveToSlot(state, slotId) {
 export function loadFromSlot(slotId) {
   if (!ALL_SAVE_SLOTS.includes(slotId)) throw new Error(`Invalid save slot: ${slotId}`);
   importLegacySingleSaveIfNeeded();
-  const primaryRaw = localStorage.getItem(slotKey(slotId));
-  const backupRaw = slotId === AUTOSAVE_SLOT ? null : localStorage.getItem(backupKey(slotId));
+  const primaryRaw = getSaveStorage().getItem(slotKey(slotId));
+  const backupRaw = slotId === AUTOSAVE_SLOT ? null : getSaveStorage().getItem(backupKey(slotId));
   if (!primaryRaw && !backupRaw) return null;
 
   let payload = null;
@@ -217,7 +229,7 @@ export function loadFromSlot(slotId) {
     try {
       payload = verifyAndMigrateRaw(backupRaw);
       recoveredFromBackup = true;
-      try { localStorage.setItem(slotKey(slotId), backupRaw); } catch { /* Recovery can still proceed in-memory. */ }
+      try { getSaveStorage().setItem(slotKey(slotId), backupRaw); } catch { /* Recovery can still proceed in-memory. */ }
     } catch (backupError) {
       throw friendlyLoadFailure(primaryError, backupError);
     }
@@ -236,15 +248,15 @@ export function loadFromSlot(slotId) {
 
 export function deleteSaveSlot(slotId) {
   if (!ALL_SAVE_SLOTS.includes(slotId)) throw new Error(`Invalid save slot: ${slotId}`);
-  localStorage.removeItem(slotKey(slotId));
-  localStorage.removeItem(backupKey(slotId));
+  getSaveStorage().removeItem(slotKey(slotId));
+  getSaveStorage().removeItem(backupKey(slotId));
   const index = readIndex();
   delete index[slotId];
   try { writeIndex(index); } catch { /* Deletion itself has already completed. */ }
 }
 
 export function importLegacySingleSaveIfNeeded() {
-  const legacyRaw = localStorage.getItem(LEGACY_KEY);
+  const legacyRaw = getSaveStorage().getItem(LEGACY_KEY);
   const slotAlreadyExists = localStorage.getItem(slotKey("slot_01")) || localStorage.getItem(backupKey("slot_01"));
   if (slotAlreadyExists || readIndex().slot_01 || !legacyRaw) return false;
   try {

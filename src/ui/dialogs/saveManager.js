@@ -44,7 +44,24 @@ export function createSaveManagerController({
     elements.title.textContent = mode === "save" ? "Choose Save Slot" : "Choose Career to Load";
     elements.slots.replaceChildren();
 
-    for (const meta of getSlots()) {
+    let slotData;
+    try {
+      slotData = getSlots();
+    } catch (error) {
+      const unavailable = document.createElement("section");
+      unavailable.className = "save-slot save-storage-unavailable";
+      const heading = document.createElement("h3");
+      heading.textContent = "Save Storage Unavailable";
+      const message = document.createElement("p");
+      message.className = "save-slot-warning";
+      message.textContent = error instanceof Error ? error.message : "Save storage is unavailable in this browser session.";
+      unavailable.appendChild(heading);
+      unavailable.appendChild(message);
+      elements.slots.appendChild(unavailable);
+      return;
+    }
+
+    for (const meta of slotData) {
       const card = document.createElement("section");
       card.className = `save-slot ${meta.slotId === autosaveSlotId ? "autosave-slot" : ""}`.trim();
 

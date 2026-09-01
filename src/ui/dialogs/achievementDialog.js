@@ -13,6 +13,8 @@ export function createAchievementDialogController({
   if (typeof getNoticesByIds !== "function") throw new Error("Achievement dialog controller requires getNoticesByIds().");
 
   const queue = [];
+  let acknowledgementLocked = false;
+  const ACKNOWLEDGEMENT_GUARD_MS = 450;
 
   function showNext() {
     if (dialog.open || isBlocked() || queue.length === 0) return;
@@ -33,6 +35,9 @@ export function createAchievementDialogController({
   }
 
   ok.addEventListener("click", () => {
+    if (acknowledgementLocked) return;
+    acknowledgementLocked = true;
+    setTimeout(() => { acknowledgementLocked = false; }, ACKNOWLEDGEMENT_GUARD_MS);
     const id = dialog.dataset.notificationId;
     const opportunityRecordId = dialog.dataset.opportunityRecordId;
     if (id && typeof markRead === "function") {

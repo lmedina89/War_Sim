@@ -173,8 +173,8 @@ const renderInboxView = createInboxRenderer({
   },
   recordReference,
   onOpenOpportunity: openOpportunityRecord,
-  onAcknowledge: noticeId => runCommand(() => markNotificationRead(store, noticeId)),
-  onArchive: noticeId => runCommand(() => archiveNotification(store, noticeId)),
+  onAcknowledge: noticeId => runCommand(() => markNotificationRead(store, noticeId), { interactionKey: `notification:ack:${noticeId}` }),
+  onArchive: noticeId => runCommand(() => archiveNotification(store, noticeId), { interactionKey: `notification:archive:${noticeId}` }),
   onMarkReadQuiet: noticeId => { try { markNotificationRead(store, noticeId); } catch {} },
 });
 
@@ -264,7 +264,7 @@ const unitPersonnelRenderer = createUnitPersonnelRenderer({
   setPersonnelFilterUnitId: unitId => { personnelFilterUnitId = unitId; },
   onOpenPerson: showPersonProfile,
   onRender: () => render(),
-  onScheduleUnitDuty: (personId, dutyId) => runCommand(() => scheduleUnitDuty(store, registries, personId, dutyId)),
+  onScheduleUnitDuty: (personId, dutyId) => runCommand(() => scheduleUnitDuty(store, registries, personId, dutyId), { interactionKey: `duty:schedule:${personId}:${dutyId}` }),
   onOpenAssignedUnit: unitId => { selectedOrganizationUnitId = unitId; setActiveView("unit"); render(); },
 });
 const renderOrganization = unitPersonnelRenderer.renderOrganization;
@@ -278,7 +278,7 @@ const renderServiceCareer = createServiceCareerRenderer({
   selectServiceCareer,
   statLine,
   renderList,
-  onAcceptOffer: offerId => runCommand(() => acceptReenlistmentOffer(store, registries, offerId)),
+  onAcceptOffer: offerId => runCommand(() => acceptReenlistmentOffer(store, registries, offerId), { interactionKey: `reenlistment:accept:${offerId}` }),
 }).render;
 
 const renderCareerRecord = createCareerRecordRenderer({
@@ -319,11 +319,11 @@ const careerGameplayRenderer = createCareerGameplayRenderer({
   onRender: () => render(),
   onShowDuty: id => resultDialog.showDuty(id),
   onShowActivity: id => resultDialog.showActivity(id),
-  onAcceptOpportunity: id => runCommand(() => acceptCareerOpportunity(store, registries, id)),
-  onDeclineOpportunity: id => runCommand(() => declineCareerOpportunity(store, registries, id)),
-  onResolveDecision: (personId, decisionId, choiceId) => runCommand(() => resolveDecision(store, registries, personId, decisionId, choiceId)),
-  onPerformActivity: (personId, activityId) => runCommand(() => performActivity(store, registries, personId, activityId)),
-  onRequestSchool: schoolId => runCommand(() => requestSchoolOpportunity(store, registries, schoolId)),
+  onAcceptOpportunity: id => runCommand(() => acceptCareerOpportunity(store, registries, id), { interactionKey: `opportunity:accept:${id}` }),
+  onDeclineOpportunity: id => runCommand(() => declineCareerOpportunity(store, registries, id), { interactionKey: `opportunity:decline:${id}` }),
+  onResolveDecision: (personId, decisionId, choiceId) => runCommand(() => resolveDecision(store, registries, personId, decisionId, choiceId), { interactionKey: `decision:${personId}:${decisionId}` }),
+  onPerformActivity: (personId, activityId) => runCommand(() => performActivity(store, registries, personId, activityId), { interactionKey: `activity:${personId}:${activityId}` }),
+  onRequestSchool: schoolId => runCommand(() => requestSchoolOpportunity(store, registries, schoolId), { interactionKey: `school:request:${schoolId}` }),
 });
 const renderGameplay = careerGameplayRenderer.renderGameplay;
 const renderSchoolCatalog = careerGameplayRenderer.renderSchoolCatalog;
@@ -377,7 +377,35 @@ function pulseFeedback(result) {
   const targets = result?.code === "activity_completed" ? [els.careerSummary, els.skillSummary, els.activityHistory] : result?.code === "time_advanced" ? [els.careerSummary, els.promotionCard] : [];
   for (const target of targets.filter(Boolean)) { target.classList.remove("feedback-pulse"); void target.offsetWidth; target.classList.add("feedback-pulse"); setTimeout(() => target.classList.remove("feedback-pulse"), 700); }
 }
-function runCommand(fn, { autosaveAfter = true, statusTone = "good" } = {}) { try { const result = fn(); if (result?.notifications?.length) queueNotifications(result.notifications); eventBus.publish({ type: "command_completed", result }); resultDialog.showCommandResult(result); pulseFeedback(result); if (autosaveAfter) autosave(); setStatus(result?.message ?? "Command completed.", statusTone); return result; } catch (error) { console.error(error); setStatus(error instanceof Error ? error.message : String(error), "bad"); return null; } }
+const commandInteractionGuards = new Map();
+const COMMAND_DUPLICATE_GUARD_MS = 450;
+function runCommand(fn, { autosaveAfter = true, statusTone = "good", interactionKey = null } = {}) {
+  const now = performance.now();
+  if (interactionKey) {
+    const previous = commandInteractionGuards.get(interactionKey);
+    if (previous != null && now - previous < COMMAND_DUPLICATE_GUARD_MS) return null;
+    commandInteractionGuards.set(interactionKey, now);
+  }
+  try {
+    const result = fn();
+    if (result?.notifications?.length) queueNotifications(result.notifications);
+    eventBus.publish({ type: "command_completed", result });
+    resultDialog.showCommandResult(result);
+    pulseFeedback(result);
+    if (autosaveAfter) autosave();
+    setStatus(result?.message ?? "Command completed.", statusTone);
+    return result;
+  } catch (error) {
+    console.error(error);
+    setStatus(error instanceof Error ? error.message : String(error), "bad");
+    return null;
+  } finally {
+    if (interactionKey) setTimeout(() => {
+      const startedAt = commandInteractionGuards.get(interactionKey);
+      if (startedAt === now) commandInteractionGuards.delete(interactionKey);
+    }, COMMAND_DUPLICATE_GUARD_MS);
+  }
+}
 
 const saveManager = createSaveManagerController({
   elements: { dialog: els.saveDialog, title: els.saveDialogTitle, modeLabel: els.saveModeLabel, slots: els.saveSlots },
@@ -437,16 +465,16 @@ personProfile = createPersonProfileController({
   onOpenUnit: unitId => { selectedOrganizationUnitId=unitId; personProfile.close(); setActiveView("unit"); render(); }
 });
 
-els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true }); });
-els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1)));
-els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 7)));
-els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30)));
-els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId)));
-els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId)));
+els.newCareerForm.addEventListener("submit", event => { event.preventDefault(); setSubscreen("career","home",{scroll:false}); runCommand(() => createPlayerCareer(store, registries, { firstName: els.firstName.value, lastName: els.lastName.value, branchId: els.branchSelect.value, componentId: els.componentSelect.value, specialtyId: els.specialtySelect.value, contractDefinitionId: els.contractSelect.value, seed: Number(els.worldSeed.value) >>> 0 }), { autosaveAfter: true, interactionKey: "career:create" }); });
+els.advance1.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 1), { interactionKey: "time:advance:1" }));
+els.advance7.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 7), { interactionKey: "time:advance:7" }));
+els.advance30.addEventListener("click", () => runCommand(() => advanceWorldDays(store, 30), { interactionKey: "time:advance:30" }));
+els.reviewReenlistment.addEventListener("click", () => runCommand(() => generateReenlistmentOffers(store, registries, store.getState().playerPersonId), { interactionKey: "reenlistment:review" }));
+els.promote.addEventListener("click", () => runCommand(() => promotePerson(store, registries, store.getState().playerPersonId), { interactionKey: "promotion:process" }));
 els.save.addEventListener("click", () => saveManager.open("save")); els.load.addEventListener("click", () => saveManager.open("load")); els.loadFromStart.addEventListener("click", () => saveManager.open("load"));
 els.resultClose.addEventListener("click",()=>{els.resultDialog.close();achievementDialog.showNext();});
-els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true}));
-els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true}));
+els.markAllRead.addEventListener("click",()=>runCommand(()=>markAllNotificationsRead(store,store.getState().playerPersonId),{autosaveAfter:true,interactionKey:"inbox:mark-all-read"}));
+els.clearRead.addEventListener("click",()=>runCommand(()=>clearReadNotifications(store,store.getState().playerPersonId),{autosaveAfter:true,interactionKey:"inbox:clear-read"}));
 els.saveDialogClose.addEventListener("click", () => saveManager.close());
 els.personProfileClose.addEventListener("click", () => personProfile.close());
 els.newCareer.addEventListener("click", async () => {
