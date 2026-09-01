@@ -1,42 +1,33 @@
-# War Sim v0.4.3.15 — UI Architecture Refactor Phase 11
+# War Sim v0.4.3.16 — UI Architecture Refactor Phase 12
 
-War Sim v0.4.3.15 is built directly from the verified v0.4.3.14 Phase 10 baseline. Runtime **0.4.3.15**, world schema **16**, save format **3**, generator **v3**.
+War Sim v0.4.3.16 is built directly from the verified v0.4.3.15 Phase 11 baseline. Runtime **0.4.3.16**, world schema **16**, save format **3**, generator **v3**.
 
-## Phase 11 scope
+## Phase 12 scope
 
-Phase 11 extracts the Career Gameplay / Actions presentation boundary into `src/ui/render/careerGameplay.js`.
+Phase 12 extracts the remaining Personnel Administration presentation boundary into `src/ui/render/administration.js`.
 
-The extracted presentation module owns rendering for:
+The extracted renderer owns only presentation for:
 
-- Career objectives and completed-objective history
-- Next 30 Days lookahead
-- Unit Situation Feed
-- Current Duty and Duty Schedule presentation
-- Recent Unit Training presentation and UI-only archive controls
-- Career Opportunities cards
-- Military School catalog presentation
-- Skill/performance presentation
-- Pending decision cards
-- Focused activity cards and Activity Log presentation
+- active / vacant / replacement-request / separated manpower summary chips
+- open vacancy and replacement-request list presentation
+- recent personnel-action list presentation
 
-Canonical behavior remains outside the renderer. `src/app.js` still owns command execution, autosave, state/store access, opportunity acceptance/decline, decision resolution, focused activities, school requests, result dialogs, and render orchestration. These behaviors are injected into the renderer as callbacks.
+Canonical personnel administration state remains selected by `selectPersonnelAdministration`, which is injected into the renderer from `src/app.js`. The renderer has no direct imports from commands, services, state, core, or selectors and performs no state mutation.
 
-No gameplay rules, save schema, world schema, generator behavior, RNG behavior, progression rules, or simulation services were changed.
+No gameplay rules, personnel lifecycle behavior, save schema, world schema, generator behavior, RNG behavior, progression rules, or simulation services were changed.
 
 ## Architecture impact
 
-`src/app.js` changed from **52,148 bytes / 609 lines** in v0.4.3.14 to **33,373 bytes / 495 lines** in v0.4.3.15.
+`src/app.js` changed from **33,373 bytes / 495 lines** in v0.4.3.15 to **32,652 bytes / 497 lines** in v0.4.3.16. The slight line-count increase comes from explicit dependency composition while the remaining inline Administration implementation was removed.
 
 New module:
 
-- `src/ui/render/careerGameplay.js`
+- `src/ui/render/administration.js`
 
 New regression coverage:
 
-- `tests/career-gameplay-module.mjs`
-- Phase 11 checks added to `tests/browser-regression.py`
-
-The browser regression now explicitly verifies Career objectives, current duty, 30-day lookahead, duty schedule, opportunities, school catalog, skills, activity cards, actual activity execution, time advancement, and zero browser/runtime errors.
+- `tests/administration-module.mjs`
+- Phase 12 Administration assertions added to `tests/browser-regression.py`
 
 ## Release gate
 
@@ -52,3 +43,5 @@ The source tree and exact packaged ZIP are required to pass:
 - save-system hash preservation
 - app-wide Chromium browser regression
 - clean extraction and repeat verification of the final ZIP
+
+After Phase 12, the remaining `src/app.js` responsibilities should be audited before deciding whether any further extraction is architecturally justified.

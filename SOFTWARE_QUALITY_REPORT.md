@@ -1,21 +1,23 @@
-# War Sim v0.4.3.15 — Software Quality Report
+# War Sim v0.4.3.16 — Software Quality Report
 
 ## Release
 
-v0.4.3.15 is UI Architecture Refactor Phase 11, built directly from the verified v0.4.3.14 baseline. Runtime **0.4.3.15**, world schema **16**, save format **3**, generator **v3**.
+v0.4.3.16 is UI Architecture Refactor Phase 12, built directly from the verified v0.4.3.15 baseline. Runtime **0.4.3.16**, world schema **16**, save format **3**, generator **v3**.
 
 ## Scope containment
 
-The only architectural feature change is extraction of Career Gameplay / Actions presentation into `src/ui/render/careerGameplay.js`.
+The only architectural feature change is extraction of Personnel Administration presentation into `src/ui/render/administration.js`.
 
-State mutation and gameplay behavior remain in canonical command/service/store layers. The new renderer receives presentation helpers, selectors, UI-archive functions, and command callbacks by dependency injection. It has no direct imports from commands, services, state, or the state store.
+The renderer owns only manpower summary chips plus replacement-request and recent personnel-action list presentation. Canonical personnel-administration selection remains in the existing selector layer and is injected from `src/app.js`. The renderer has no direct imports from commands, services, state, core, or selectors and performs no state mutation.
+
+No gameplay rules, personnel lifecycle behavior, save schema, world schema, generator behavior, RNG behavior, progression rules, or simulation services were changed.
 
 ## Source-tree verification
 
-- JS/MJS test suites: **37/37 PASS**
-- ES-module syntax checks: **149/149 PASS**
-- Relative import targets checked: **447**, missing: **0**
-- Runtime source modules: **112**
+- JS/MJS test suites: **38/38 PASS**
+- ES-module syntax checks: **151/151 PASS**
+- Runtime relative import targets checked: **245**, missing: **0**
+- Runtime source modules: **113**
 - Circular imports: **0**
 - Deterministic generated worlds validated: **300**
 - Stress population: **10,000 people**
@@ -24,31 +26,26 @@ State mutation and gameplay behavior remain in canonical command/service/store l
 
 ## Browser regression
 
-App-wide Chromium regression on the Phase 11 worktree: **74/74 PASS**.
+App-wide Chromium regression on the Phase 12 worktree: **77/77 PASS**.
 
-Coverage includes:
+Coverage includes startup/career creation, all primary views and major subtabs, Soldier Identity, Unit/Personnel cross-navigation, personnel profile, Save/Load Manager presentation, activities/AAR, 1/7/30-day time advance, achievement dialogs, Inbox actions, contract/reenlistment presentation, Career Record, Career Gameplay/Actions, and explicit Phase 12 Personnel Administration checks.
 
-- startup and New Career creation
-- Career Home / Actions / Soldier / Records / Inbox
-- all Soldier Identity tabs
-- Unit / Personnel / Orders / More navigation
-- Personnel profile dialog and Unit→Personnel navigation
-- Save Manager and Load Manager presentation
-- focused activity execution and AAR
-- 1-day, 7-day, and 30-day advancement
-- achievement dialogs
-- Inbox acknowledge/archive/open-opportunity/mark-all-read/clear-read actions
-- contract/reenlistment presentation
-- Career Record / Promotion / Education & Awards / Service Record
-- Phase 11 Career Gameplay presentation: objectives, current duty, next-30-days, duty schedule, opportunities, school catalog, skills, activity cards
-- app-error surface hidden
+Phase 12-specific browser assertions verify:
+
+- Unit Admin screen renders
+- active/vacancy/replacement/separated manpower summary renders
+- replacement-request presentation renders
+- recent personnel-action presentation renders
+- app-error surface remains hidden
 - browser page exceptions: **0**
 - browser console errors: **0**
 
 ## app.js reduction
 
-- v0.4.3.14: **52,148 bytes / 609 lines**
 - v0.4.3.15: **33,373 bytes / 495 lines**
+- v0.4.3.16: **32,652 bytes / 497 lines**
+
+The line count increases by two because renderer composition is intentionally explicit, while the remaining inline Administration implementation was removed. Byte size and direct UI responsibility both decreased.
 
 ## Package verification
 

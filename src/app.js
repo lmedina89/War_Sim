@@ -49,6 +49,7 @@ import { createSituationRenderer } from "./ui/render/situation.js";
 import { createServiceCareerRenderer } from "./ui/render/serviceCareer.js";
 import { createCareerRecordRenderer } from "./ui/render/careerRecord.js";
 import { createCareerGameplayRenderer } from "./ui/render/careerGameplay.js";
+import { createAdministrationRenderer } from "./ui/render/administration.js";
 import { createHistoryArchiveController } from "./ui/historyArchive.js";
 
 const definitionValidation = validateDefinitions(registries);
@@ -330,16 +331,17 @@ const careerGameplayRenderer = createCareerGameplayRenderer({
 const renderGameplay = careerGameplayRenderer.renderGameplay;
 const renderSchoolCatalog = careerGameplayRenderer.renderSchoolCatalog;
 
-function renderAdministration(state, indexes) {
-  const view = selectPersonnelAdministration(state, indexes, registries);
-  els.administrationSummary.replaceChildren();
-  const summary = document.createElement("div"); summary.className = "status-chips";
-  const summaryItems = [`${view.counts.active ?? 0} active`, `${view.vacantBillets.length} vacancies`, `${view.openRequests.length} replacement requests`, `${view.counts.separated ?? 0} separated`];
-  for (const text of summaryItems) { const chip=document.createElement("span"); chip.className="status-chip"; chip.textContent=text; summary.appendChild(chip); }
-  els.administrationSummary.appendChild(summary);
-  renderList(els.replacementRequests, view.openRequests.map(r => `${r.unitName} · ${r.billetName} · requested ${r.requestedDate}`), view.vacantBillets.length ? `${view.vacantBillets.length} vacancy/vacancies are awaiting request processing.` : "No open replacement requests.");
-  renderList(els.personnelActions, view.actions.map(a => `${a.effectiveDate} · ${a.personName} · ${a.type.replaceAll("_"," ")} · ${a.reason.replaceAll("_"," ")}`), "No personnel actions recorded yet.");
-}
+const administrationRenderer = createAdministrationRenderer({
+  elements: {
+    administrationSummary: els.administrationSummary,
+    replacementRequests: els.replacementRequests,
+    personnelActions: els.personnelActions,
+  },
+  registries,
+  selectPersonnelAdministration,
+  renderList,
+});
+const renderAdministration = administrationRenderer.render;
 
 function awardDeviceLabel(item) {
   if (item.count <= 1) return "";

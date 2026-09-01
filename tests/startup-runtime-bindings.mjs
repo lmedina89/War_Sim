@@ -22,4 +22,4 @@ assert.ok(bindingIndex >= 0, "app must bind historyArchive.write as writeUiArchi
 assert.ok(profileIndex > bindingIndex, "writeUiArchive must be defined before the person profile controller is created");
 assert.match(app, /readUiArchive,\s*writeUiArchive,/, "person profile composition must receive both archive read and write callbacks");
 
-console.log("War Sim v0.4.3.15 startup runtime binding QA passed");
+console.log("War Sim v0.4.3.16 startup runtime binding QA passed");

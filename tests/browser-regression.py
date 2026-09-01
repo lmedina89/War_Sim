@@ -161,6 +161,12 @@ async def main():
         for tab in ['overview','roster','readiness','admin']:
           await page.click(f'[data-unit-tab="{tab}"]'); await page.wait_for_timeout(100)
           await check('unit tab '+tab,await visible(f'[data-unit-screen="{tab}"]'),(await page.locator(f'[data-unit-screen="{tab}"]').inner_text())[:160].replace('\n',' | '))
+        admin_summary=(await page.locator('#administration-summary').inner_text()).strip()
+        replacement_text=(await page.locator('#replacement-requests').inner_text()).strip()
+        action_text=(await page.locator('#personnel-actions').inner_text()).strip()
+        await check('phase12 administration summary rendered', len(admin_summary)>0 and 'active' in admin_summary.lower(), admin_summary[:220].replace('\n',' | '))
+        await check('phase12 replacement requests rendered', len(replacement_text)>0, replacement_text[:220].replace('\n',' | '))
+        await check('phase12 personnel actions rendered', len(action_text)>0, action_text[:220].replace('\n',' | '))
         await shot('unit-admin')
       elif view=='personnel':
         for tab in ['roster','relationships']:
